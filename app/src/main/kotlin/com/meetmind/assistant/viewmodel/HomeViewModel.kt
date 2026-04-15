@@ -9,6 +9,7 @@ import com.meetmind.assistant.data.model.CloudProviderConfig
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,15 +20,25 @@ class HomeViewModel(
 
     /**
      * Config of the "active" provider — whichever provider has a saved + validated key.
-     * Falls back to Gemini config if both or neither are configured.
+     * Prefers Claude if enabled; falls back to Gemini; falls back to whichever has a
+     * valid connection; otherwise defaults to GEMINI config.
      */
-    val activeCloudConfig: StateFlow<CloudProviderConfig> = configRepository
-        .observe(CloudProvider.GEMINI)
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5_000),
-            CloudProviderConfig(provider = CloudProvider.GEMINI, encryptedApiKey = null)
-        )
+    val activeCloudConfig: StateFlow<CloudProviderConfig> = combine(
+        configRepository.observe(CloudProvider.CLAUDE),
+        configRepository.observe(CloudProvider.GEMINI)
+    ) { claude, gemini ->
+        when {
+            claude.isEnabled -> claude
+            gemini.isEnabled -> gemini
+            claude.connectionStatus == true -> claude
+            gemini.connectionStatus == true -> gemini
+            else -> gemini
+        }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        CloudProviderConfig(provider = CloudProvider.GEMINI, encryptedApiKey = null)
+    )
 
     val isCloudEnabled: StateFlow<Boolean> = activeCloudConfig
         .map { it.isEnabled }
