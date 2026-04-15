@@ -1,0 +1,51 @@
+# Android / Kotlin
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+out/
+
+# Generated files
+*.class
+*.jar
+*.aar
+*.ap_
+
+# Keystore files (NEVER commit)
+*.jks
+*.keystore
+
+# Firebase / Google services — NEVER commit these
+google-services.json
+GoogleService-Info.plist
+
+# Tink / EncryptedDataStore backup
+# (backup_rules.xml excludes these from Android backup too)
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+
+# IDE
+.vscode/
+*.suo
+*.user
+
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
