@@ -11,11 +11,10 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.meetmind.assistant.data.model.CloudProvider
 import com.meetmind.assistant.data.model.CloudProviderConfig
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 
 private val Context.cloudConfigDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "cloud_provider_config"
@@ -30,10 +29,14 @@ private val Context.cloudConfigDataStore: DataStore<Preferences> by preferencesD
  *   connection status, and last-validated timestamp.
  * - [setEnabled] throws [IllegalStateException] if [connectionStatus] is not `true`.
  *   Callers must validate the key (via CloudKeyValidationService) before enabling.
+ *
+ * DataStore suspend functions handle their own threading — no [kotlinx.coroutines.Dispatchers.IO]
+ * wrapper is needed and adding one breaks testability.
  */
 class CloudProviderConfigRepository(
     private val context: Context,
-    private val apiKeyStore: ApiKeyStore
+    private val apiKeyStore: ApiKeyStore,
+    private val dataStore: DataStore<Preferences> = context.cloudConfigDataStore
 ) {
 
     companion object {
@@ -50,13 +53,12 @@ class CloudProviderConfigRepository(
     /** Emits the current [CloudProviderConfig] for [provider], updating on any change. */
     fun observe(provider: CloudProvider): Flow<CloudProviderConfig> =
         combine(
-            context.cloudConfigDataStore.data,
+            dataStore.data,
             apiKeyStore.observeHasKey(provider)
         ) { prefs, hasKey ->
             val statusStr = prefs[statusKey(provider)]
             CloudProviderConfig(
                 provider = provider,
-                // encryptedApiKey is not held here; presence is signalled via hasKey
                 encryptedApiKey = if (hasKey) ByteArray(0) else null,
                 isEnabled = prefs[enabledKey(provider)] ?: false,
                 connectionStatus = when (statusStr) {
@@ -73,13 +75,9 @@ class CloudProviderConfigRepository(
      * Disables whatever was previously enabled; does not automatically enable [provider].
      */
     suspend fun setProvider(provider: CloudProvider) {
-        withContext(Dispatchers.IO) {
-            context.cloudConfigDataStore.edit { prefs ->
-                // disable all providers first
-                CloudProvider.entries.forEach { p ->
-                    prefs[enabledKey(p)] = false
-                }
-                // caller still needs to call setEnabled(provider, true) after validation
+        dataStore.edit { prefs ->
+            CloudProvider.entries.forEach { p ->
+                prefs[enabledKey(p)] = false
             }
         }
     }
@@ -91,22 +89,17 @@ class CloudProviderConfigRepository(
      *         successfully validated (connectionStatus != true).
      */
     suspend fun setEnabled(provider: CloudProvider, enabled: Boolean) {
-        withContext(Dispatchers.IO) {
-            if (enabled) {
-                // Guard: must have a validated key before enabling
-                var isConnected = false
-                context.cloudConfigDataStore.data.map { prefs ->
-                    prefs[statusKey(provider)] == "true"
-                }.collect { isConnected = it }
-
-                check(isConnected) {
-                    "Cannot enable cloud inference for $provider: key not validated. " +
-                        "Call CloudKeyValidationService first."
-                }
+        if (enabled) {
+            val isConnected = dataStore.data
+                .map { prefs -> prefs[statusKey(provider)] == "true" }
+                .first()
+            check(isConnected) {
+                "Cannot enable cloud inference for $provider: key not validated. " +
+                    "Call CloudKeyValidationService first."
             }
-            context.cloudConfigDataStore.edit { prefs ->
-                prefs[enabledKey(provider)] = enabled
-            }
+        }
+        dataStore.edit { prefs ->
+            prefs[enabledKey(provider)] = enabled
         }
     }
 
@@ -117,16 +110,13 @@ class CloudProviderConfigRepository(
      * @param connected  True if validation succeeded, false if key was rejected
      */
     suspend fun updateConnectionStatus(provider: CloudProvider, connected: Boolean) {
-        withContext(Dispatchers.IO) {
-            context.cloudConfigDataStore.edit { prefs ->
-                prefs[statusKey(provider)] = connected.toString()
-                if (connected) {
-                    prefs[validatedAtKey(provider)] = System.currentTimeMillis()
-                }
-                // If validation failed, disable cloud for this provider
-                if (!connected) {
-                    prefs[enabledKey(provider)] = false
-                }
+        dataStore.edit { prefs ->
+            prefs[statusKey(provider)] = connected.toString()
+            if (connected) {
+                prefs[validatedAtKey(provider)] = System.currentTimeMillis()
+            }
+            if (!connected) {
+                prefs[enabledKey(provider)] = false
             }
         }
     }
@@ -136,12 +126,10 @@ class CloudProviderConfigRepository(
      * call [ApiKeyStore.deleteKey] separately).
      */
     suspend fun clearConfig(provider: CloudProvider) {
-        withContext(Dispatchers.IO) {
-            context.cloudConfigDataStore.edit { prefs ->
-                prefs.remove(enabledKey(provider))
-                prefs.remove(statusKey(provider))
-                prefs.remove(validatedAtKey(provider))
-            }
+        dataStore.edit { prefs ->
+            prefs.remove(enabledKey(provider))
+            prefs.remove(statusKey(provider))
+            prefs.remove(validatedAtKey(provider))
         }
     }
 }

@@ -15,6 +15,7 @@ import com.google.crypto.tink.integration.android.AndroidKeysetManager
 import com.meetmind.assistant.data.model.CloudProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -104,6 +105,7 @@ class TinkApiKeyStore(private val context: Context) : ApiKeyStore {
         }
 
     override suspend fun saveKey(provider: CloudProvider, plaintextKey: ByteArray) {
+        require(plaintextKey.isNotEmpty()) { "API key must not be blank" }
         withContext(Dispatchers.IO) {
             try {
                 val ciphertext = aead.encrypt(plaintextKey, provider.name.toByteArray())
@@ -131,11 +133,8 @@ class TinkApiKeyStore(private val context: Context) : ApiKeyStore {
 
     // --- helpers ---
 
-    private suspend fun getEncryptedBytes(provider: CloudProvider): ByteArray? {
-        var result: ByteArray? = null
-        context.apiKeyDataStore.data.map { prefs ->
-            prefs[prefKey(provider)]
-        }.collect { result = it }
-        return result
-    }
+    private suspend fun getEncryptedBytes(provider: CloudProvider): ByteArray? =
+        context.apiKeyDataStore.data
+            .map { prefs -> prefs[prefKey(provider)] }
+            .first()
 }

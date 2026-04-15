@@ -1,4 +1,4 @@
-// T018/T028: Gemini inference via Firebase AI Logic SDK
+// T018/T028: Gemini inference via Firebase AI Logic SDK; T008: implements CloudStreamingProvider
 package com.meetmind.assistant.inference
 
 import com.google.firebase.Firebase
@@ -20,9 +20,9 @@ import kotlinx.coroutines.flow.flowOn
  * The Firebase project is configured via google-services.json — no API key is passed in code.
  * Constitution v2.0 data minimisation: only question text + system prompt are transmitted.
  */
-class GeminiInferenceClient {
+class GeminiInferenceClient : CloudStreamingProvider {
 
-    fun streamSuggestion(request: CloudInferenceRequest): Flow<InferenceEvent> = flow {
+    override fun streamSuggestion(request: CloudInferenceRequest): Flow<InferenceEvent> = flow {
         val model = Firebase.ai(backend = GenerativeBackend.googleAI())
             .generativeModel(
                 modelName = "gemini-2.5-flash",
@@ -49,6 +49,6 @@ class GeminiInferenceClient {
         )
     }.flowOn(Dispatchers.IO)
 
-    suspend fun validate(): ValidationResult =
+    override suspend fun validate(): ValidationResult =
         CloudKeyValidationService().validate(CloudProvider.GEMINI, "")
 }

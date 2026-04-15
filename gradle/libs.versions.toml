@@ -17,6 +17,13 @@ coroutines = "1.8.1"
 desugar = "2.1.4"
 material = "1.12.0"
 
+# Testing
+robolectric      = "4.14.1"
+junit            = "4.13.2"
+mockitoKotlin    = "5.4.0"
+truth            = "1.4.4"
+androidxTestCore = "1.6.1"
+
 [libraries]
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -65,6 +72,18 @@ desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", ver
 
 # Material Design (for app theme)
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+# Testing — spec 006
+junit                              = { group = "junit", name = "junit", version.ref = "junit" }
+robolectric                        = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+mockito-kotlin                     = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+kotlinx-coroutines-test            = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+truth                              = { group = "com.google.truth", name = "truth", version.ref = "truth" }
+okhttp-mockwebserver               = { group = "com.squareup.okhttp3", name = "mockwebserver", version.ref = "okhttp" }
+androidx-test-core                 = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+androidx-test-core-ktx             = { group = "androidx.test", name = "core-ktx", version.ref = "androidxTestCore" }
+androidx-compose-ui-test-junit4    = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest  = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

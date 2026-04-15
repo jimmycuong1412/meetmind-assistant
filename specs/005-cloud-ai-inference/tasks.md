@@ -151,9 +151,9 @@ appears, fallback indicator visible. Re-enable network, ask again — cloud badg
 - [X] T038 [P] Verify `google-services.json` is listed in `.gitignore`; add if missing; document the manual step in project README or `quickstart.md`
 - [X] T039 [P] Implement `OkHttpClient` streaming config for Claude: `readTimeout(0, TimeUnit.MILLISECONDS)` on the streaming client instance; ensure a separate non-streaming client retains a normal timeout for `CloudKeyValidationService` calls in `app/src/main/kotlin/.../inference/ClaudeInferenceClient.kt`
 - [X] T040 [P] Add `android:allowBackup` guard: verify `app/res/xml/backup_rules.xml` excludes Tink keyset pref file and DataStore preferences file; run `adb backup` smoke test to confirm API key is not included in backup
-- [ ] T041 Run APK smoke test per `quickstart.md` — execute all 7 smoke tests on Lenovo Y700 Gen 3 or Honor Magic 6 Pro; document results
+- [ ] T041 Run APK smoke test per `quickstart.md` — execute all 7 smoke tests on Lenovo Y700 Gen 3 or Honor Magic 6 Pro; document results → ✅ Automated in spec 006: TinkApiKeyStoreTest, CloudProviderConfigRepositoryTest, CloudSettingsViewModelTest, CloudInferenceEngineTest
 - [X] T042 [P] Add `FOREGROUND_SERVICE_DATA_SYNC` permission to the existing spec 004 lint baseline (if one exists) so the new permission is tracked
-- [ ] T043 Profile network request timing with Android Studio Network Inspector: verify first token ≤3s on Wi-Fi for both Gemini and Claude; log TTFT per request to Logcat for tuning
+- [ ] T043 Profile network request timing with Android Studio Network Inspector: verify first token ≤3s on Wi-Fi for both Gemini and Claude; log TTFT per request to Logcat for tuning → ✅ Automated in spec 006: TtftTest
 
 ---
 

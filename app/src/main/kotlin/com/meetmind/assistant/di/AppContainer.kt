@@ -1,4 +1,5 @@
 // T015: Manual DI container — single source of truth for shared singleton dependencies
+// T011: Updated to wire CloudInferenceEngine with CloudStreamingProvider interface
 package com.meetmind.assistant.di
 
 import android.content.Context
@@ -36,19 +37,16 @@ class AppContainer(applicationContext: Context) {
         GeminiInferenceClient()
     }
 
-    val claudeInferenceClient: ClaudeInferenceClient by lazy {
-        ClaudeInferenceClient()
-    }
-
     val cloudInferenceEngine: CloudInferenceEngine by lazy {
         CloudInferenceEngine(
             context = applicationContext,
             apiKeyStore = apiKeyStore,
             configRepository = cloudProviderConfigRepository,
-            geminiClient = geminiInferenceClient,
-            claudeClient = claudeInferenceClient,
+            geminiProvider = geminiInferenceClient,
+            // T011: Claude client is constructed per-request with the decrypted API key
+            claudeProviderFactory = { apiKey -> ClaudeInferenceClient(apiKey = apiKey) },
             // On-device fallback: placeholder until spec 004 SuggestionEngine is wired in
-            onDeviceFallback = { questionText ->
+            onDeviceFallback = { _ ->
                 flowOf(
                     com.meetmind.assistant.data.model.InferenceEvent.Complete(
                         requestId = java.util.UUID.randomUUID().toString(),

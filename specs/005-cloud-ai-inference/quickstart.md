@@ -121,7 +121,7 @@ plugins {
 
 ## Manual Smoke Tests
 
-### Smoke Test 1: API key configuration and persistence
+### Smoke Test 1: API key configuration and persistence → ✅ Automated (spec 006)
 
 1. Open the app → Settings → Cloud AI.
 2. Select **Gemini**, enter a valid AI Studio API key, tap Save.
@@ -150,7 +150,7 @@ plugins {
 7. **Expected**: The cloud suggestion is observably more detailed, specific, and
    coherent than the on-device suggestion.
 
-### Smoke Test 4: Fallback on network unavailable
+### Smoke Test 4: Fallback on network unavailable → ✅ Automated (spec 006)
 
 1. Enable Cloud mode ON.
 2. Disable Wi-Fi AND mobile data on the device.
@@ -159,7 +159,7 @@ plugins {
    seconds. A "⚡ On-device (cloud unavailable)" indicator is visible instead of
    "☁ Cloud".
 
-### Smoke Test 5: Fallback on timeout (simulated)
+### Smoke Test 5: Fallback on timeout (simulated) → ✅ Automated (spec 006)
 
 1. Enable Cloud mode ON.
 2. Use Android Studio's Network Inspector or `adb shell` to throttle connectivity to
@@ -168,7 +168,7 @@ plugins {
 4. **Expected**: After ~5 seconds without a first cloud token, a fallback indicator
    appears and an on-device suggestion is generated.
 
-### Smoke Test 6: 401 auto-disable
+### Smoke Test 6: 401 auto-disable → ✅ Automated (spec 006)
 
 1. Configure a key. Manually corrupt it in settings (edit one character).
 2. Enable Cloud mode ON.
@@ -176,7 +176,7 @@ plugins {
 4. **Expected**: The app detects the 401, automatically disables Cloud mode, shows
    a notification: "Cloud AI disabled — check your API key in Settings." No crash.
 
-### Smoke Test 7: No audio transmitted (network audit)
+### Smoke Test 7: No audio transmitted (network audit) → ✅ Automated (spec 006)
 
 1. Enable Cloud mode ON.
 2. Use Android Studio's Network Inspector (or `mitmproxy` via system proxy) to

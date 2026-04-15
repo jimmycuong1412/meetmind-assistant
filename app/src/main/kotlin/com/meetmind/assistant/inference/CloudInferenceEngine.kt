@@ -1,4 +1,5 @@
 // T030: Routes inference requests to the active cloud provider with 5s fallback to on-device
+// T010: Refactored to inject CloudStreamingProvider, Clock, and connectivityChecker for testability
 package com.meetmind.assistant.inference
 
 import android.content.Context
@@ -14,9 +15,7 @@ import com.meetmind.assistant.storage.CloudProviderConfigRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withTimeout
 
 /**
@@ -29,14 +28,21 @@ import kotlinx.coroutines.withTimeout
  *  - No audio, no transcript history, no user identity is transmitted
  *
  * Fallback is per-suggestion: the next question will attempt cloud again.
+ *
+ * @param geminiProvider        Injectable Gemini streaming provider (default: [GeminiInferenceClient])
+ * @param claudeProviderFactory Factory that receives the decrypted API key and returns a Claude provider
+ * @param clock                 Injectable clock for deterministic TTFT measurement in tests
+ * @param connectivityChecker   Injectable network check to avoid 5s timeout when offline
  */
 class CloudInferenceEngine(
     private val context: Context,
     private val apiKeyStore: ApiKeyStore,
     private val configRepository: CloudProviderConfigRepository,
-    private val geminiClient: GeminiInferenceClient,
-    private val claudeClient: ClaudeInferenceClient,
-    private val onDeviceFallback: OnDeviceFallback
+    private val geminiProvider: CloudStreamingProvider,
+    private val claudeProviderFactory: (apiKey: String) -> CloudStreamingProvider,
+    private val onDeviceFallback: OnDeviceFallback,
+    private val clock: Clock = SystemClock,
+    private val connectivityChecker: (() -> Boolean)? = null
 ) {
 
     /** Functional interface — calls the existing on-device SuggestionEngine */
@@ -48,6 +54,7 @@ class CloudInferenceEngine(
         private const val MAX_QUESTION_CHARS = 600  // ≈150 tokens
         private const val MAX_SYSTEM_CHARS = 320    // ≈80 tokens
         private const val CLOUD_TIMEOUT_MS = 5_000L
+        private const val TAG = "CloudInferenceEngine"
     }
 
     /**
@@ -64,7 +71,8 @@ class CloudInferenceEngine(
         // are transient and should be retried on the next question.
 
         // T034: Check connectivity before wasting the 5s timeout
-        if (!isNetworkAvailable()) {
+        val networkAvailable = connectivityChecker?.invoke() ?: isNetworkAvailable()
+        if (!networkAvailable) {
             emit(InferenceEvent.FallbackActivated(request.requestId, FallbackReason.NETWORK_UNAVAILABLE))
             onDeviceFallback.generate(request.questionText).collect { emit(it) }
             return@flow
@@ -90,22 +98,22 @@ class CloudInferenceEngine(
             systemPrompt = request.systemPrompt.take(MAX_SYSTEM_CHARS)
         )
 
-        // T043: TTFT logging for Network Inspector profiling
-        val requestStartMs = System.currentTimeMillis()
+        // T043: TTFT logging — injectable clock for deterministic test assertions
+        val requestStartMs = clock.nowMs()
         var firstTokenMs = -1L
 
         try {
             withTimeout(CLOUD_TIMEOUT_MS) {
-                val clientFlow = when (request.provider) {
+                val providerFlow = when (request.provider) {
                     // Gemini: API key is in google-services.json, not passed in code
-                    CloudProvider.GEMINI -> geminiClient.streamSuggestion(safeRequest)
-                    // Claude: API key passed directly to SDK
-                    CloudProvider.CLAUDE -> claudeClient.streamSuggestion(safeRequest, apiKey)
+                    CloudProvider.GEMINI -> geminiProvider.streamSuggestion(safeRequest)
+                    // Claude: API key passed via factory to keep it out of this class
+                    CloudProvider.CLAUDE -> claudeProviderFactory(apiKey).streamSuggestion(safeRequest)
                 }
-                clientFlow.collect { event ->
+                providerFlow.collect { event ->
                     if (event is InferenceEvent.Token && firstTokenMs < 0) {
-                        firstTokenMs = System.currentTimeMillis() - requestStartMs
-                        Log.d("CloudInferenceEngine", "TTFT[${request.provider}] = ${firstTokenMs}ms")
+                        firstTokenMs = clock.nowMs() - requestStartMs
+                        Log.d(TAG, "TTFT[${request.provider}] = ${firstTokenMs}ms")
                     }
                     emit(event)
                 }

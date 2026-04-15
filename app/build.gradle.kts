@@ -33,6 +33,13 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true   // prevent "Method not mocked" for Android stubs
+            isIncludeAndroidResources = true  // required for Robolectric resource loading
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -93,4 +100,16 @@ dependencies {
 
     // Material Design (for app theme)
     implementation(libs.material)
+
+    // Testing — spec 006
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.mockito.kotlin)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.truth)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.core.ktx)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

@@ -32,9 +32,9 @@ enum class ValidationResult {
  * Claude: API key is passed directly to AnthropicOkHttpClient and validated
  *   via a 1-token message request.
  */
-class CloudKeyValidationService {
+open class CloudKeyValidationService {
 
-    suspend fun validate(
+    open suspend fun validate(
         provider: CloudProvider,
         apiKey: String
     ): ValidationResult = withContext(Dispatchers.IO) {
