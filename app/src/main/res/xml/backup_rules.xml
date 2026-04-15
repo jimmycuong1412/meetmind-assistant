@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- T004: Exclude Tink keyset and DataStore API key file from Android cloud backup.
+     Backed-up ciphertext on a new device cannot be decrypted (different Keystore key).
+     This prevents silent data loss and potential key exposure. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Tink keyset SharedPreferences (contains the keyset protecting the API key) -->
+        <exclude domain="sharedpref" path="api_key_keyset_pref.xml" />
+        <!-- DataStore file storing encrypted API key ciphertext -->
+        <exclude domain="file" path="datastore/api_keys.preferences_pb" />
+        <!-- Room database (contains ContextProfile — not sensitive, but exclude for safety) -->
+        <exclude domain="database" path="meetmind.db" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="api_key_keyset_pref.xml" />
+        <exclude domain="file" path="datastore/api_keys.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>
