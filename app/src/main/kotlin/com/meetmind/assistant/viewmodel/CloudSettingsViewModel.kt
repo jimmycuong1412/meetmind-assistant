@@ -1,8 +1,8 @@
 // T021: ViewModel for Cloud AI Settings screen
+// spec 009 — T020: migrated to @HiltViewModel @Inject constructor; Factory deleted
 package com.meetmind.assistant.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.meetmind.assistant.data.model.CloudProvider
 import com.meetmind.assistant.data.model.CloudProviderConfig
@@ -10,12 +10,14 @@ import com.meetmind.assistant.inference.CloudKeyValidationService
 import com.meetmind.assistant.inference.ValidationResult
 import com.meetmind.assistant.storage.ApiKeyStore
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 sealed class ValidationState {
     object Idle : ValidationState()
@@ -24,7 +26,8 @@ sealed class ValidationState {
     data class Failure(val reason: ValidationResult) : ValidationState()
 }
 
-class CloudSettingsViewModel(
+@HiltViewModel
+class CloudSettingsViewModel @Inject constructor(
     private val apiKeyStore: ApiKeyStore,
     private val configRepository: CloudProviderConfigRepository,
     private val validationService: CloudKeyValidationService
@@ -62,7 +65,6 @@ class CloudSettingsViewModel(
             _validationState.value = ValidationState.Validating
             val result = validationService.validate(provider, keyText)
             if (result == ValidationResult.SUCCESS) {
-                // Save encrypted key then mark connected
                 apiKeyStore.saveKey(provider, keyText.toByteArray())
                 configRepository.updateConnectionStatus(provider, connected = true)
                 _validationState.value = ValidationState.Success
@@ -89,14 +91,4 @@ class CloudSettingsViewModel(
         provider = provider,
         encryptedApiKey = null
     )
-
-    class Factory(
-        private val apiKeyStore: ApiKeyStore,
-        private val configRepository: CloudProviderConfigRepository,
-        private val validationService: CloudKeyValidationService
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            CloudSettingsViewModel(apiKeyStore, configRepository, validationService) as T
-    }
 }

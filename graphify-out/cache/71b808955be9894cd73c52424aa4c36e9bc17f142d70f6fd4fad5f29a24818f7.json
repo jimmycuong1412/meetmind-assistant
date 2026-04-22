@@ -1,0 +1,1 @@
+{"nodes": [{"id": "fakestreamresponse_FakeStreamResponse", "label": "FakeStreamResponse", "file_type": "code", "source_file": "app/src/test/kotlin/com/meetmind/assistant/helpers/FakeStreamResponse.kt", "source_location": "class FakeStreamResponse", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

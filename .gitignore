@@ -49,3 +49,13 @@ Thumbs.db
 .gradle/
 gradle-app.setting
 !gradle/wrapper/gradle-wrapper.jar
+
+# llama.cpp native libs (built externally from source — see quickstart.md)
+app/src/main/jniLibs/arm64-v8a/liballama.so
+app/src/main/jniLibs/arm64-v8a/libggml.so
+app/src/main/jniLibs/arm64-v8a/libggml-base.so
+app/src/main/jniLibs/arm64-v8a/libggml-cpu.so
+app/src/main/jniLibs/arm64-v8a/libggml-opencl.so
+
+# models
+.models/

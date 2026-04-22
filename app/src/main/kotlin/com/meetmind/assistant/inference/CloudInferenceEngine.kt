@@ -1,5 +1,6 @@
 // T030: Routes inference requests to the active cloud provider with 5s fallback to on-device
 // T010: Refactored to inject CloudStreamingProvider, Clock, and connectivityChecker for testability
+// spec 009 — T015: claudeProviderFactory moved inside class body; constructor usable by Hilt @Inject
 package com.meetmind.assistant.inference
 
 import android.content.Context
@@ -15,6 +16,7 @@ import com.meetmind.assistant.storage.CloudProviderConfigRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withTimeout
 
@@ -39,8 +41,14 @@ class CloudInferenceEngine(
     private val apiKeyStore: ApiKeyStore,
     private val configRepository: CloudProviderConfigRepository,
     private val geminiProvider: CloudStreamingProvider,
-    private val claudeProviderFactory: (apiKey: String) -> CloudStreamingProvider,
     private val onDeviceFallback: OnDeviceFallback,
+    /**
+     * Factory for creating a per-request Claude provider with the decrypted API key.
+     * Defaults to [ClaudeInferenceClient] in production; injectable in tests via constructor.
+     * Not a constructor parameter in Hilt — [InferenceModule] uses the default directly.
+     */
+    private val claudeProviderFactory: (apiKey: String) -> CloudStreamingProvider =
+        { apiKey -> ClaudeInferenceClient(apiKey = apiKey) },
     private val clock: Clock = SystemClock,
     private val connectivityChecker: (() -> Boolean)? = null
 ) {
@@ -69,6 +77,14 @@ class CloudInferenceEngine(
         // The next call to streamSuggestion() will attempt cloud again from the top.
         // Connection status is only updated on AUTH_ERROR (T035) — all other failures
         // are transient and should be retried on the next question.
+
+        // Guard: respect isEnabled — the engine should not run cloud if the user disabled it
+        val config = configRepository.observe(request.provider).first()
+        if (!config.isEnabled) {
+            emit(InferenceEvent.FallbackActivated(request.requestId, FallbackReason.CLOUD_DISABLED))
+            onDeviceFallback.generate(request.questionText).collect { emit(it) }
+            return@flow
+        }
 
         // T034: Check connectivity before wasting the 5s timeout
         val networkAvailable = connectivityChecker?.invoke() ?: isNetworkAvailable()

@@ -1,27 +1,29 @@
 // HomeViewModel — exposes cloud config state and toggle for HomeScreen
+// spec 009 — T018: migrated to @HiltViewModel @Inject constructor; Factory deleted
 package com.meetmind.assistant.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.meetmind.assistant.data.model.CloudProvider
 import com.meetmind.assistant.data.model.CloudProviderConfig
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(
+@HiltViewModel
+class HomeViewModel @Inject constructor(
     private val configRepository: CloudProviderConfigRepository
 ) : ViewModel() {
 
     /**
-     * Config of the "active" provider — whichever provider has a saved + validated key.
-     * Prefers Claude if enabled; falls back to Gemini; falls back to whichever has a
-     * valid connection; otherwise defaults to GEMINI config.
+     * Config of the "active" provider — whichever provider is currently enabled.
+     * Prefers Claude; falls back to Gemini; defaults to GEMINI config when neither is enabled.
      */
     val activeCloudConfig: StateFlow<CloudProviderConfig> = combine(
         configRepository.observe(CloudProvider.CLAUDE),
@@ -30,8 +32,6 @@ class HomeViewModel(
         when {
             claude.isEnabled -> claude
             gemini.isEnabled -> gemini
-            claude.connectionStatus == true -> claude
-            gemini.connectionStatus == true -> gemini
             else -> gemini
         }
     }.stateIn(
@@ -52,13 +52,5 @@ class HomeViewModel(
                 // Key not validated — toggle silently ignored (UI guard prevents this)
             }
         }
-    }
-
-    class Factory(
-        private val configRepository: CloudProviderConfigRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            HomeViewModel(configRepository) as T
     }
 }

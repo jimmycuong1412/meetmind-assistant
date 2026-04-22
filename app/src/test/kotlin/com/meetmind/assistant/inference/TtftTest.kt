@@ -10,6 +10,7 @@ import com.meetmind.assistant.data.model.SessionMode
 import com.meetmind.assistant.helpers.FakeApiKeyStore
 import com.meetmind.assistant.helpers.FakeCloudStreamingProvider
 import com.meetmind.assistant.helpers.FakeClock
+import com.meetmind.assistant.helpers.enableProvider
 import com.meetmind.assistant.helpers.testDataStore
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,7 +34,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], manifest = Config.NONE)
+@Config(sdk = [33], manifest = Config.NONE, application = android.app.Application::class)
 class TtftTest {
 
     private val fallbackProvider = CloudInferenceEngine.OnDeviceFallback { _ ->
@@ -70,7 +71,7 @@ class TtftTest {
     @Test
     fun ttft_withinBudget() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-ttft-test".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
 
         val clock = FakeClock(start = 0L)
         val fakeProvider = FakeCloudStreamingProvider(tokens = listOf("Hello"))
@@ -94,9 +95,9 @@ class TtftTest {
 
     /** Contract 4.2: TTFT exceeds budget (6s > 5s timeout) → TIMEOUT fallback */
     @Test
-    fun ttft_exceedsBudget_triggersFallback() = runTest(StandardTestDispatcher()) {
-        val (apiKeyStore, configRepo) = makeComponents(StandardTestDispatcher())
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-ttft-test".toByteArray())
+    fun ttft_exceedsBudget_triggersFallback() = runTest {
+        val (apiKeyStore, configRepo) = makeComponents(StandardTestDispatcher(testScheduler))
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
 
         val slowProvider = FakeCloudStreamingProvider(
             tokens = listOf("Never"),
@@ -131,7 +132,7 @@ class TtftTest {
     @Test
     fun ttft_logged_toLogcat() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-ttft-test".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
 
         val fakeProvider = FakeCloudStreamingProvider(tokens = listOf("Logged"))
         val engine = CloudInferenceEngine(

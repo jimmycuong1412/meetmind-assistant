@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.hilt)             // spec 009: Hilt DI
     id("com.google.gms.google-services")  // T001: Firebase
 }
 
@@ -33,6 +34,29 @@ android {
         compose = true
     }
 
+    // T002 (spec 007): NDK build for llama.cpp JNI bridge
+    // liballama.so and libggml*.so are pre-built externally and placed in jniLibs/arm64-v8a/
+    // See app/src/main/jniLibs/arm64-v8a/BUILD_INSTRUCTIONS.md
+    externalNativeBuild {
+        cmake {
+            path = file("CMakeLists.txt")
+            version = "3.22.0+"
+        }
+    }
+
+    defaultConfig {
+        externalNativeBuild {
+            cmake {
+                abiFilters += "arm64-v8a"
+                arguments += listOf(
+                    "-DANDROID_PLATFORM=android-28",
+                    "-DGGML_OPENCL=ON",
+                    "-DGGML_OPENCL_USE_ADRENO_KERNELS=ON"
+                )
+            }
+        }
+    }
+
     testOptions {
         unitTests {
             isReturnDefaultValues = true   // prevent "Method not mocked" for Android stubs
@@ -48,6 +72,19 @@ android {
             excludes += "META-INF/LICENSE.txt"
             excludes += "META-INF/NOTICE"
             excludes += "META-INF/NOTICE.txt"
+        }
+    }
+}
+
+
+// spec 009: Force javapoet 1.13.0 everywhere (replaces 1.10.0 which lacks ClassName.canonicalName()).
+// Required for hiltAggregateDepsDebug to succeed — Hilt 2.56.2 calls canonicalName() which
+// was introduced in javapoet 1.13.0.
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "com.squareup" && requested.name == "javapoet") {
+            useVersion("1.13.0")
+            because("Hilt AggregateDepsTask requires ClassName.canonicalName() from javapoet >= 1.13.0")
         }
     }
 }
@@ -100,6 +137,13 @@ dependencies {
 
     // Material Design (for app theme)
     implementation(libs.material)
+
+    // Hilt DI — spec 009
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
+    testImplementation(libs.hilt.testing)
+    kspTest(libs.hilt.compiler)
 
     // Testing — spec 006
     testImplementation(libs.junit)

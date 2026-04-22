@@ -57,6 +57,15 @@
             android:exported="false"
             android:foregroundServiceType="microphone|dataSync" />
 
+        <!--
+            spec 009 T046: Model download foreground service.
+            foregroundServiceType=dataSync required for background HTTP downloads (API 34+).
+        -->
+        <service
+            android:name=".service.ModelDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
     </application>
 
 </manifest>

@@ -10,6 +10,7 @@ import com.meetmind.assistant.data.model.SessionMode
 import com.meetmind.assistant.helpers.FakeApiKeyStore
 import com.meetmind.assistant.helpers.FakeCloudStreamingProvider
 import com.meetmind.assistant.helpers.FakeConnectivityChecker
+import com.meetmind.assistant.helpers.enableProvider
 import com.meetmind.assistant.helpers.testDataStore
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,7 +34,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], manifest = Config.NONE)
+@Config(sdk = [33], manifest = Config.NONE, application = android.app.Application::class)
 class CloudInferenceEngineTest {
 
     private val fallbackProvider = CloudInferenceEngine.OnDeviceFallback { _ ->
@@ -71,7 +72,7 @@ class CloudInferenceEngineTest {
     @Test
     fun streamCloud_emitsTokensThenComplete() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val fakeProvider = FakeCloudStreamingProvider(tokens = listOf("Hi", " there"))
         val engine = CloudInferenceEngine(
             context = ApplicationProvider.getApplicationContext(),
@@ -96,7 +97,7 @@ class CloudInferenceEngineTest {
     @Test
     fun fallback_networkUnavailable() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val connectivity = FakeConnectivityChecker(isAvailable = false)
         val engine = CloudInferenceEngine(
             context = ApplicationProvider.getApplicationContext(),
@@ -120,9 +121,10 @@ class CloudInferenceEngineTest {
      * Uses StandardTestDispatcher so advanceTimeBy controls virtual time.
      */
     @Test
-    fun fallback_timeout_5s() = runTest(StandardTestDispatcher()) {
-        val (apiKeyStore, configRepo) = makeComponents(StandardTestDispatcher())
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+    fun fallback_timeout_5s() = runTest {
+        // Share testScheduler so advanceTimeBy controls all coroutines
+        val (apiKeyStore, configRepo) = makeComponents(StandardTestDispatcher(testScheduler))
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val slowProvider = FakeCloudStreamingProvider(firstTokenDelayMs = 6_000L)
         val engine = CloudInferenceEngine(
             context = ApplicationProvider.getApplicationContext(),
@@ -150,7 +152,7 @@ class CloudInferenceEngineTest {
     @Test
     fun fallback_perSuggestion_retriesCloudNextQuestion() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val connectivity = FakeConnectivityChecker(isAvailable = false)
         val fakeProvider = FakeCloudStreamingProvider(tokens = listOf("Hello"))
         val engine = CloudInferenceEngine(
@@ -177,7 +179,7 @@ class CloudInferenceEngineTest {
     @Test
     fun fallback_authError_disablesCloud() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val authErrorProvider = FakeCloudStreamingProvider(
             throwOnStream = RuntimeException("401 Unauthorized — invalid API key")
         )
@@ -205,8 +207,7 @@ class CloudInferenceEngineTest {
     @Test
     fun fallback_providerError_doesNotDisableCloud() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
-        configRepo.updateConnectionStatus(CloudProvider.CLAUDE, connected = true)
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
 
         val providerErrorProvider = FakeCloudStreamingProvider(
             throwOnStream = RuntimeException("Service unavailable (503)")
@@ -234,7 +235,7 @@ class CloudInferenceEngineTest {
     @Test
     fun dataTruncation_questionOver600Chars() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val capturedProvider = FakeCloudStreamingProvider()
         val engine = CloudInferenceEngine(
             context = ApplicationProvider.getApplicationContext(),
@@ -255,7 +256,7 @@ class CloudInferenceEngineTest {
     @Test
     fun dataTruncation_systemPromptOver320Chars() = runTest(UnconfinedTestDispatcher()) {
         val (apiKeyStore, configRepo) = makeComponents()
-        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.enableProvider(CloudProvider.CLAUDE, apiKeyStore)
         val capturedProvider = FakeCloudStreamingProvider()
         val engine = CloudInferenceEngine(
             context = ApplicationProvider.getApplicationContext(),
@@ -270,5 +271,34 @@ class CloudInferenceEngineTest {
         engine.streamSuggestion(makeRequest(systemPrompt = "B".repeat(400))).toList()
 
         assertEquals(320, capturedProvider.lastRequest?.systemPrompt?.length)
+    }
+
+    /** Contract 3.9: Cloud disabled (isEnabled=false) triggers CLOUD_DISABLED fallback */
+    @Test
+    fun fallback_cloudDisabled_emitsCloudDisabled() = runTest(UnconfinedTestDispatcher()) {
+        val (apiKeyStore, configRepo) = makeComponents()
+        // Key is saved and validated, but cloud is NOT enabled
+        apiKeyStore.saveKey(CloudProvider.CLAUDE, "sk-ant-test-key".toByteArray())
+        configRepo.updateConnectionStatus(CloudProvider.CLAUDE, connected = true)
+        // intentionally skip: configRepo.setEnabled(CloudProvider.CLAUDE, enabled = true)
+
+        val fakeProvider = FakeCloudStreamingProvider(tokens = listOf("should not reach"))
+        val engine = CloudInferenceEngine(
+            context = ApplicationProvider.getApplicationContext(),
+            apiKeyStore = apiKeyStore,
+            configRepository = configRepo,
+            geminiProvider = fakeProvider,
+            claudeProviderFactory = { _ -> fakeProvider },
+            onDeviceFallback = fallbackProvider,
+            connectivityChecker = { true }
+        )
+
+        val events = engine.streamSuggestion(makeRequest()).toList()
+
+        val fallback = events.filterIsInstance<InferenceEvent.FallbackActivated>()
+        assertEquals(1, fallback.size)
+        assertEquals(FallbackReason.CLOUD_DISABLED, fallback.first().reason)
+        // On-device fallback should run
+        assertTrue(events.any { it is InferenceEvent.Token && (it as InferenceEvent.Token).text == "[on-device]" })
     }
 }

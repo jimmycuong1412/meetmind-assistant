@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meetmind.assistant.viewmodel.HomeViewModel
@@ -37,7 +38,8 @@ import com.meetmind.assistant.viewmodel.HomeViewModel
 fun HomeScreen(
     viewModel: HomeViewModel,
     onStartSession: () -> Unit,
-    onOpenCloudSettings: () -> Unit
+    onOpenCloudSettings: () -> Unit,
+    onOpenModelSetup: () -> Unit = {}  // T035 (spec 007): navigate to On-Device Model screen
 ) {
     val cloudConfig by viewModel.activeCloudConfig.collectAsStateWithLifecycle()
     val isCloudEnabled by viewModel.isCloudEnabled.collectAsStateWithLifecycle()
@@ -50,6 +52,13 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("MeetMind") },
                 actions = {
+                    // T035 (spec 007): On-Device Model setup entry
+                    IconButton(onClick = onOpenModelSetup) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "On-Device Model"
+                        )
+                    }
                     IconButton(onClick = onOpenCloudSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Cloud AI Settings")
                     }
@@ -94,13 +103,15 @@ fun HomeScreen(
                         Switch(
                             checked = false,
                             onCheckedChange = null, // disabled
-                            enabled = false
+                            enabled = false,
+                            modifier = Modifier.testTag("cloud_mode_toggle")
                         )
                     }
                 } else {
                     Switch(
                         checked = isCloudEnabled,
-                        onCheckedChange = { viewModel.onToggleCloud(it) }
+                        onCheckedChange = { viewModel.onToggleCloud(it) },
+                        modifier = Modifier.testTag("cloud_mode_toggle")
                     )
                 }
             }

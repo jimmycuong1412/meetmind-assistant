@@ -1,9 +1,12 @@
 // T027: SessionViewModel — exposes badge state and streaming suggestion tokens
+// T014 (spec 008): Added analysisEvent StateFlow + cadence lifecycle
+// spec 009 — T019: migrated to @HiltViewModel @Inject constructor; Factory deleted
 package com.meetmind.assistant.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.meetmind.assistant.analysis.AnalysisEvent
+import com.meetmind.assistant.analysis.AnalysisCadenceController
 import com.meetmind.assistant.data.model.CloudBadgeState
 import com.meetmind.assistant.data.model.CloudInferenceRequest
 import com.meetmind.assistant.data.model.CloudProvider
@@ -13,6 +16,7 @@ import com.meetmind.assistant.data.model.SessionMode
 import com.meetmind.assistant.inference.CloudBadgeController
 import com.meetmind.assistant.inference.CloudInferenceEngine
 import com.meetmind.assistant.storage.CloudProviderConfigRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,16 +26,20 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class SessionViewModel(
+@HiltViewModel
+class SessionViewModel @Inject constructor(
     private val cloudInferenceEngine: CloudInferenceEngine,
     private val configRepository: CloudProviderConfigRepository,
-    activeProvider: CloudProvider = CloudProvider.GEMINI
+    /** Singleton cadence controller injected by Hilt; wired to the app-scoped shared buffer. */
+    private val cadenceController: AnalysisCadenceController
 ) : ViewModel() {
+
 
     private val badgeController = CloudBadgeController(
         configRepository = configRepository,
-        activeProvider = activeProvider,
+        activeProvider = CloudProvider.GEMINI,
         scope = viewModelScope
     )
 
@@ -47,8 +55,15 @@ class SessionViewModel(
     val currentSuggestionTokens: StateFlow<String> = _currentSuggestionTokens.asStateFlow()
 
     /**
-     * The active cloud config — whichever provider has a saved + validated key.
-     * Prefers Claude if both are configured, falls back to GEMINI default.
+     * T014 (spec 008): Latest analysis event from the continuous analysis cadence.
+     * Null when no analysis has run yet or analysisEnabled = false.
+     * Reset to null when a question-detection event takes priority (FR-010 / T017).
+     */
+    private val _analysisEvent = MutableStateFlow<AnalysisEvent?>(null)
+    val analysisEvent: StateFlow<AnalysisEvent?> = _analysisEvent.asStateFlow()
+
+    /**
+     * The active cloud config — whichever provider is currently enabled.
      */
     val activeCloudConfig: StateFlow<CloudProviderConfig> = combine(
         configRepository.observe(CloudProvider.CLAUDE),
@@ -57,8 +72,6 @@ class SessionViewModel(
         when {
             claude.isEnabled -> claude
             gemini.isEnabled -> gemini
-            claude.connectionStatus == true -> claude
-            gemini.connectionStatus == true -> gemini
             else -> gemini
         }
     }.stateIn(
@@ -66,6 +79,19 @@ class SessionViewModel(
         SharingStarted.WhileSubscribed(5_000),
         CloudProviderConfig(provider = CloudProvider.GEMINI, encryptedApiKey = null)
     )
+
+    init {
+        // T014: Start cadence controller and collect its events into analysisEvent StateFlow
+        cadenceController.start(viewModelScope)
+        cadenceController.events
+            .onEach { event ->
+                // FR-010 / T017: suppress analysis card if a question suggestion is active
+                if (_currentSuggestionTokens.value.isBlank()) {
+                    _analysisEvent.value = event
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
     /** Called by the audio processing service when a new question is detected. */
     fun onInferenceEvent(event: InferenceEvent) {
@@ -85,15 +111,14 @@ class SessionViewModel(
     /** Reset token stream when a new question is detected */
     fun onNewQuestion() {
         _currentSuggestionTokens.value = ""
+        // T017: Clear any pending analysis card when a question takes priority
+        _analysisEvent.value = null
         badgeController.onNewQuestion()
     }
 
     /**
      * Submit a question for cloud inference. Resets the current suggestion,
      * then streams inference events into [onInferenceEvent].
-     *
-     * @param questionText The user's question text (e.g., detected by VAD/ASR or typed manually).
-     * @param sessionMode  The active session mode, defaults to INTERVIEW.
      */
     fun onQuestionDetected(
         questionText: String,
@@ -119,13 +144,14 @@ class SessionViewModel(
         }
     }
 
-    class Factory(
-        private val cloudInferenceEngine: CloudInferenceEngine,
-        private val configRepository: CloudProviderConfigRepository,
-        private val activeProvider: CloudProvider = CloudProvider.GEMINI
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T =
-            SessionViewModel(cloudInferenceEngine, configRepository, activeProvider) as T
+    /** T034 (spec 008): Dismiss analysis card — called from SessionScreen dismiss button. */
+    fun dismissAnalysisEvent() {
+        _analysisEvent.value = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // T015 (spec 008): Cancel cadence on session end to prevent in-flight inference (FR-015)
+        cadenceController.stop()
     }
 }

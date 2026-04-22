@@ -31,7 +31,7 @@ import org.robolectric.annotation.Config
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [33], manifest = Config.NONE)
+@Config(sdk = [33], manifest = Config.NONE, application = android.app.Application::class)
 class TinkApiKeyStoreTest {
 
     private lateinit var store: ApiKeyStore
