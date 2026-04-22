@@ -3,10 +3,19 @@
 **Feature Branch**: `feature/008-continuous-conversation-analysis`
 **Input**: Design documents from `/specs/008-continuous-conversation-analysis/`
 **Prerequisites**: spec.md ✅ plan.md ✅ research.md ✅ data-model.md ✅ contracts/ ✅ quickstart.md ✅
+**Last Updated**: 2026-04-22 (clarification pass — FR-002 priority order, FR-005 QUESTION routing, FR-014 heuristic NoSignal)
 
 **Tests**: Contract tests ARE included — explicitly required by spec User Story 4 (P1).
 
 **Organization**: Tasks grouped by user story for independent implementation and testing.
+
+### Clarification Notes (2026-04-22)
+
+The following were formally clarified and are already implemented correctly in the codebase:
+
+- **FR-002 tie-breaking**: `DECISION > ACTION_ITEM > CONFUSION > QUESTION` (lower ordinal = higher priority in `EventType` enum) — `AnalysisEvent.kt` uses this ordering; `data-model.md` updated to match
+- **FR-005 QUESTION routing**: `EventType.QUESTION` result routes to `suggestionEvents` StateFlow ONLY; `analysisEvent` is NOT updated — `DefaultConversationAnalyzer.kt` must verify this is implemented
+- **FR-014 heuristic NoSignal**: When keyword heuristic finds no match (no-model + cloud-disabled conditions), return `AnalysisEvent.NoSignal` — no card shown; `analysisEvent` stays `null`
 
 ---
 
@@ -129,6 +138,8 @@
 - [X] T034 [P] Add `onTrimMemory(TRIM_MEMORY_RUNNING_CRITICAL)` hook in `MeetMindApplication` to stop `AnalysisCadenceController` (mirrors spec 007 model unload pattern) in `app/src/main/kotlin/com/meetmind/assistant/MeetMindApplication.kt`
 - [X] T035 Wire `TranscriptWindowBuffer.append()` into the existing ASR segment callback in `AudioProcessingForegroundService` so live transcript feeds the analysis window in `app/src/main/kotlin/com/meetmind/assistant/service/AudioProcessingForegroundService.kt`
 - [ ] T036 Run APK smoke test on Y700 Gen 3 per `quickstart.md`: speak each example phrase (ActionItem, Decision, Confusion), verify card appears within 3s, verify logcat timestamps
+- [X] T037 Verify FR-005 QUESTION routing in `DefaultConversationAnalyzer`: confirm `EventType.QUESTION` result is forwarded only to `CloudInferenceEngine.streamSuggestion()` path and `analysisEvent` StateFlow is NOT updated (add assertion to C1.2 test if missing) in `app/src/test/kotlin/com/meetmind/assistant/analysis/ConversationAnalyzerTest.kt`
+- [X] T038 Verify FR-014 heuristic NoSignal path in `DefaultConversationAnalyzer`: confirm that when keyword heuristic returns no match AND no model loaded AND cloud disabled, `AnalysisEvent.NoSignal` is emitted (add test case to `ConversationAnalyzerTest.kt` if not already covered)
 
 ---
 

@@ -15,6 +15,12 @@
 - Q: Is SC-007 battery drain a merge gate or post-merge monitoring target? → A: Post-merge monitoring only; not required before branch merge
 - Q: Does the TranscriptBuffer assumption accurately reflect the implementation? → A: Updated — `TranscriptWindowBuffer` (spec 008) is the new implementation; spec 004 ASR feeds it via `onTranscriptSegment()` once the VAD/Vosk pipeline is complete
 
+### Session 2026-04-22
+
+- Q: When `EventType.QUESTION` is classified, does the result flow through `analysisEvent` StateFlow or bypass it and route only to `suggestionEvents`? → A: Bypass `analysisEvent` entirely; route only to `suggestionEvents` (FR-005 updated)
+- Q: When multiple event type patterns match in the same window, what is the canonical tie-breaking priority order? → A: Decision > ActionItem > Confusion > Question (FR-002 updated)
+- Q: When the keyword heuristic (FR-014 fallback) finds no pattern match, should anything be shown in the UI? → A: Nothing shown — return `AnalysisEvent.NoSignal`, `analysisEvent` stays `null` (FR-014 updated)
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Sliding-Window Proactive Analysis (Priority: P1)
@@ -131,10 +137,10 @@ must be verified before hardware testing.
 ### Functional Requirements
 
 - **FR-001**: The app MUST run `ConversationAnalyzer.analyze()` on a repeating cadence (`ANALYSIS_INTERVAL_MS`, default 20s) while a session is active and `analysisEnabled = true`
-- **FR-002**: `ConversationAnalyzer` MUST classify the transcript window into exactly one of: `EventType.QUESTION`, `EventType.ACTION_ITEM`, `EventType.DECISION`, `EventType.CONFUSION`, or return `AnalysisEvent.NoSignal`
+- **FR-002**: `ConversationAnalyzer` MUST classify the transcript window into exactly one of: `EventType.QUESTION`, `EventType.ACTION_ITEM`, `EventType.DECISION`, `EventType.CONFUSION`, or return `AnalysisEvent.NoSignal`; when multiple patterns match in the same window, tie-breaking MUST follow priority order: `DECISION` > `ACTION_ITEM` > `CONFUSION` > `QUESTION`
 - **FR-003**: The transcript window passed to the analyzer MUST be capped at `windowSizeSeconds` (default 60s) of the most recent transcript text; older text MUST be excluded (data minimisation, Principle I)
 - **FR-004**: Text passed to any inference call from the analyzer MUST NOT exceed 600 characters (same truncation rule as existing `OnDeviceLlamaProvider` and `CloudInferenceEngine`)
-- **FR-005**: When `EventType.QUESTION` is classified, `ConversationAnalyzer` MUST delegate to the existing `CloudInferenceEngine.streamSuggestion()` path rather than duplicating inference logic
+- **FR-005**: When `EventType.QUESTION` is classified, `ConversationAnalyzer` MUST delegate to the existing `CloudInferenceEngine.streamSuggestion()` path rather than duplicating inference logic; the result MUST route only to the existing `suggestionEvents` StateFlow and MUST NOT be emitted to `analysisEvent` StateFlow
 - **FR-006**: `AnalysisCadenceController` MUST skip a tick if a prior analysis inference is still in-flight (debounce guard)
 - **FR-007**: `AnalysisCadenceController` MUST enforce a minimum cadence of 10 seconds regardless of the configured `analysisInterval`
 - **FR-008**: `SessionViewModel` MUST expose `analysisEvent: StateFlow<AnalysisEvent?>` in addition to the existing `suggestionEvents` flow
@@ -143,7 +149,7 @@ must be verified before hardware testing.
 - **FR-011**: Duplicate suppression MUST be applied: if the leading 64 chars of a new analysis result matches a card displayed in the last 60s, the new card MUST be suppressed
 - **FR-012**: `AnalysisSettings` MUST be persisted to DataStore Preferences (`analysis_enabled`, `analysis_interval_s`, `analysis_window_s`)
 - **FR-013**: When `analysisEnabled = false`, all cadence timers MUST be stopped and no inference calls MUST be made; existing question-detection is unaffected
-- **FR-014**: If no on-device model is loaded and cloud is disabled, `ConversationAnalyzer` MUST use a keyword-matching heuristic classifier and return an `AnalysisEvent` with `suggestionText = null` (label-only card)
+- **FR-014**: If no on-device model is loaded and cloud is disabled, `ConversationAnalyzer` MUST use a keyword-matching heuristic classifier; if a pattern matches, it MUST return an `AnalysisEvent` with `suggestionText = null` (label-only card); if no pattern matches, it MUST return `AnalysisEvent.NoSignal` and `analysisEvent` MUST remain `null` (no card shown)
 - **FR-015**: `SessionViewModel.onCleared()` MUST cancel the analysis coroutine scope to prevent in-flight inference after session end
 
 ### Key Entities

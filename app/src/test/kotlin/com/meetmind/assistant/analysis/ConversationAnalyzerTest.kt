@@ -163,4 +163,77 @@ class ConversationAnalyzerTest {
 
         assertTrue("Second identical result within 60s should be NoSignal", second is AnalysisEvent.NoSignal)
     }
+
+    // ── T037: FR-005 — QUESTION result emits AnalysisEvent.Question (not other types) ──
+    //
+    // The ViewModel is responsible for routing Question events to suggestionEvents
+    // (not analysisEvent). This test verifies the analyzer side: QUESTION classification
+    // produces AnalysisEvent.Question, NOT ActionItem / Decision / Confusion.
+    // The SessionViewModelAnalysisTest.C3-2 verifies the routing side.
+
+    @Test
+    fun `T037 C1-2 QUESTION result is AnalysisEvent_Question not other subtypes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val fake = FakeInferenceEngine(stubTokens = listOf("Consider breaking it down into milestones."))
+            val analyzer = makeAnalyzer(fake)
+
+            val event = analyzer.analyze("What is the deadline for the alpha release?").first()
+
+            assertTrue(
+                "FR-005: QUESTION classification must produce AnalysisEvent.Question, not ${event::class.simpleName}",
+                event is AnalysisEvent.Question
+            )
+            // Must NOT produce any other AnalysisEvent subtype
+            assertTrue("Must not be ActionItem", event !is AnalysisEvent.ActionItem)
+            assertTrue("Must not be Decision",   event !is AnalysisEvent.Decision)
+            assertTrue("Must not be Confusion",  event !is AnalysisEvent.Confusion)
+            assertTrue("Must not be NoSignal",   event !is AnalysisEvent.NoSignal)
+            // Inference engine must be called exactly once (delegates to existing path)
+            assertEquals("FR-005: inference engine must be called once for QUESTION", 1, fake.callCount.get())
+        }
+
+    // ── T038: FR-014 — heuristic NoSignal: no keyword match + no model + cloud disabled ──
+    //
+    // When the keyword heuristic finds no pattern match in non-blank input AND no on-device
+    // model is loaded (simulating no-model + cloud-disabled conditions), the analyzer must
+    // return AnalysisEvent.NoSignal immediately with zero inference calls.
+
+    @Test
+    fun `T038 FR-014 heuristic no-match with no model loaded emits NoSignal`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val fake = FakeInferenceEngine() // no stub tokens — should never be called
+            // modelLoaded = false simulates no model + effectively cloud-disabled path
+            val analyzer = makeAnalyzer(fake, modelLoaded = false)
+
+            // Non-blank text with no action-item / decision / confusion / question keywords
+            val ambiguousText = "The weather is nice and the meeting room is comfortable today."
+            val event = analyzer.analyze(ambiguousText).first()
+
+            assertTrue(
+                "FR-014: non-blank text with no keyword match must emit NoSignal, got ${event::class.simpleName}",
+                event is AnalysisEvent.NoSignal
+            )
+            assertEquals(
+                "FR-014: inference engine must NOT be called when heuristic returns no match",
+                0,
+                fake.callCount.get()
+            )
+        }
+
+    @Test
+    fun `T038b FR-014 heuristic no-match with model loaded also emits NoSignal`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val fake = FakeInferenceEngine(stubTokens = listOf("should not appear"))
+            val analyzer = makeAnalyzer(fake, modelLoaded = true)
+
+            // Filler speech — no actionable keywords, not blank, no question marks, no wh-word at start
+            val fillerText = "The quarterly report is looking great and the numbers are positive."
+            val event = analyzer.analyze(fillerText).first()
+
+            assertTrue(
+                "Filler text with no keyword match must emit NoSignal even when model is loaded",
+                event is AnalysisEvent.NoSignal
+            )
+            assertEquals("No inference call for NoSignal path", 0, fake.callCount.get())
+        }
 }

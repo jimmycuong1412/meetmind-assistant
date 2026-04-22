@@ -55,21 +55,18 @@ Used internally by the classifier to rank concurrent signals before constructing
 
 ```
 enum class EventType {
-    QUESTION,     // ordinal 0 — lowest classifier priority (delegates to existing path)
+    DECISION,     // ordinal 0 — highest classifier priority (clarified 2026-04-22)
     ACTION_ITEM,  // ordinal 1
-    DECISION,     // ordinal 2
-    CONFUSION;    // ordinal 3 — highest classifier priority
+    CONFUSION,    // ordinal 2
+    QUESTION;     // ordinal 3 — lowest classifier priority (delegates to existing path)
 
-    companion object {
-        /** Higher ordinal wins when multiple types are detected in the same window. */
-        fun highestPriority(types: Set<EventType>): EventType =
-            types.maxBy { it.ordinal }
-    }
+    /** Returns true if this type has higher priority than [other] (lower ordinal wins). */
+    fun hasHigherPriorityThan(other: EventType): Boolean = ordinal < other.ordinal
 }
 ```
 
-**Priority order** (highest → lowest for tie-breaking):
-`CONFUSION` > `DECISION` > `ACTION_ITEM` > `QUESTION`
+**Priority order** (highest → lowest for tie-breaking, FR-002 — clarified 2026-04-22):
+`DECISION` > `ACTION_ITEM` > `CONFUSION` > `QUESTION`
 
 Only one `EventType` is promoted per tick; exactly one `AnalysisEvent` subtype is emitted.
 
