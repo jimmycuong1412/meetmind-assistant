@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Info -->
+    <string name="app_name">MeetMind AI</string>
+
+    <!-- Common Actions -->
+    <string name="start">Bắt đầu</string>
+    <string name="stop">Dừng</string>
+    <string name="copy">Sao chép</string>
+    <string name="clear">Xóa sạch</string>
+    <string name="delete">Xóa</string>
+    <string name="dismiss">Đóng</string>
+    <string name="cancel">Hủy</string>
+    <string name="settings">Cài đặt</string>
+    <string name="save">Lưu</string>
+
+    <!-- Sessions Screen -->
+    <string name="sessions_title">MeetMind AI</string>
+    <string name="sessions_subtitle">Bản ghi của tôi</string>
+    <string name="new_transcription">Bản ghi mới</string>
+    <string name="session_unnamed">(Chưa đặt tên)</string>
+
+    <!-- Main Screen - Tabs -->
+    <string name="tab_transcription">Bản ghi</string>
+    <string name="tab_insights">Phân tích AI</string>
+
+    <!-- AI Insights Tab -->
+    <string name="final_insight_label">Tóm tắt tổng quát</string>
+    <string name="insight_label">Phân tích AI</string>
+    <string name="action_items">Việc cần làm</string>
+    <string name="insight_summary">Tóm tắt</string>
+    <string name="insight_tasks">Công việc</string>
+    <string name="source_transcription">Nguồn bản ghi:</string>
+    <string name="generating_ai_insights">Đang tạo phân tích AI\u2026</string>
+
+    <!-- New Session Dialog -->
+    <string name="new_session_output_language">Ngôn ngữ đầu ra bản dịch</string>
+    <string name="new_session_output_language_label">Ngôn ngữ đầu ra</string>
+    <string name="mode_simple_listening">Nghe đơn giản</string>
+    <string name="mode_short_meeting">Cuộc họp ngắn</string>
+    <string name="mode_long_meeting">Cuộc họp dài</string>
+    <string name="mode_translation_live">Dịch trực tiếp</string>
+
+    <!-- System Prompts — Vietnamese version -->
+    <string name="prompt_simple_listening">Bạn là một trợ lý AI phân tích bản ghi âm. Hãy phản hồi bằng tiếng Việt 100%. Tuy nhiên, hãy giữ nguyên các thuật ngữ chuyên môn kỹ thuật bằng tiếng Anh (ví dụ: technical terms, framework, API, v.v.) để đảm bảo tính chính xác.\nHãy viết một tiêu đề ngắn (tối đa 8 từ) và một bản tóm tắt súc tích tương ứng với độ dài đầu vào.\nCHỈ xuất ra JSON hợp lệ với cấu trúc chính xác sau đây. Không dùng markdown, không dùng hàng rào mã (code fences), không dùng dấu ngoặc ngược (backticks):\n{\"tiêu_đề\": \"...\", \"tóm_tắt\": \"...\"}\nHãy xuất trực tiếp JSON.</string>
+    <string name="prompt_short_meeting">Bạn là một trợ lý cuộc họp phân tích các cuộc thảo luận. Hãy phản hồi bằng tiếng Việt hoàn toàn, nhưng giữ nguyên các thuật ngữ chuyên môn hoặc tên riêng kỹ thuật bằng tiếng Anh.\nHãy viết một tiêu đề (tối đa 8 từ), một bản tóm tắt các quyết định quan trọng và các điểm thảo luận (ít nhất 3-5 câu), và một danh sách các việc cần làm thực tế.\nCHỈ xuất ra JSON hợp lệ với cấu trúc chính xác sau đây. Không dùng markdown, không dùng hàng rào mã, không dùng dấu ngoặc ngược:\n{\"tiêu_đề\": \"...\", \"tóm_tắt\": \"...\", \"việc_cần_làm\": [\"...\", \"...\"]}\nHãy phản hồi trực tiếp và rõ ràng.</string>
+    <string name="prompt_long_meeting">Bạn là một trợ lý phân tích các cuộc thảo luận kéo dài. Viết toàn bộ phản hồi bằng tiếng Việt, ngoại trừ các thuật ngữ chuyên môn kỹ thuật cần giữ nguyên bằng tiếng Anh để giữ đúng ngữ nghĩa.\nHãy viết một tiêu đề (tối đa 8 từ) nắm bắt chủ đề chính, một bản tóm tắt toàn diện về các chủ đề chính, quyết định và kết luận, và một danh sách các việc cần làm thực tế.\nCHỈ xuất ra JSON hợp lệ với cấu trúc chính xác sau đây. Không dùng markdown, không dùng hàng rào mã, không dùng dấu ngoặc ngược:\n{\"tiêu_đề\": \"...\", \"tóm_tắt\": \"...\", \"việc_cần_làm\": [\"...\", \"...\"]}\nTập trung vào các thông tin chi tiết quan trọng và kết quả cụ thể.</string>
+    <string name="prompt_translation">Bạn là một biên dịch viên chuyên nghiệp.\nHãy dịch văn bản sau sang {target_language}.\nChỉ xuất ra bản dịch. Không giải thích, không thêm nhãn hay tiền tố.</string>
+
+    <!-- JSON output field names in Vietnamese -->
+    <string name="json_field_title">tiêu_đề</string>
+    <string name="json_field_summary">tóm_tắt</string>
+    <string name="json_field_action_items">việc_cần_làm</string>
+
+    <!-- Batch insight prompts -->
+    <string name="prompt_batch_chunk_summary">Bạn là một trợ lý phân tích cuộc họp. Hãy tóm tắt đoạn ghi chép sau bằng tiếng Việt, giữ nguyên các thuật ngữ chuyên môn kỹ thuật bằng tiếng Anh.\nBao gồm: các chủ đề chính, quyết định đã đưa ra và các việc cần làm.\nCHỈ xuất ra JSON hợp lệ. Không dùng markdown hay hàng rào mã.\n{\"tiêu_đề\": \"...\", \"tóm_tắt\": \"...\", \"việc_cần_làm\": [\"...\"]}</string>
+    <string name="prompt_batch_merge">Bạn là một trợ lý phân tích cuộc họp. Dưới đây là tóm tắt của các phần liên tiếp trong một bản ghi âm. Hãy hợp nhất và viết phản hồi cuối cùng bằng tiếng Việt 100%.\nHãy hợp nhất chúng thành một bản tóm tắt toàn diện và mạch lạc duy nhất. Loại bỏ các việc cần làm trùng lặp.\nCHỈ xuất ra JSON hợp lệ. Không dùng markdown hay hàng rào mã.\n{\"tiêu_đề\": \"...\", \"tóm_tắt\": \"...\", \"việc_cần_làm\": [\"...\"]}</string>
+
+    <string name="session_topic_prefix">Chủ đề chính của bản ghi này: \"%1$s\". Hãy tập trung phân tích vào chủ đề này.</string>
+    <string name="history_insight_copy_suffix_format">(Phân tích AI lúc %s)</string>
+    <string name="history_insight_copy_info">Một bản sao mới của phiên này sẽ được tạo với phân tích AI.\nPhiên gốc sẽ không bị thay đổi.</string>
+    <string name="onboarding_language_label">Ngôn ngữ:</string>
+</resources>

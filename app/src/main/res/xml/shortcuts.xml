@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Quick Start shortcut: appears in long-press launcher menu (Android 7.1+).
+        Launches MainActivity with ACTION_QUICK_START so it bypasses the New Session
+        dialog and immediately starts a session with the last-used (or first) template.
+    -->
+    <shortcut
+        android:shortcutId="quick_start"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_quick_start_short_label"
+        android:shortcutLongLabel="@string/shortcut_quick_start_label">
+        <intent
+            android:action="com.hearopilot.app.ACTION_QUICK_START"
+            android:targetClass="com.hearopilot.app.ui.MainActivity"
+            android:targetPackage="com.hearopilot.app" />
+        <categories android:name="android.shortcut.conversation" />
+    </shortcut>
+
+</shortcuts>
