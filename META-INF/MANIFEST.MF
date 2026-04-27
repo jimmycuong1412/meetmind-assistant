@@ -1,4 +1,0 @@
-Manifest-Version: 1.0
-Implementation-Title: anthropic-java
-Implementation-Version: 2.24.0
-
