@@ -10,6 +10,9 @@ captures/
 .cxx/
 out/
 
+# graphify cache
+graphify-out/cache
+
 # Generated files
 *.class
 *.jar
