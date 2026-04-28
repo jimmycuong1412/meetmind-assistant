@@ -1,16 +1,16 @@
-# HearoPilot
+# MeetMind Assistant
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Min SDK](https://img.shields.io/badge/Min%20SDK-API%2030-green.svg)](https://developer.android.com/about/versions/11/highlights)
-[![Build](https://github.com/Helldez/HearoPilot-App/actions/workflows/build.yml/badge.svg)](https://github.com/Helldez/HearoPilot-App/actions/workflows/build.yml)
+[![Build](https://github.com/Helldez/MeetMind Assistant-App/actions/workflows/build.yml/badge.svg)](https://github.com/Helldez/MeetMind Assistant-App/actions/workflows/build.yml)
 
-<a href="https://play.google.com/store/apps/details?id=com.hearopilot.app">
+<a href="https://play.google.com/store/apps/details?id=com.meetmind.assistant">
   <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">
 </a>
 
 **On-device audio transcription and AI insights for Android**
 
-HearoPilot combines a local Speech-to-Text engine with a local Large Language Model to deliver
+MeetMind Assistant combines a local Speech-to-Text engine with a local Large Language Model to deliver
 real-time transcription and AI-generated insights — entirely offline, with no data sent to any
 server.
 
@@ -59,7 +59,7 @@ No outer layer may import from an inner layer's implementation; only interfaces 
 ### Module Layout
 
 ```
-HearoPilot/
+MeetMind Assistant/
 ├── app/              # Composable UI, Navigation, Hilt entry points
 ├── domain/           # Pure Kotlin: models, repository interfaces, use cases
 ├── data/             # Repository impls, Room DB, DataStore, ModelDownloadManager
@@ -253,8 +253,8 @@ Token budget flows from `SyncSttLlmUseCase` → `LlmRepository` → `LlamaAndroi
 git lfs install
 
 # 2. Clone (LFS objects are downloaded automatically)
-git clone https://github.com/Helldez/HearoPilot-App.git
-cd HearoPilot
+git clone https://github.com/Helldez/MeetMind Assistant-App.git
+cd MeetMind Assistant
 
 # 3. Configure Firebase
 #    Copy the example file and fill in your own Firebase project credentials.

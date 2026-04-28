@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
@@ -27,7 +27,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name="com.hearopilot.app.HearoPilotApplication"
+        android:name="com.meetmind.assistant.MeetMindApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -78,7 +78,7 @@
         </activity>
 
         <service
-            android:name="com.hearopilot.app.service.RecordingService"
+            android:name="com.meetmind.assistant.service.RecordingService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="microphone" />
@@ -88,7 +88,7 @@
              Play Store requirement: declared here and FOREGROUND_SERVICE_DATA_SYNC
              permission declared above (API 34+). -->
         <service
-            android:name="com.hearopilot.app.service.ModelDownloadService"
+            android:name="com.meetmind.assistant.service.ModelDownloadService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
@@ -96,7 +96,7 @@
         <!-- Foreground service for on-device LLM inference (batch / history insights).
              Keeps the CPU-bound inference alive when the user backgrounds the app. -->
         <service
-            android:name="com.hearopilot.app.service.LlmProcessingService"
+            android:name="com.meetmind.assistant.service.LlmProcessingService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />

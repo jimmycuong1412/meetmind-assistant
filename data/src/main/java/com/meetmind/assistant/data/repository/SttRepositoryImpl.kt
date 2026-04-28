@@ -1,0 +1,46 @@
+package com.meetmind.assistant.data.repository
+
+import com.meetmind.assistant.data.datasource.SttDataSource
+import com.meetmind.assistant.domain.model.TranscriptionSegment
+import com.meetmind.assistant.domain.repository.SttRepository
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.map
+import java.util.UUID
+import javax.inject.Inject
+
+/**
+ * Implementation of SttRepository that bridges data source to domain layer.
+ *
+ * @property sttDataSource Data source for STT operations
+ */
+class SttRepositoryImpl @Inject constructor(
+    private val sttDataSource: SttDataSource
+) : SttRepository {
+
+    override suspend fun initialize(modelPath: String, languageCode: String): Result<Unit> {
+        return sttDataSource.initialize(modelPath, languageCode)
+    }
+
+    override fun startStreaming(): Flow<TranscriptionSegment> {
+        return sttDataSource.startRecording()
+            .map { result ->
+                TranscriptionSegment(
+                    id = UUID.randomUUID().toString(),
+                    sessionId = "", // Temporary - MainViewModel will replace with actual sessionId
+                    text = result.text,
+                    timestamp = System.currentTimeMillis(),
+                    isComplete = result.isComplete
+                )
+            }
+    }
+
+    override suspend fun stopStreaming() {
+        sttDataSource.stopRecording()
+    }
+
+    override suspend fun releaseModel() {
+        sttDataSource.releaseModel()
+    }
+}

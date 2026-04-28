@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- App Info -->
-    <string name="app_name">MeetMind AI</string>
+    <string name="app_name">MeetMind Assistant</string>
 
     <!-- Common Actions -->
     <string name="start">Bắt đầu</string>
@@ -15,7 +15,7 @@
     <string name="save">Lưu</string>
 
     <!-- Sessions Screen -->
-    <string name="sessions_title">MeetMind AI</string>
+    <string name="sessions_title">MeetMind Assistant</string>
     <string name="sessions_subtitle">Bản ghi của tôi</string>
     <string name="new_transcription">Bản ghi mới</string>
     <string name="session_unnamed">(Chưa đặt tên)</string>

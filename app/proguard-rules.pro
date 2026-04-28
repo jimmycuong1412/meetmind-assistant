@@ -1,5 +1,5 @@
 ##############################################
-# HearoPilot ProGuard / R8 rules
+# MeetMind Assistant ProGuard / R8 rules
 ##############################################
 
 # ---- Crash reporting: preserve stack traces in release ----
@@ -68,11 +68,11 @@
 # ---- Foreground Services: keep action constants used in explicit intents ----
 # ModelDownloadService and LlmProcessingService use companion object ACTION_* constants
 # that are referenced via string comparison in onStartCommand(). R8 must not remove them.
--keepclassmembers class com.hearopilot.app.service.ModelDownloadService {
+-keepclassmembers class com.meetmind.assistant.service.ModelDownloadService {
     public static final java.lang.String ACTION_START;
     public static final java.lang.String ACTION_STOP;
 }
--keepclassmembers class com.hearopilot.app.service.LlmProcessingService {
+-keepclassmembers class com.meetmind.assistant.service.LlmProcessingService {
     public static final java.lang.String ACTION_START;
     public static final java.lang.String ACTION_STOP;
 }
@@ -80,34 +80,34 @@
 # ---- Domain models: sealed classes / data classes used across module boundaries ----
 # DownloadState subclasses are matched by type in service observers; keep class names
 # so the is-checks and smart-casts survive minification across module boundaries.
--keep class com.hearopilot.app.domain.model.DownloadState { *; }
--keep class com.hearopilot.app.domain.model.DownloadState$* { *; }
--keep class com.hearopilot.app.domain.model.LlmModelVariant { *; }
--keep class com.hearopilot.app.domain.model.ThermalThrottle { *; }
--keep class com.hearopilot.app.domain.model.LlmSamplerConfig { *; }
--keep class com.hearopilot.app.domain.model.BatchInsightProgress { *; }
--keep class com.hearopilot.app.domain.model.BatchInsightProgress$* { *; }
--keep class com.hearopilot.app.domain.model.InsightStrategy { *; }
+-keep class com.meetmind.assistant.domain.model.DownloadState { *; }
+-keep class com.meetmind.assistant.domain.model.DownloadState$* { *; }
+-keep class com.meetmind.assistant.domain.model.LlmModelVariant { *; }
+-keep class com.meetmind.assistant.domain.model.ThermalThrottle { *; }
+-keep class com.meetmind.assistant.domain.model.LlmSamplerConfig { *; }
+-keep class com.meetmind.assistant.domain.model.BatchInsightProgress { *; }
+-keep class com.meetmind.assistant.domain.model.BatchInsightProgress$* { *; }
+-keep class com.meetmind.assistant.domain.model.InsightStrategy { *; }
 
 # ---- Notification managers (Hilt-injected into services) ----
--keep class com.hearopilot.app.service.ModelDownloadNotificationManager { *; }
--keep class com.hearopilot.app.service.LlmProcessingNotificationManager { *; }
+-keep class com.meetmind.assistant.service.ModelDownloadNotificationManager { *; }
+-keep class com.meetmind.assistant.service.LlmProcessingNotificationManager { *; }
 
 # ---- Service controller ----
--keep class com.hearopilot.app.domain.service.LlmProcessingServiceController { *; }
--keep class com.hearopilot.app.service.LlmProcessingServiceControllerImpl { *; }
+-keep class com.meetmind.assistant.domain.service.LlmProcessingServiceController { *; }
+-keep class com.meetmind.assistant.service.LlmProcessingServiceControllerImpl { *; }
 
 # ---- Device tier detector ----
--keep class com.hearopilot.app.data.device.DeviceTierDetector { *; }
+-keep class com.meetmind.assistant.data.device.DeviceTierDetector { *; }
 
 # ---- Model config ----
--keep class com.hearopilot.app.data.config.ModelConfig { *; }
--keep class com.hearopilot.app.data.config.DefaultModelConfig { *; }
--keep class com.hearopilot.app.data.config.LowEndModelConfig { *; }
+-keep class com.meetmind.assistant.data.config.ModelConfig { *; }
+-keep class com.meetmind.assistant.data.config.DefaultModelConfig { *; }
+-keep class com.meetmind.assistant.data.config.LowEndModelConfig { *; }
 
 # ---- Thermal monitor ----
--keep class com.hearopilot.app.domain.service.ThermalMonitor { *; }
--keepclassmembers class * implements com.hearopilot.app.domain.service.ThermalMonitor { *; }
+-keep class com.meetmind.assistant.domain.service.ThermalMonitor { *; }
+-keepclassmembers class * implements com.meetmind.assistant.domain.service.ThermalMonitor { *; }
 
 # ---- Strip debug and verbose log calls from release builds ----
 # This removes Log.v() and Log.d() at compile time — errors and warnings are kept

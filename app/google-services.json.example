@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "YOUR_MOBILESDK_APP_ID",
         "android_client_info": {
-          "package_name": "com.hearopilot.app"
+          "package_name": "com.meetmind.assistant"
         }
       },
       "oauth_client": [],

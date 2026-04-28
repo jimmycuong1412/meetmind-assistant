@@ -19,7 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "HearoPilot"
+rootProject.name = "MeetMindAssistant"
 include(":app")
 include(":domain")
 include(":data")

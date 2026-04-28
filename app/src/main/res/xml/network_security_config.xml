@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Network Security Config for HearoPilot.
+    Network Security Config for meetmind.
     minSdk=32 already disables cleartext by default, but this file makes the
     policy explicit and prevents accidental regressions if minSdk is ever lowered.
 

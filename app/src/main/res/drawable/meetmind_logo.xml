@@ -1,0 +1,48 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="512dp"
+    android:height="512dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+
+    <!-- Rounded rectangle background with gradient -->
+    <path
+        android:pathData="M112,0 L400,0 Q512,0 512,112 L512,400 Q512,512 400,512 L112,512 Q0,512 0,400 L0,112 Q0,0 112,0 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="0"
+                android:endY="512"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF8B8CC7"/>
+                <item android:offset="1" android:color="#FF464775"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- M/headphone shape: two lines meeting at center bottom -->
+    <path
+        android:pathData="M100,340 L100,180 L256,290 L412,180 L412,340"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="44"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"/>
+
+    <!-- Center dot -->
+    <path
+        android:pathData="M256,390 m-18,0 a18,18 0 1,0 36,0 a18,18 0 1,0 -36,0"
+        android:fillColor="#E6FFFFFF"/>
+
+    <!-- Left dot -->
+    <path
+        android:pathData="M210,405 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0"
+        android:fillColor="#80FFFFFF"/>
+
+    <!-- Right dot -->
+    <path
+        android:pathData="M302,405 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0"
+        android:fillColor="#80FFFFFF"/>
+
+</vector>

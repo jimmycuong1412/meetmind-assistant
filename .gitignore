@@ -10,8 +10,11 @@ captures/
 .cxx/
 out/
 
-# graphify cache
-graphify-out/cache
+# Kotlin compiler cache
+.kotlin/
+
+# graphify — all generated output (cache, graph, reports, html)
+graphify-out/
 
 # Generated files
 *.class
@@ -26,6 +29,8 @@ graphify-out/cache
 # Firebase / Google services — NEVER commit these
 google-services.json
 GoogleService-Info.plist
+*google-services*.json
+*GoogleService*.json
 
 # Tink / EncryptedDataStore backup
 # (backup_rules.xml excludes these from Android backup too)
@@ -47,6 +52,15 @@ Thumbs.db
 .vscode/
 *.suo
 *.user
+
+# AI tool local data (runtime, memory, sessions)
+.gemini/
+.claude/
+.specify/.runtime/
+.specify/memory/
+
+# Duplicate / accidental files
+.gitignore copy
 
 # Gradle
 .gradle/

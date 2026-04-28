@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.plugin.compose)
@@ -13,11 +13,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.hearopilot.app.ui"
+    namespace = "com.meetmind.assistant.ui"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.hearopilot.app"
+        applicationId = "com.meetmind.assistant"
         minSdk = 35
         targetSdk = 35
         versionCode = 20260327

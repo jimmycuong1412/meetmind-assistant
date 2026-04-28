@@ -10,7 +10,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.hearopilot.app.feature.stt"
+    namespace = "com.meetmind.assistant.feature.stt"
     compileSdk = 35
 
     defaultConfig {

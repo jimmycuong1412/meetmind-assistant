@@ -1,8 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:startColor="#5E17EB"
-        android:endColor="#1E3A8A"
-        android:angle="135"
-        android:type="linear"/>
-</shape>
+<!--
+    Adaptive icon background: purple gradient matching the MeetMind Assistant brand.
+    The foreground vector paints its own rounded gradient rect on top; this background
+    fills any safe-zone area visible after launcher masking with the same brand gradient
+    so the icon looks seamless on round / squircle / teardrop launcher masks.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="0"
+                android:endY="108"
+                android:type="linear">
+                <item android:offset="0" android:color="#FF8B8CC7"/>
+                <item android:offset="1" android:color="#FF464775"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

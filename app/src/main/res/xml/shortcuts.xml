@@ -13,9 +13,9 @@
         android:shortcutShortLabel="@string/shortcut_quick_start_short_label"
         android:shortcutLongLabel="@string/shortcut_quick_start_label">
         <intent
-            android:action="com.hearopilot.app.ACTION_QUICK_START"
-            android:targetClass="com.hearopilot.app.ui.MainActivity"
-            android:targetPackage="com.hearopilot.app" />
+            android:action="com.meetmind.assistant.ACTION_QUICK_START"
+            android:targetClass="com.meetmind.assistant.ui.MainActivity"
+            android:targetPackage="com.meetmind.assistant" />
         <categories android:name="android.shortcut.conversation" />
     </shortcut>
 

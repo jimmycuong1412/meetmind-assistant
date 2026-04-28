@@ -1,6 +1,6 @@
 <resources>
     <!-- App Info -->
-    <string name="app_name">MeetMind AI</string>
+    <string name="app_name">MeetMind Assistant</string>
 
     <!-- Common Actions -->
     <string name="start">Start</string>
@@ -38,7 +38,7 @@
     <string name="notification_llm_processing_text">AI is processing your recording…</string>
 
     <!-- Sessions Screen -->
-    <string name="sessions_title">MeetMind AI</string>
+    <string name="sessions_title">MeetMind Assistant</string>
     <string name="sessions_subtitle">My Transcriptions</string>
     <string name="new_transcription">New Transcription</string>
     <string name="session_unnamed">(Unnamed)</string>
@@ -457,7 +457,7 @@
     <string name="search_source_action_item">Action item</string>
 
     <!-- Onboarding carousel messages shown while the LLM model is downloading -->
-    <string name="onboarding_message_1">MeetMind AI listens so you don\'t have to take notes.</string>
+    <string name="onboarding_message_1">MeetMind Assistant listens so you don\'t have to take notes.</string>
     <string name="onboarding_message_2">All AI processing runs on your device: no data leaves.</string>
     <string name="onboarding_message_3">Transcribe lectures, meetings and conversations in real time.</string>
     <string name="onboarding_message_4">Automatic summaries help you focus on what matters most.</string>
@@ -466,8 +466,8 @@
     <string name="onboarding_message_7">Great for students, professionals and anyone who speaks.</string>
     <string name="onboarding_message_8">Review your transcriptions and insights anytime, offline.</string>
     <string name="onboarding_message_9">One tap to start, one tap to stop: it\'s that simple.</string>
-    <string name="onboarding_message_10">Thank you for choosing MeetMind AI.</string>
-    <string name="onboarding_message_11">Use MeetMind AI with a Bluetooth microphone to transcribe from a distance.</string>
+    <string name="onboarding_message_10">Thank you for choosing MeetMind Assistant.</string>
+    <string name="onboarding_message_11">Use MeetMind Assistant with a Bluetooth microphone to transcribe from a distance.</string>
 
     <!-- About & Legal section in Settings -->
     <string name="settings_section_about">About &amp; Legal</string>
@@ -478,7 +478,7 @@
 
     <!-- Open Source Licenses screen -->
     <string name="licenses_title">Open Source Licenses</string>
-    <string name="licenses_intro">MeetMind AI uses the following third-party software and AI models. Tap a card to read the full license text.</string>
+    <string name="licenses_intro">MeetMind Assistant uses the following third-party software and AI models. Tap a card to read the full license text.</string>
     <string name="licenses_open_url">Open</string>
     <string name="licenses_show_full_text">Show full license</string>
     <string name="licenses_hide_full_text">Hide full license</string>
