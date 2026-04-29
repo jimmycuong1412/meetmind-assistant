@@ -8,6 +8,8 @@ import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
 import com.meetmind.assistant.data.database.mapper.toDomain
 import com.meetmind.assistant.data.database.mapper.toEntity
+import com.meetmind.assistant.domain.audio.AudioStorage
+import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
@@ -42,7 +44,8 @@ class TranscriptionRepositoryImpl @Inject constructor(
     private val segmentDao: TranscriptionSegmentDao,
     private val insightDao: LlmInsightDao,
     private val searchDao: SearchDao,
-    private val actionItemDao: ActionItemDao
+    private val actionItemDao: ActionItemDao,
+    private val audioStorage: AudioStorage
 ) : TranscriptionRepository {
 
     // ========== Session Management ==========
@@ -131,9 +134,38 @@ class TranscriptionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateSessionAudioFile(
+        sessionId: String,
+        audioFilePath: String?,
+        diarizationStatus: DiarizationStatus
+    ): Result<Unit> {
+        return try {
+            sessionDao.updateAudioFile(sessionId, audioFilePath, diarizationStatus.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun updateSessionDiarizationStatus(
+        sessionId: String,
+        status: DiarizationStatus
+    ): Result<Unit> {
+        return try {
+            sessionDao.updateDiarizationStatus(sessionId, status.name)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun deleteSession(sessionId: String): Result<Unit> {
         return try {
             sessionDao.deleteSession(sessionId)
+            // Best-effort: clean up the retained audio file. Failure to delete is
+            // logged inside AudioStorage but does not roll back the DB delete —
+            // dangling audio files at worst waste disk and never affect correctness.
+            audioStorage.deleteAudioForSession(sessionId)
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -142,7 +174,10 @@ class TranscriptionRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAllSessions(): Result<Unit> {
         return try {
+            // Snapshot session ids before delete so we know which audio files to clean up.
+            val ids = sessionDao.getAllSessions().first().map { it.id }
             sessionDao.deleteAllSessions()
+            ids.forEach { audioStorage.deleteAudioForSession(it) }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

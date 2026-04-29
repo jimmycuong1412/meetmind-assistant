@@ -6,9 +6,11 @@ import android.os.PowerManager
 import com.arm.aichat.InferenceEngine
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.Vad
+import com.meetmind.assistant.data.audio.AndroidAudioStorage
 import com.meetmind.assistant.data.datasource.LlmDataSource
 import com.meetmind.assistant.data.config.DefaultModelConfig
 import com.meetmind.assistant.data.config.ModelConfig
+import com.meetmind.assistant.domain.audio.AudioStorage
 import com.meetmind.assistant.data.datasource.ModelDownloadManager
 import com.meetmind.assistant.data.datasource.SttDataSource
 import com.meetmind.assistant.data.monitor.AndroidThermalMonitor
@@ -117,4 +119,8 @@ object DataModule {
     fun provideCrashReporter(): com.meetmind.assistant.domain.monitor.CrashReporter {
         return com.meetmind.assistant.monitor.FirebaseCrashReporter()
     }
+
+    @Provides
+    @Singleton
+    fun provideAudioStorage(impl: AndroidAudioStorage): AudioStorage = impl
 }

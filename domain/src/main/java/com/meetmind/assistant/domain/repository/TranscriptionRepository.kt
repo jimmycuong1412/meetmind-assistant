@@ -1,5 +1,6 @@
 package com.meetmind.assistant.domain.repository
 
+import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
@@ -94,6 +95,32 @@ interface TranscriptionRepository {
      * @return Result indicating success or failure
      */
     suspend fun updateSessionDuration(sessionId: String, durationMs: Long): Result<Unit>
+
+    /**
+     * Persist the path of the WAV recording produced for a session and set its
+     * diarization status to [DiarizationStatus.NOT_RUN], indicating that
+     * speaker diarization can be run for it on demand.
+     *
+     * Pass null for [audioFilePath] to clear the path (e.g. after the audio
+     * has been auto-deleted post-diarization or the user opted out). Clearing
+     * the path also moves the status to [DiarizationStatus.UNAVAILABLE] unless
+     * [diarizationStatus] is supplied explicitly.
+     */
+    suspend fun updateSessionAudioFile(
+        sessionId: String,
+        audioFilePath: String?,
+        diarizationStatus: DiarizationStatus = if (audioFilePath != null) DiarizationStatus.NOT_RUN else DiarizationStatus.UNAVAILABLE
+    ): Result<Unit>
+
+    /**
+     * Update the diarization status for a session without changing its audio
+     * file path. Used during the diarization pipeline lifecycle (RUNNING →
+     * COMPLETED / FAILED).
+     */
+    suspend fun updateSessionDiarizationStatus(
+        sessionId: String,
+        status: DiarizationStatus
+    ): Result<Unit>
 
     /**
      * Delete all sessions and their associated data.

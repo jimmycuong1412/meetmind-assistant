@@ -71,6 +71,21 @@ interface TranscriptionSessionDao {
     suspend fun updateDuration(sessionId: String, durationMs: Long)
 
     /**
+     * Persist the audio file path and diarization status for a session.
+     * Used when audio retention starts (path set, status = NOT_RUN), when the
+     * audio is deleted post-diarization (path cleared, status = COMPLETED), or
+     * when retention failed (path null, status = UNAVAILABLE).
+     */
+    @Query("UPDATE transcription_sessions SET audio_file_path = :audioFilePath, diarization_status = :status WHERE id = :sessionId")
+    suspend fun updateAudioFile(sessionId: String, audioFilePath: String?, status: String)
+
+    /**
+     * Update only the diarization status (during the pipeline run lifecycle).
+     */
+    @Query("UPDATE transcription_sessions SET diarization_status = :status WHERE id = :sessionId")
+    suspend fun updateDiarizationStatus(sessionId: String, status: String)
+
+    /**
      * Get session count (for debugging/stats).
      */
     @Query("SELECT COUNT(*) FROM transcription_sessions")

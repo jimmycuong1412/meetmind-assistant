@@ -23,6 +23,10 @@ class SttRepositoryImpl @Inject constructor(
         return sttDataSource.initialize(modelPath, languageCode)
     }
 
+    override fun setAudioOutputFile(path: String?) {
+        sttDataSource.setAudioOutputFile(path)
+    }
+
     override fun startStreaming(): Flow<TranscriptionSegment> {
         return sttDataSource.startRecording()
             .map { result ->
@@ -31,7 +35,9 @@ class SttRepositoryImpl @Inject constructor(
                     sessionId = "", // Temporary - MainViewModel will replace with actual sessionId
                     text = result.text,
                     timestamp = System.currentTimeMillis(),
-                    isComplete = result.isComplete
+                    isComplete = result.isComplete,
+                    startOffsetMs = result.startOffsetMs,
+                    endOffsetMs = result.endOffsetMs
                 )
             }
     }
@@ -39,6 +45,8 @@ class SttRepositoryImpl @Inject constructor(
     override suspend fun stopStreaming() {
         sttDataSource.stopRecording()
     }
+
+    override fun lastRecordedAudioFilePath(): String? = sttDataSource.lastRecordedAudioFilePath()
 
     override suspend fun releaseModel() {
         sttDataSource.releaseModel()

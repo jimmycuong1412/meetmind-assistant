@@ -133,6 +133,28 @@ class SherpaOnnxDataSource(
     // Used to tear it down symmetrically in stopRecording().
     private var bluetoothScoActive = false
 
+    // Optional WAV mirror of the live PCM stream. Set via setAudioOutputFile() before
+    // startRecording(); a single recorder instance is reused across sessions.
+    // The path is consumed at start; callers must call setAudioOutputFile() each session.
+    private var pendingAudioOutputPath: String? = null
+    private val wavRecorder = WavRecorder(sampleRateHz = SAMPLE_RATE_HZ)
+
+    // Total PCM samples consumed by the audio loop since the current session started.
+    // Drives RecognitionResult.startOffsetMs / endOffsetMs without needing wall-clock math.
+    // Reset in startRecording() and incremented in the audio-read loop.
+    @Volatile private var totalSamplesConsumed: Long = 0L
+
+    // Absolute path of the WAV file written for the most recently stopped session.
+    // Reset when a new session starts; populated when stopRecording() finalizes the
+    // WAV file. Read by the SttRepository to plumb through to the session entity.
+    @Volatile private var lastRecordedAudioPath: String? = null
+
+    /**
+     * Convert a sample-index offset to milliseconds since recording start.
+     * Uses Long math to stay accurate beyond the ~36-hour Int sample-count overflow.
+     */
+    private fun samplesToMs(samples: Long): Long = samples * 1000L / SAMPLE_RATE_HZ
+
     /**
      * Attempts to activate Bluetooth SCO so Android routes the BT headset mic as the
      * audio input. If no BT device is connected, or if the SCO handshake times out,
@@ -189,6 +211,15 @@ class SherpaOnnxDataSource(
     // Diagnostic metrics
     private var metrics = AudioMetrics()
     private var recordingStartTimeMs = 0L
+
+    override fun setAudioOutputFile(path: String?) {
+        pendingAudioOutputPath = path
+        // Clear stale path from the previous session so callers can't accidentally
+        // read a result that doesn't correspond to the upcoming startRecording().
+        lastRecordedAudioPath = null
+    }
+
+    override fun lastRecordedAudioFilePath(): String? = lastRecordedAudioPath
 
     override suspend fun initialize(modelPath: String, languageCode: String): Result<Unit> = runCatching {
         // Eagerly create recognizer and VAD so any model-not-found error surfaces here
@@ -300,6 +331,19 @@ class SherpaOnnxDataSource(
         // Reset metrics for new session
         metrics = AudioMetrics()
         recordingStartTimeMs = System.currentTimeMillis()
+        totalSamplesConsumed = 0L
+
+        // Open the WAV mirror if a path was set via setAudioOutputFile() before start.
+        // The path is consumed (single-shot) so we don't accidentally write to the same
+        // file across sessions if the caller forgets to call setAudioOutputFile() again.
+        val wavTarget = pendingAudioOutputPath
+        pendingAudioOutputPath = null
+        if (wavTarget != null) {
+            val opened = wavRecorder.start(wavTarget)
+            if (!opened) {
+                Log.w(TAG, "WAV recorder failed to start; STT will continue without audio retention")
+            }
+        }
 
         Log.i(TAG, "Starting recording session (bluetoothSco=$bluetoothScoActive)")
         Log.i(TAG, "Device: ${metrics.deviceManufacturer} ${metrics.deviceModel}")
@@ -352,6 +396,12 @@ class SherpaOnnxDataSource(
                     val samples = FloatArray(ret) { buffer[it] / 32768.0f }
                     // Validate samples before sending
                     if (samples.all { it.isFinite() }) {
+                        // Mirror the PCM stream to disk (best-effort; failures self-disable).
+                        // Done BEFORE channel.send so the audio file always has at least
+                        // as many samples as the STT pipeline has processed — important for
+                        // diarization offset alignment.
+                        wavRecorder.appendSamples(samples)
+                        totalSamplesConsumed += samples.size
                         samplesChannel.send(samples)
 
                         // Record channel state (approximate)
@@ -405,6 +455,15 @@ class SherpaOnnxDataSource(
             var startTime = System.currentTimeMillis()
             var speechStartOffset = 0
             var lastInferenceOffset = 0
+            // Session-relative sample counter, incremented every time we drain a chunk
+            // off the channel. Independent of `offset` (which is buffer-relative and
+            // gets reset by keepTail). Used to convert buffer indices back to
+            // milliseconds-since-recording-start for diarization alignment.
+            var samplesProcessed = 0L
+            // Absolute (session-relative) sample index of the start of the current
+            // speech segment. Captured at the moment VAD first reports speech and
+            // stays valid until the segment is emitted, then reset to -1.
+            var speechStartAbsoluteSamples = -1L
             // Guard against a slow device queuing multiple concurrent partial inferences.
             // When the previous partial call is still running we skip the interval and let
             // audio accumulate, so the next call processes a larger (but fresher) chunk.
@@ -414,6 +473,7 @@ class SherpaOnnxDataSource(
 
             for (samples in samplesChannel) {
                 buffer.append(samples)
+                samplesProcessed += samples.size
 
                 // VAD processing with fixed window size
                 while (offset + VAD_WINDOW_SIZE <= buffer.size) {
@@ -434,8 +494,12 @@ class SherpaOnnxDataSource(
                         speechStartOffset = maxOf(0, offset - SPEECH_START_LOOKBACK_SAMPLES)
                         startTime = System.currentTimeMillis()
                         lastInferenceOffset = speechStartOffset
+                        // Anchor speech-start in session-relative samples. buffer[k]
+                        // corresponds to sample (samplesProcessed - buffer.size + k),
+                        // so the speech-start absolute sample is:
+                        speechStartAbsoluteSamples = samplesProcessed - buffer.size + speechStartOffset
                         metrics.recordSpeechSegment()
-                        Log.d(TAG, "Speech detected at offset $offset")
+                        Log.d(TAG, "Speech detected at offset $offset (abs=${speechStartAbsoluteSamples})")
                     }
                 }
 
@@ -477,7 +541,21 @@ class SherpaOnnxDataSource(
                                 result.text.trim().takeIf { it.isNotBlank() }
                             }
                             if (trimmedText != null) {
-                                send(RecognitionResult(trimmedText, isComplete = true))
+                                // End-of-segment is the absolute sample at `offset` right now.
+                                val endAbs = samplesProcessed - buffer.size + offset
+                                val startAbs = if (speechStartAbsoluteSamples >= 0) {
+                                    // Cap the start to MAX_INFERENCE_AUDIO_SAMPLES so it matches
+                                    // the audio actually decoded (we trimmed to cappedStart above).
+                                    maxOf(speechStartAbsoluteSamples, endAbs - MAX_INFERENCE_AUDIO_SAMPLES)
+                                } else null
+                                send(
+                                    RecognitionResult(
+                                        text = trimmedText,
+                                        isComplete = true,
+                                        startOffsetMs = startAbs?.let { samplesToMs(it) },
+                                        endOffsetMs = samplesToMs(endAbs)
+                                    )
+                                )
                                 Log.d(TAG, "Forced split after ${speechElapsedSamples / SAMPLE_RATE_HZ}s: ${trimmedText.take(50)}")
                             }
                         }
@@ -485,6 +563,7 @@ class SherpaOnnxDataSource(
                         Log.e(TAG, "Forced split inference failed", e)
                     }
                     isSpeechStarted = false
+                    speechStartAbsoluteSamples = -1L
                     vad.reset()
                     buffer.keepTail(CONTEXT_CARRY_OVER_SAMPLES)
                     offset = buffer.size
@@ -509,6 +588,13 @@ class SherpaOnnxDataSource(
                     val cappedStart = maxOf(speechStartOffset, offset - MAX_INFERENCE_AUDIO_SAMPLES)
                     val audioSnapshot = buffer.getRange(cappedStart, offset)
                     val snapshotNewSamples = newAudioSamples
+                    // Capture absolute (session-relative) offsets BEFORE launch — the buffer
+                    // and processing-loop variables will keep advancing while the child
+                    // coroutine is still running, so we can't read them when we emit.
+                    val partialEndAbs = samplesProcessed - buffer.size + offset
+                    val partialStartAbs = if (speechStartAbsoluteSamples >= 0) {
+                        maxOf(speechStartAbsoluteSamples, partialEndAbs - MAX_INFERENCE_AUDIO_SAMPLES)
+                    } else null
                     // Advance offset trackers immediately so the next iteration measures
                     // new audio relative to this snapshot, not the previous one.
                     lastInferenceOffset = offset
@@ -533,7 +619,14 @@ class SherpaOnnxDataSource(
                                 val inferenceLatency = System.currentTimeMillis() - inferenceStart
                                 metrics.recordInference(inferenceLatency, success = trimmedText != null)
                                 if (trimmedText != null) {
-                                    send(RecognitionResult(trimmedText, isComplete = false))
+                                    send(
+                                        RecognitionResult(
+                                            text = trimmedText,
+                                            isComplete = false,
+                                            startOffsetMs = partialStartAbs?.let { samplesToMs(it) },
+                                            endOffsetMs = samplesToMs(partialEndAbs)
+                                        )
+                                    )
                                     Log.d(TAG, "Partial result (${inferenceLatency}ms, " +
                                             "$snapshotNewSamples new samples): ${trimmedText.take(50)}")
                                 }
@@ -574,7 +667,26 @@ class SherpaOnnxDataSource(
                             val segmentLatency = System.currentTimeMillis() - segmentStart
                             metrics.recordInference(segmentLatency, success = trimmedText != null)
                             if (trimmedText != null) {
-                                send(RecognitionResult(trimmedText, isComplete = true))
+                                // VAD segment ended somewhere up to `offset`; use segment
+                                // length to derive the actual end. `vadSegment.start` is
+                                // VAD-internal (resets on vad.reset()), so prefer the
+                                // session-relative speech-start anchor where possible.
+                                val endAbs = if (speechStartAbsoluteSamples >= 0) {
+                                    speechStartAbsoluteSamples + vadSegment.samples.size
+                                } else {
+                                    samplesProcessed - buffer.size + offset
+                                }
+                                val startAbs = if (speechStartAbsoluteSamples >= 0) {
+                                    speechStartAbsoluteSamples
+                                } else null
+                                send(
+                                    RecognitionResult(
+                                        text = trimmedText,
+                                        isComplete = true,
+                                        startOffsetMs = startAbs?.let { samplesToMs(it) },
+                                        endOffsetMs = samplesToMs(endAbs)
+                                    )
+                                )
                                 Log.d(TAG, "Final segment (${segmentLatency}ms): ${trimmedText.take(50)}")
                             }
                         }
@@ -593,6 +705,7 @@ class SherpaOnnxDataSource(
                     }
 
                     isSpeechStarted = false
+                    speechStartAbsoluteSamples = -1L
                     buffer.keepTail(CONTEXT_CARRY_OVER_SAMPLES)
                     offset = buffer.size
                     lastInferenceOffset = offset
@@ -620,7 +733,18 @@ class SherpaOnnxDataSource(
                             result.text.trim().takeIf { it.isNotBlank() }
                         }
                         if (trimmedText != null) {
-                            send(RecognitionResult(trimmedText, isComplete = true))
+                            val endAbs = samplesProcessed - buffer.size + offset
+                            val startAbs = if (speechStartAbsoluteSamples >= 0) {
+                                maxOf(speechStartAbsoluteSamples, endAbs - MAX_INFERENCE_AUDIO_SAMPLES)
+                            } else null
+                            send(
+                                RecognitionResult(
+                                    text = trimmedText,
+                                    isComplete = true,
+                                    startOffsetMs = startAbs?.let { samplesToMs(it) },
+                                    endOffsetMs = samplesToMs(endAbs)
+                                )
+                            )
                             Log.d(TAG, "Flush segment on stop: ${trimmedText.take(50)}")
                         }
                     } catch (e: Exception) {
@@ -643,8 +767,13 @@ class SherpaOnnxDataSource(
         audioRecord = null
         deactivateBluetoothSco()
 
+        // Finalize the WAV mirror before reporting the duration so the file is fully
+        // flushed and the header patched by the time anything tries to read it.
+        val finalPath = wavRecorder.stop()
+        lastRecordedAudioPath = finalPath
+
         val recordingDuration = (System.currentTimeMillis() - recordingStartTimeMs) / 1000.0
-        Log.i(TAG, "Recording stopped after ${recordingDuration}s")
+        Log.i(TAG, "Recording stopped after ${recordingDuration}s (audioPath=${finalPath ?: "none"})")
 
         // Calculate and log audio drop rate
         val dropRate = metrics.calculateAudioDropRate(recordingDuration)

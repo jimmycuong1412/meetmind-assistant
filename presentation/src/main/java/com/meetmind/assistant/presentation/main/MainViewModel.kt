@@ -96,6 +96,7 @@ class MainViewModel @Inject constructor(
     private val llmProcessingServiceController: LlmProcessingServiceController,
     private val thermalMonitor: com.meetmind.assistant.domain.monitor.ThermalMonitor,
     private val batteryOptimizationHelper: com.meetmind.assistant.data.device.BatteryOptimizationHelper,
+    private val audioStorage: com.meetmind.assistant.domain.audio.AudioStorage,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -491,6 +492,15 @@ class MainViewModel @Inject constructor(
             }
         }
 
+        // Configure audio retention so end-of-session diarization can run later.
+        // The same path is reused across multiple start/stop cycles within a single
+        // session — each new startStreaming() truncates and rewrites the file via
+        // WavRecorder.start(), keeping only the most recent recording segment. This
+        // matches the duration counter, which already only reflects the latest segment
+        // of a resumed session for diarization purposes.
+        val audioPath = audioStorage.audioFilePathForSession(sessionId)
+        sttRepository.setAudioOutputFile(audioPath)
+
         // Create a SINGLE shared STT stream
         val sharedSttStream = sttRepository.startStreaming()
             .catch { e ->
@@ -717,6 +727,22 @@ class MainViewModel @Inject constructor(
             // speech) and emit final complete segments. transcriptionJob must stay alive
             // to receive and save those last segments.
             stopSttStreamingUseCase()
+
+            // Persist the WAV path on the session so end-of-session diarization can run
+            // later. lastRecordedAudioFilePath() returns null when retention was disabled
+            // or the recorder failed; in both cases we leave the session entity's
+            // audioFilePath null and its diarizationStatus at UNAVAILABLE.
+            sttRepository.lastRecordedAudioFilePath()?.let { path ->
+                transcriptionRepository
+                    .updateSessionAudioFile(
+                        sessionId = sessionId,
+                        audioFilePath = path,
+                        diarizationStatus = com.meetmind.assistant.domain.model.DiarizationStatus.NOT_RUN
+                    )
+                    .onFailure { e ->
+                        Log.e(TAG, "Failed to persist audio file path: ${e.message}")
+                    }
+            }
 
             // Wait for transcriptionJob to drain the final STT segments.
             // Root cause of the timeout: sharedSttStream is a SharedFlow (from shareIn) which

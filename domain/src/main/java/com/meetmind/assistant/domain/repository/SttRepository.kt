@@ -19,6 +19,16 @@ interface SttRepository {
     suspend fun initialize(modelPath: String, languageCode: String): Result<Unit>
 
     /**
+     * Configure audio retention for the next [startStreaming] call. When
+     * non-null, the underlying engine mirrors the live PCM stream to a WAV
+     * file at [path] so end-of-session diarization can run later. Pass null
+     * (the default) to disable retention for the next session.
+     *
+     * Has no effect on a session already in progress.
+     */
+    fun setAudioOutputFile(path: String?)
+
+    /**
      * Start streaming audio recording and transcription.
      *
      * @return Flow of transcription segments. Flow never completes until stopStreaming is called.
@@ -29,6 +39,13 @@ interface SttRepository {
      * Stop streaming and release audio resources.
      */
     suspend fun stopStreaming()
+
+    /**
+     * Absolute path of the WAV file written during the most recently completed
+     * recording session, or null when audio retention was disabled / failed /
+     * captured zero samples. Valid only after [stopStreaming] returns.
+     */
+    fun lastRecordedAudioFilePath(): String?
 
     /**
      * Release the native STT model from memory (~670 MB footprint).

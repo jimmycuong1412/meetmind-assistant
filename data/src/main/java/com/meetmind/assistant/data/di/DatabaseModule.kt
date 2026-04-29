@@ -112,14 +112,16 @@ object DatabaseModule {
         segmentDao: TranscriptionSegmentDao,
         insightDao: LlmInsightDao,
         searchDao: SearchDao,
-        actionItemDao: ActionItemDao
+        actionItemDao: ActionItemDao,
+        audioStorage: com.meetmind.assistant.domain.audio.AudioStorage
     ): TranscriptionRepository {
         return TranscriptionRepositoryImpl(
             sessionDao = sessionDao,
             segmentDao = segmentDao,
             insightDao = insightDao,
             searchDao = searchDao,
-            actionItemDao = actionItemDao
+            actionItemDao = actionItemDao,
+            audioStorage = audioStorage
         )
     }
 }
