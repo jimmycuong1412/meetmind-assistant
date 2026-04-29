@@ -34,17 +34,20 @@ import kotlinx.coroutines.delay
 private const val CAROUSEL_DISPLAY_MS = 4_000L
 private const val CAROUSEL_FADE_IN_MS = 600
 private const val CAROUSEL_FADE_OUT_MS = 400
-private const val CAROUSEL_TOTAL_MESSAGES = 11
 
 /**
- * Carousel cycling through 11 localised onboarding messages.
+ * Carousel cycling through the core onboarding messages while a download runs.
+ *
+ * Curated to the 4 highest-value messages — earlier versions had 11 messages, but
+ * funnel data shows attention drops sharply after the third, so we lead with the
+ * single biggest selling points (privacy, simplicity, AI summaries) and end with
+ * a thank-you. The remaining tip-style messages live on a "Tips" screen the user
+ * can revisit anytime.
  *
  * Two modes:
  * - Default: gradient rounded card with [PrimaryGradient] background.
  * - Immersive ([immersive] = true): no background card, large text rendered
  *   directly on whatever surface the caller provides (full-screen gradient).
- *
- * Text crossfades every [CAROUSEL_DISPLAY_MS] ms.
  */
 @Composable
 fun DownloadOnboardingCarousel(
@@ -52,17 +55,10 @@ fun DownloadOnboardingCarousel(
     immersive: Boolean = false
 ) {
     val messages = listOf(
-        stringResource(R.string.onboarding_message_1),
-        stringResource(R.string.onboarding_message_2),
-        stringResource(R.string.onboarding_message_3),
-        stringResource(R.string.onboarding_message_4),
-        stringResource(R.string.onboarding_message_5),
-        stringResource(R.string.onboarding_message_6),
-        stringResource(R.string.onboarding_message_7),
-        stringResource(R.string.onboarding_message_8),
-        stringResource(R.string.onboarding_message_9),
-        stringResource(R.string.onboarding_message_11),
-        stringResource(R.string.onboarding_message_10),
+        stringResource(R.string.onboarding_message_5),  // Privacy: works offline, your voice stays private
+        stringResource(R.string.onboarding_message_9),  // One tap to start, one tap to stop
+        stringResource(R.string.onboarding_message_4),  // Automatic summaries help you focus
+        stringResource(R.string.onboarding_message_10), // Thank you for choosing MeetMind Assistant
     )
 
     var currentIndex by remember { mutableIntStateOf(0) }
@@ -70,7 +66,7 @@ fun DownloadOnboardingCarousel(
     LaunchedEffect(Unit) {
         while (true) {
             delay(CAROUSEL_DISPLAY_MS)
-            currentIndex = (currentIndex + 1) % CAROUSEL_TOTAL_MESSAGES
+            currentIndex = (currentIndex + 1) % messages.size
         }
     }
 

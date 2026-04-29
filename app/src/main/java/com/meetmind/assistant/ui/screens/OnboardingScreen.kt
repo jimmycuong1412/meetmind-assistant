@@ -21,9 +21,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.OnboardingStep
+import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.components.OnboardingPageIndicator
 import com.meetmind.assistant.ui.icons.AppIcons
 
@@ -138,7 +140,7 @@ fun OnboardingScreen(
             ) {
                 Icon(
                     imageVector = AppIcons.Back,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.back),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
             }

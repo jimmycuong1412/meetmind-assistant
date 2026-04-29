@@ -72,7 +72,7 @@ fun SearchScreen(
                         IconButton(onClick = onNavigateBack) {
                             Icon(
                                 imageVector = AppIcons.Back,
-                                contentDescription = null,
+                                contentDescription = stringResource(R.string.back),
                                 tint = Color.White
                             )
                         }
@@ -159,7 +159,7 @@ private fun SearchBarInput(
                 IconButton(onClick = onClear) {
                     Icon(
                         imageVector = AppIcons.Close,
-                        contentDescription = null,
+                        contentDescription = stringResource(R.string.clear_search),
                         tint = Color.White
                     )
                 }

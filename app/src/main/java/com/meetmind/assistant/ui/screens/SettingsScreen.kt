@@ -352,7 +352,7 @@ private fun ModeAccordionCard(
                 IconButton(onClick = onToggle) {
                     Icon(
                         imageVector = if (isExpanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -721,7 +721,7 @@ private fun SettingsSection(
                 IconButton(onClick = { isExpanded = !isExpanded }) {
                     Icon(
                         imageVector = if (isExpanded) AppIcons.ExpandLess else AppIcons.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

@@ -58,7 +58,11 @@ class TranscriptionRepositoryImpl @Inject constructor(
         return try {
             val now = System.currentTimeMillis()
             val finalName = if (name.isNullOrBlank()) {
-                val dateFormat = SimpleDateFormat("MMM dd, HH:mm:ss", Locale.getDefault())
+                // Use Locale.US so the auto-generated session name format is stable across
+                // device locales — the timestamp is embedded in session names that get
+                // sorted, searched, and exported, so locale-specific month abbreviations
+                // (e.g. "thg 4" in Vietnamese) would break sort order and string matching.
+                val dateFormat = SimpleDateFormat("MMM dd, HH:mm:ss", Locale.US)
                 dateFormat.format(Date(now))
             } else {
                 name

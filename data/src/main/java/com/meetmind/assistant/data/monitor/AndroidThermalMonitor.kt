@@ -17,4 +17,10 @@ class AndroidThermalMonitor(private val powerManager: PowerManager) : ThermalMon
         // THERMAL_STATUS_MODERATE (2) or above indicates the device is throttling or about to.
         return powerManager.currentThermalStatus >= PowerManager.THERMAL_STATUS_MODERATE
     }
+
+    override fun isCritical(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        // THERMAL_STATUS_SEVERE (4) and above: heavy throttling — defer LLM work entirely.
+        return powerManager.currentThermalStatus >= PowerManager.THERMAL_STATUS_SEVERE
+    }
 }

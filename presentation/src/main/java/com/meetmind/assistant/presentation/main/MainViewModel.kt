@@ -94,6 +94,7 @@ class MainViewModel @Inject constructor(
     private val downloadStateManager: DownloadStateManager,
     private val serviceController: RecordingServiceController,
     private val llmProcessingServiceController: LlmProcessingServiceController,
+    private val thermalMonitor: com.meetmind.assistant.domain.monitor.ThermalMonitor,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -564,6 +565,17 @@ class MainViewModel @Inject constructor(
             }
         }
 
+        // Thermal-aware strategy downgrade: on a phone that's already SEVERE-throttling
+        // when the user hits Record, REAL_TIME insights would (a) fall behind real time
+        // and (b) accelerate further heating, hurting transcription quality too. Defer
+        // to end-of-session batch processing instead. The banner flag in MainUiState
+        // surfaces a one-time message explaining why real-time was disabled.
+        if (currentInsightStrategy == InsightStrategy.REAL_TIME && thermalMonitor.isCritical()) {
+            Log.i(TAG, "Device thermal status critical — downgrading REAL_TIME → END_OF_SESSION")
+            currentInsightStrategy = InsightStrategy.END_OF_SESSION
+            _uiState.update { it.copy(thermalDowngradeBannerVisible = true) }
+        }
+
         // Collect LLM insights from the SAME shared stream AND persist them.
         // For END_OF_SESSION strategy, skip the real-time insights job entirely —
         // the batch pipeline will run after stop.
@@ -893,6 +905,11 @@ class MainViewModel @Inject constructor(
      */
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    /** User dismissed the "switched to end-of-session due to heat" banner. */
+    fun dismissThermalDowngradeBanner() {
+        _uiState.update { it.copy(thermalDowngradeBannerVisible = false) }
     }
 
     /**

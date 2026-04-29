@@ -47,7 +47,13 @@ data class MainUiState(
     val downloadSpeedMbps: Float = 0f,
     val downloadEtaSeconds: Int = 0,
     val recordingDurationMillis: Long = 0,
-    val regeneratingInsightId: String? = null
+    val regeneratingInsightId: String? = null,
+    /**
+     * True when the user started recording in REAL_TIME mode but the device was already
+     * thermally critical so we silently downgraded to END_OF_SESSION. The UI shows a
+     * dismissible banner explaining why real-time insights are off this session.
+     */
+    val thermalDowngradeBannerVisible: Boolean = false
 ) {
     /**
      * Returns all segments for display: completed + current partial (if exists).

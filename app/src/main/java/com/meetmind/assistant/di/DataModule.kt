@@ -111,4 +111,10 @@ object DataModule {
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         return AndroidThermalMonitor(powerManager)
     }
+
+    @Provides
+    @Singleton
+    fun provideCrashReporter(): com.meetmind.assistant.domain.monitor.CrashReporter {
+        return com.meetmind.assistant.monitor.FirebaseCrashReporter()
+    }
 }

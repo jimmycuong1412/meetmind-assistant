@@ -58,6 +58,7 @@ class SessionDetailsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val llmProcessingServiceController: LlmProcessingServiceController,
     private val actionItemRepository: ActionItemRepository,
+    private val crashReporter: com.meetmind.assistant.domain.monitor.CrashReporter,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -365,7 +366,15 @@ class SessionDetailsViewModel @Inject constructor(
     }
 
     /**
-     * Export session as a Markdown summary for sharing.
+     * Export session as a polished Markdown summary for sharing.
+     *
+     * Layout (top → bottom):
+     *  1. Title + metadata header (date, duration, segment count)
+     *  2. **TL;DR** — pinned single-paragraph overview (first insight's summary)
+     *  3. Per-insight sections with `### Action Items` checklists
+     *  4. Aggregated `## Action Items` checklist combining all insights' tasks
+     *  5. Collapsed `<details>` block with the full timestamped transcript
+     *     (YouTube-style `[mm:ss]` offsets, **bold** speaker labels)
      *
      * Includes only the final/summary insights (sourceSegmentIds empty) for END_OF_SESSION
      * sessions, or all insights for REAL_TIME sessions — mirroring what the AI Insights tab shows.
@@ -383,11 +392,40 @@ class SessionDetailsViewModel @Inject constructor(
             details.insights
         }.sortedBy { it.timestamp }
 
+        // Aggregate every action item across all insights for a single combined checklist.
+        // Deduped (case-insensitive trim) so repeated tasks across chunked insights
+        // collapse into one row.
+        val allTasks = summaryInsights
+            .flatMap { parseTasksToStrings(it.tasks) }
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+
         return buildString {
-            appendLine("# ${session.name ?: "(Unnamed)"}")
-            appendLine(formatTimestamp(session.createdAt))
+            // ── Header ─────────────────────────────────────────────────────
+            appendLine("# ${session.name ?: "(Unnamed Session)"}")
+            appendLine()
+            appendLine("> 📅 ${formatTimestamp(session.createdAt)}  ")
+            if (session.durationMs > 0L) {
+                appendLine("> ⏱️ ${formatDurationHuman(session.durationMs)}  ")
+            }
+            appendLine("> 💬 ${details.completeSegmentCount} segments · ${summaryInsights.size} insights")
             appendLine()
 
+            // ── TL;DR (pinned at top) ──────────────────────────────────────
+            val firstSummary = summaryInsights.firstOrNull()
+                ?.let { extractSummaryFromContent(it.content) }
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+            if (firstSummary != null) {
+                appendLine("## TL;DR")
+                appendLine(firstSummary.lines().first().take(280)) // first sentence-ish
+                appendLine()
+                appendLine("---")
+                appendLine()
+            }
+
+            // ── Per-insight detail sections ────────────────────────────────
             summaryInsights.forEach { insight ->
                 val title = insight.title?.takeIf { it.isNotBlank() } ?: "Summary"
                 appendLine("## $title")
@@ -403,7 +441,68 @@ class SessionDetailsViewModel @Inject constructor(
                 appendLine("---")
                 appendLine()
             }
+
+            // ── Combined Action Items (only if multiple insights contributed) ─
+            if (allTasks.size > 1 && summaryInsights.size > 1) {
+                appendLine("## All Action Items")
+                allTasks.forEach { task -> appendLine("- [ ] $task") }
+                appendLine()
+                appendLine("---")
+                appendLine()
+            }
+
+            // ── Full transcript (collapsed by default in GitHub/Slack-style renderers) ─
+            val segments = details.segments.filter { it.isComplete }
+            if (segments.isNotEmpty()) {
+                appendLine("<details>")
+                appendLine("<summary><strong>Full Transcript</strong> (${segments.size} segments)</summary>")
+                appendLine()
+                segments.forEach { seg ->
+                    val offsetMs = (seg.timestamp - session.createdAt).coerceAtLeast(0L)
+                    val ts = formatOffsetTimestamp(offsetMs)
+                    val speaker = seg.speaker?.takeIf { it.isNotBlank() }
+                    val line = if (speaker != null) {
+                        "`[$ts]` **$speaker:** ${seg.text.trim()}"
+                    } else {
+                        "`[$ts]` ${seg.text.trim()}"
+                    }
+                    appendLine(line)
+                    appendLine()
+                }
+                appendLine("</details>")
+                appendLine()
+            }
+
             append("*Generated by MeetMind Assistant*")
+        }
+    }
+
+    /**
+     * Format a millisecond offset as `[mm:ss]` or `[hh:mm:ss]` for a transcript timestamp.
+     * Mirrors YouTube's chapter-link convention so pasted transcripts are scannable.
+     */
+    private fun formatOffsetTimestamp(offsetMs: Long): String {
+        val totalSec = offsetMs / 1000
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
+        val s = totalSec % 60
+        return if (h > 0) String.format(java.util.Locale.US, "%d:%02d:%02d", h, m, s)
+        else String.format(java.util.Locale.US, "%d:%02d", m, s)
+    }
+
+    /**
+     * Format a millisecond duration as a human-readable string ("12 min 34 sec").
+     * Used in the export header where a precise machine-readable form isn't needed.
+     */
+    private fun formatDurationHuman(durationMs: Long): String {
+        val totalSec = durationMs / 1000
+        val h = totalSec / 3600
+        val m = (totalSec % 3600) / 60
+        val s = totalSec % 60
+        return when {
+            h > 0 -> "${h}h ${m}m"
+            m > 0 -> "${m}m ${s}s"
+            else  -> "${s}s"
         }
     }
 
@@ -563,7 +662,12 @@ class SessionDetailsViewModel @Inject constructor(
      * @param newSessionName Name to assign to the new copy session (localized by the caller).
      * @param onNavigateToSession Callback invoked with the new session ID upon success.
      */
-    fun generateHistoryInsight(newSessionName: String?, modelNotDownloadedError: String, onNavigateToSession: (String) -> Unit) {
+    fun generateHistoryInsight(
+        newSessionName: String?,
+        modelNotDownloadedError: String,
+        transcriptTooShortError: String,
+        onNavigateToSession: (String) -> Unit
+    ) {
         _uiState.update {
             it.copy(
                 showHistoryInsightConfirm = false,
@@ -605,6 +709,14 @@ class SessionDetailsViewModel @Inject constructor(
                 // GenerateBatchInsightUseCase (checkAndCacheMemoryConstraint + recordConstrainedInference).
                 initializeLlmUseCase(settings.llmModelPath, loadImmediately = false)
                     .onFailure { e ->
+                        // Non-fatal report: LLM init silently failing here is the most common
+                        // hidden cause of "history insight stuck / didn't work" complaints.
+                        // Capture the cause + model path so we can correlate with model variants
+                        // and OOM patterns in Crashlytics.
+                        crashReporter.recordNonFatal(
+                            e,
+                            "history_insight: initializeLlmUseCase failed (modelPath=${settings.llmModelPath})"
+                        )
                         _uiState.update {
                             it.copy(
                                 isInitializingLlm = false,
@@ -652,20 +764,32 @@ class SessionDetailsViewModel @Inject constructor(
                 historyInsightJob = null
 
                 result.onSuccess { newSessionId ->
-                    _uiState.update {
-                        it.copy(
-                            isGeneratingHistoryInsight = false,
-                            intermediateHistoryInsights = emptyList(),
-                            finalHistoryInsight = null
-                        )
-                    }
-                    // A blank session ID signals a silent skip (transcript too short).
                     if (newSessionId.isNotBlank()) {
+                        _uiState.update {
+                            it.copy(
+                                isGeneratingHistoryInsight = false,
+                                intermediateHistoryInsights = emptyList(),
+                                finalHistoryInsight = null
+                            )
+                        }
                         onNavigateToSession(newSessionId)
+                    } else {
+                        // Blank session ID = use case skipped because transcript was too short.
+                        // Surface a clear message instead of silently doing nothing — users were
+                        // tapping "Create AI Copy" and seeing nothing happen.
+                        _uiState.update {
+                            it.copy(
+                                isGeneratingHistoryInsight = false,
+                                intermediateHistoryInsights = emptyList(),
+                                finalHistoryInsight = null,
+                                error = transcriptTooShortError
+                            )
+                        }
                     }
                 }.onFailure { e ->
                     // CancellationException is handled by cancelHistoryInsight(); suppress here.
                     if (e !is CancellationException) {
+                        crashReporter.recordNonFatal(e, "history_insight: pipeline failure")
                         _uiState.update {
                             it.copy(
                                 isGeneratingHistoryInsight = false,
@@ -786,10 +910,14 @@ class SessionDetailsViewModel @Inject constructor(
     }
 
     /**
-     * Format timestamp to readable date/time.
+     * Format timestamp for the markdown export header.
+     *
+     * Uses Locale.US for stable month abbreviations across device locales — exported
+     * markdown often gets pasted into other tools that match on date strings, and
+     * locale-specific month names ("thg 4" vs "Apr") break that matching.
      */
     private fun formatTimestamp(timestamp: Long): String {
-        val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+        val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.US)
         return dateFormat.format(java.util.Date(timestamp))
     }
 }

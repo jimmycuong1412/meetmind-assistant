@@ -402,7 +402,10 @@ fun MainScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             AppIcons.AutoAwesome,
-                            contentDescription = null,
+                            // Disabled IconButton — TalkBack still announces it. Use a generic
+                            // label so blind users can hear the status text below; tint conveys
+                            // ready/not-ready visually for sighted users.
+                            contentDescription = stringResource(R.string.ai_status_indicator),
                             tint = if (aiReady) AccentSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
@@ -451,6 +454,42 @@ fun MainScreen(
                         }
                         IconButton(onClick = { viewModel.clearError() }) {
                             Icon(AppIcons.Close, stringResource(R.string.dismiss), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+
+            // Thermal-downgrade banner — shown when REAL_TIME insights were silently
+            // disabled because the device is overheating. Dismissible.
+            if (uiState.thermalDowngradeBannerVisible) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                AppIcons.Info,
+                                null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.thermal_downgrade_banner),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                        IconButton(onClick = { viewModel.dismissThermalDowngradeBanner() }) {
+                            Icon(AppIcons.Close, stringResource(R.string.dismiss), tint = MaterialTheme.colorScheme.onTertiaryContainer)
                         }
                     }
                 }

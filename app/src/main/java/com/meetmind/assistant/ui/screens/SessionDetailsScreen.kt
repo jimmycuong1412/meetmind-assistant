@@ -350,17 +350,25 @@ fun SessionDetailsScreen(
         // Confirm before starting history insight generation
         if (uiState.showHistoryInsightConfirm) {
             val originalName = uiState.sessionDetails?.session?.name
-            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date())
+            // Locale.US: this timestamp is embedded in the new session's name; locale-
+            // dependent formatting would break sort order and search matching across devices.
+            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())
             val copySuffix = stringResource(R.string.history_insight_copy_suffix_format, timestamp)
             val newSessionName = if (!originalName.isNullOrBlank()) "$originalName $copySuffix" else null
             val modelNotDownloadedError = stringResource(R.string.llm_model_not_downloaded_error)
+            val transcriptTooShortError = stringResource(R.string.history_insight_transcript_too_short)
 
             HistoryInsightConfirmDialog(
                 outputLanguage = uiState.historyInsightOutputLanguage,
                 onOutputLanguageChange = viewModel::setHistoryInsightOutputLanguage,
                 onDismiss = { viewModel.hideHistoryInsightConfirm() },
                 onConfirm = {
-                    viewModel.generateHistoryInsight(newSessionName, modelNotDownloadedError, onNavigateToSession)
+                    viewModel.generateHistoryInsight(
+                        newSessionName,
+                        modelNotDownloadedError,
+                        transcriptTooShortError,
+                        onNavigateToSession
+                    )
                 }
             )
         }

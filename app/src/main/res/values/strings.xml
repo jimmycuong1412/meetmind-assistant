@@ -116,6 +116,11 @@
     <string name="segments_analyzed">%d segments analyzed</string>
     <string name="expand">Expand</string>
     <string name="collapse">Collapse</string>
+    <string name="close">Close</string>
+    <string name="ai_status_indicator">AI status</string>
+    <string name="clear_search">Clear search</string>
+    <string name="history_insight_transcript_too_short">Recording is too short for AI analysis. You need at least about 30 seconds of speech.</string>
+    <string name="thermal_downgrade_banner">Phone is hot — switching to end-of-session insights to protect performance.</string>
     <string name="source_transcription">Source Transcription:</string>
     <string name="segments_not_found">(Segments not found)</string>
 
