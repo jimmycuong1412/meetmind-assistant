@@ -51,7 +51,7 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         LlmInsightEntity::class,
         ActionItemEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -158,6 +158,27 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL(
                     "ALTER TABLE transcription_segments ADD COLUMN speaker TEXT"
                 )
+            }
+        }
+
+        /**
+         * Database version 9:
+         * - Added audio_file_path + diarization_status to transcription_sessions
+         *   for end-of-session speaker diarization with audio retention + auto-delete.
+         * - Added speaker_cluster + start_offset_ms + end_offset_ms to
+         *   transcription_segments so diarization clusters can be aligned with text
+         *   segments by their audio offsets and propagated as manual labels.
+         * Existing sessions default to UNAVAILABLE (no audio retained pre-feature).
+         */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE transcription_sessions ADD COLUMN audio_file_path TEXT")
+                database.execSQL(
+                    "ALTER TABLE transcription_sessions ADD COLUMN diarization_status TEXT NOT NULL DEFAULT 'UNAVAILABLE'"
+                )
+                database.execSQL("ALTER TABLE transcription_segments ADD COLUMN speaker_cluster INTEGER")
+                database.execSQL("ALTER TABLE transcription_segments ADD COLUMN start_offset_ms INTEGER")
+                database.execSQL("ALTER TABLE transcription_segments ADD COLUMN end_offset_ms INTEGER")
             }
         }
     }

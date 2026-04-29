@@ -41,5 +41,11 @@ data class TranscriptionSessionEntity(
     val insightStrategy: String = "REAL_TIME",
 
     @ColumnInfo(name = "topic")
-    val topic: String? = null
+    val topic: String? = null,
+
+    @ColumnInfo(name = "audio_file_path")
+    val audioFilePath: String? = null,
+
+    @ColumnInfo(name = "diarization_status")
+    val diarizationStatus: String = "UNAVAILABLE"
 )

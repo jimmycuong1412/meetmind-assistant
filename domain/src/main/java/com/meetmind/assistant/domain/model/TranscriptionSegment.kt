@@ -11,6 +11,17 @@ package com.meetmind.assistant.domain.model
  * @property text The transcribed text content
  * @property timestamp Unix timestamp (milliseconds) when this segment was created
  * @property isComplete Whether this segment represents a complete utterance (speech ended)
+ * @property speaker Optional manual speaker label (e.g. "Me", "Person A"). Wins over
+ *   [speakerCluster] for display, and is propagated to all segments sharing the same
+ *   [speakerCluster] via cluster-aware label propagation.
+ * @property speakerCluster Diarization cluster id (0..N-1) assigned by the offline
+ *   diarization pipeline. Null until diarization has run on the parent session, or for
+ *   segments whose audio range failed to be diarized.
+ * @property startOffsetMs Audio offset of segment start, measured from the beginning of
+ *   the session's recording in milliseconds. Used to align this segment with diarization
+ *   speaker spans. Null for segments produced before audio offsets were tracked.
+ * @property endOffsetMs Audio offset of segment end, in milliseconds since the start of
+ *   the session's recording. Null for partials and for legacy segments.
  */
 data class TranscriptionSegment(
     val id: String,
@@ -18,5 +29,8 @@ data class TranscriptionSegment(
     val text: String,
     val timestamp: Long,
     val isComplete: Boolean,
-    val speaker: String? = null  // Optional manual speaker label (e.g. "Me", "Person A")
+    val speaker: String? = null,
+    val speakerCluster: Int? = null,
+    val startOffsetMs: Long? = null,
+    val endOffsetMs: Long? = null
 )

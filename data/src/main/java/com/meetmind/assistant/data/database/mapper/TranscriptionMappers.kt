@@ -5,6 +5,7 @@ import com.meetmind.assistant.data.database.entity.LlmInsightEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSegmentEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
 import com.meetmind.assistant.domain.model.ActionItem
+import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
@@ -43,7 +44,13 @@ fun TranscriptionSessionEntity.toDomain(): TranscriptionSession {
         } catch (e: IllegalArgumentException) {
             InsightStrategy.REAL_TIME // Safe fallback for legacy rows
         },
-        topic = topic
+        topic = topic,
+        audioFilePath = audioFilePath,
+        diarizationStatus = try {
+            DiarizationStatus.valueOf(diarizationStatus)
+        } catch (e: IllegalArgumentException) {
+            DiarizationStatus.UNAVAILABLE
+        }
     )
 }
 
@@ -61,7 +68,9 @@ fun TranscriptionSession.toEntity(): TranscriptionSessionEntity {
         outputLanguage = outputLanguage,
         durationMs = durationMs,
         insightStrategy = insightStrategy.name,
-        topic = topic
+        topic = topic,
+        audioFilePath = audioFilePath,
+        diarizationStatus = diarizationStatus.name
     )
 }
 
@@ -77,7 +86,10 @@ fun TranscriptionSegmentEntity.toDomain(): TranscriptionSegment {
         text = text,
         timestamp = timestamp,
         isComplete = isComplete,
-        speaker = speaker
+        speaker = speaker,
+        speakerCluster = speakerCluster,
+        startOffsetMs = startOffsetMs,
+        endOffsetMs = endOffsetMs
     )
 }
 
@@ -91,7 +103,10 @@ fun TranscriptionSegment.toEntity(): TranscriptionSegmentEntity {
         text = text,
         timestamp = timestamp,
         isComplete = isComplete,
-        speaker = speaker
+        speaker = speaker,
+        speakerCluster = speakerCluster,
+        startOffsetMs = startOffsetMs,
+        endOffsetMs = endOffsetMs
     )
 }
 

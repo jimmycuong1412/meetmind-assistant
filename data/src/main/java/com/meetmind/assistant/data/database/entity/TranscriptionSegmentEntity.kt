@@ -44,5 +44,14 @@ data class TranscriptionSegmentEntity(
     val isComplete: Boolean,
 
     @ColumnInfo(name = "speaker")
-    val speaker: String? = null  // Optional manual speaker label; null = unassigned
+    val speaker: String? = null,  // Optional manual speaker label; null = unassigned
+
+    @ColumnInfo(name = "speaker_cluster")
+    val speakerCluster: Int? = null,  // Diarization cluster id; null until diarization runs
+
+    @ColumnInfo(name = "start_offset_ms")
+    val startOffsetMs: Long? = null,  // Audio offset of segment start, ms from session start
+
+    @ColumnInfo(name = "end_offset_ms")
+    val endOffsetMs: Long? = null  // Audio offset of segment end, ms from session start
 )
