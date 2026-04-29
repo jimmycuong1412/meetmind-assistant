@@ -1,6 +1,7 @@
 package com.meetmind.assistant.ui.screens
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.app.Activity
@@ -175,6 +176,37 @@ fun MainScreen(
             dismissButton = {
                 TextButton(onClick = { showStopConfirmDialog = false }) {
                     Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Battery whitelist prompt for aggressive OEMs (Xiaomi/Oppo/Vivo/Huawei/etc.).
+    // Shown once before the first long-meeting recording on those devices.
+    if (uiState.batteryWhitelistPromptVisible) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissBatteryWhitelistPrompt() },
+            title = { Text(stringResource(R.string.battery_whitelist_title)) },
+            text = { Text(stringResource(R.string.battery_whitelist_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.buildBatteryWhitelistIntent()?.let { intent ->
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            // resolveActivity passed but the OEM revoked the component name
+                            // in a firmware update — silently swallow to avoid a crash.
+                        }
+                    }
+                    viewModel.dismissBatteryWhitelistPrompt()
+                }) {
+                    Text(stringResource(R.string.battery_whitelist_open_settings))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissBatteryWhitelistPrompt() }) {
+                    Text(stringResource(R.string.battery_whitelist_skip))
                 }
             }
         )

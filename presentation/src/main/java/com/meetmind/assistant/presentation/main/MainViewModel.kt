@@ -95,6 +95,7 @@ class MainViewModel @Inject constructor(
     private val serviceController: RecordingServiceController,
     private val llmProcessingServiceController: LlmProcessingServiceController,
     private val thermalMonitor: com.meetmind.assistant.domain.monitor.ThermalMonitor,
+    private val batteryOptimizationHelper: com.meetmind.assistant.data.device.BatteryOptimizationHelper,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -172,6 +173,20 @@ class MainViewModel @Inject constructor(
                         )
                     }
                     Log.i(TAG, "Session config: mode=$currentRecordingMode, input=$currentInputLanguage, output=$currentOutputLanguage, strategy=$currentInsightStrategy, topic=$currentTopic")
+
+                    // Vendor-specific battery whitelist prompt: long meetings on aggressive
+                    // OEMs (Xiaomi, Oppo, Vivo, Huawei, etc.) get killed mid-recording around
+                    // the 30-min mark unless the user manually whitelists the app. Show the
+                    // single-shot prompt here, before the first recording starts, so we can
+                    // direct the user to the right settings page proactively.
+                    if (session.mode == RecordingMode.LONG_MEETING) {
+                        val settings = settingsRepository.getSettings().first()
+                        if (!settings.hasShownBatteryWhitelistPrompt &&
+                            batteryOptimizationHelper.shouldPromptForBatteryWhitelist()
+                        ) {
+                            _uiState.update { it.copy(batteryWhitelistPromptVisible = true) }
+                        }
+                    }
                 }
         }
 
@@ -911,6 +926,25 @@ class MainViewModel @Inject constructor(
     fun dismissThermalDowngradeBanner() {
         _uiState.update { it.copy(thermalDowngradeBannerVisible = false) }
     }
+
+    /**
+     * User dismissed (or acted on) the battery-whitelist prompt. We persist the
+     * "shown" flag regardless so the prompt is single-shot — repeated nagging
+     * across recordings annoys users without changing their decision.
+     */
+    fun dismissBatteryWhitelistPrompt() {
+        _uiState.update { it.copy(batteryWhitelistPromptVisible = false) }
+        viewModelScope.launch { settingsRepository.markBatteryWhitelistPromptShown() }
+    }
+
+    /**
+     * Build the OEM-specific Intent that opens the relevant settings page where
+     * the user can whitelist this app from background-process killing. Returns
+     * null only if no resolvable settings activity exists (extremely rare).
+     * The screen launches the intent and then calls [dismissBatteryWhitelistPrompt].
+     */
+    fun buildBatteryWhitelistIntent(): android.content.Intent? =
+        batteryOptimizationHelper.buildWhitelistIntent()
 
     /**
      * Clear all transcriptions and insights.

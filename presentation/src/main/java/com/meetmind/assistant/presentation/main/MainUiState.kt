@@ -53,7 +53,14 @@ data class MainUiState(
      * thermally critical so we silently downgraded to END_OF_SESSION. The UI shows a
      * dismissible banner explaining why real-time insights are off this session.
      */
-    val thermalDowngradeBannerVisible: Boolean = false
+    val thermalDowngradeBannerVisible: Boolean = false,
+    /**
+     * True when this is a long-meeting recording on a vendor known to ignore the
+     * Android foreground-service contract (Xiaomi, Oppo, Vivo, Huawei, etc.) AND
+     * the user has not yet seen the whitelist prompt. The dialog explains the
+     * issue and offers a button that deep-links to the OEM's autostart settings.
+     */
+    val batteryWhitelistPromptVisible: Boolean = false
 ) {
     /**
      * Returns all segments for display: completed + current partial (if exists).

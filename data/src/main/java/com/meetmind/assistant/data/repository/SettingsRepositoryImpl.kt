@@ -85,6 +85,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
         // One-time UI hints
         val HAS_SHOWN_HISTORY_INSIGHT_COACHMARK = booleanPreferencesKey("has_shown_history_insight_coachmark")
+        val HAS_SHOWN_BATTERY_WHITELIST_PROMPT = booleanPreferencesKey("has_shown_battery_whitelist_prompt")
 
         // Session templates (stored as JSON array string)
         val SESSION_TEMPLATES = stringPreferencesKey("session_templates")
@@ -167,6 +168,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
                 // One-time UI hints
                 hasShownHistoryInsightCoachmark = preferences[Keys.HAS_SHOWN_HISTORY_INSIGHT_COACHMARK] ?: false,
+                hasShownBatteryWhitelistPrompt = preferences[Keys.HAS_SHOWN_BATTERY_WHITELIST_PROMPT] ?: false,
 
                 // Per-mode default insight strategy
                 simpleListeningDefaultStrategy = parseStrategy(
@@ -257,6 +259,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun markHistoryInsightCoachmarkShown() {
         context.dataStore.edit { preferences ->
             preferences[Keys.HAS_SHOWN_HISTORY_INSIGHT_COACHMARK] = true
+        }
+    }
+
+    override suspend fun markBatteryWhitelistPromptShown() {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.HAS_SHOWN_BATTERY_WHITELIST_PROMPT] = true
         }
     }
 

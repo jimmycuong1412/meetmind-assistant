@@ -42,6 +42,12 @@ interface SettingsRepository {
      */
     suspend fun markHistoryInsightCoachmarkShown()
 
+    /**
+     * Marks the battery-optimization whitelist prompt as shown so the user is not
+     * nagged again, regardless of whether they actually whitelisted the app.
+     */
+    suspend fun markBatteryWhitelistPromptShown()
+
     // ========== Session Templates ==========
 
     /**

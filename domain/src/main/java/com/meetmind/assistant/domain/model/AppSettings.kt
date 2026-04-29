@@ -69,6 +69,12 @@ data class AppSettings(
     // Never reset by the user; persisted in DataStore.
     val hasShownHistoryInsightCoachmark: Boolean = false,
 
+    // True after the user has seen (and either accepted or dismissed) the
+    // battery-optimization whitelist prompt for aggressive OEMs. The prompt is
+    // single-shot — once shown, even if the user dismissed without whitelisting,
+    // we don't nag again on subsequent recordings.
+    val hasShownBatteryWhitelistPrompt: Boolean = false,
+
     // Adaptive conservative-threads state — persisted across sessions.
     //
     // memoryConstrainedDetected: cached result of the post-load isMemoryConstrained() check.
