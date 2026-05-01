@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!--
+        Exposes files written to Context.filesDir/exports/ via FileProvider.
+        Used when sharing a PDF export of a session via ACTION_SEND.
+    -->
+    <files-path name="exports" path="exports/" />
+</paths>

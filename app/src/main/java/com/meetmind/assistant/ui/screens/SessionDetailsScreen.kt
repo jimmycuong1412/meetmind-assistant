@@ -1,6 +1,9 @@
 package com.meetmind.assistant.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -223,6 +226,28 @@ fun SessionDetailsScreen(
                                             putExtra(Intent.EXTRA_TITLE, exportTitle)
                                         }
                                         context.startActivity(Intent.createChooser(intent, exportTitle))
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.export_pdf)) },
+                                    onClick = {
+                                        showShareMenu = false
+                                        val pdfPath = viewModel.exportAsPdf(context)
+                                        if (pdfPath != null) {
+                                            val pdfUri: Uri = FileProvider.getUriForFile(
+                                                context,
+                                                "${context.packageName}.fileprovider",
+                                                File(pdfPath)
+                                            )
+                                            val exportTitle = context.getString(R.string.export_pdf)
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "application/pdf"
+                                                putExtra(Intent.EXTRA_STREAM, pdfUri)
+                                                putExtra(Intent.EXTRA_TITLE, exportTitle)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, exportTitle))
+                                        }
                                     }
                                 )
                             }

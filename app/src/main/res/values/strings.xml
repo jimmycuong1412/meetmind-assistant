@@ -541,6 +541,7 @@
     <!-- Share options -->
     <string name="share_transcript">Share Transcript</string>
     <string name="share_summary">Share Summary</string>
+    <string name="export_pdf">Export as PDF</string>
 
     <!-- Sessions list filters -->
     <string name="filter_all">All</string>
