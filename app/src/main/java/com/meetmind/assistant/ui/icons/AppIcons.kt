@@ -33,6 +33,7 @@ object AppIcons {
     val AutoAwesome: ImageVector get() = Icons.Outlined.AutoAwesome
     val Lightbulb: ImageVector get() = Icons.Outlined.Lightbulb
     val Psychology: ImageVector get() = Icons.Outlined.Psychology
+    val RecordVoiceOver: ImageVector get() = Icons.Outlined.RecordVoiceOver
     val Lock: ImageVector get() = Icons.Outlined.Lock
     val LockOpen: ImageVector get() = Icons.Outlined.LockOpen
 

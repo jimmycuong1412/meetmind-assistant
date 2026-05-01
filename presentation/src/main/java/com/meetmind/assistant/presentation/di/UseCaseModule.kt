@@ -24,6 +24,9 @@ import com.meetmind.assistant.domain.usecase.transcription.GetTotalDataSizeUseCa
 import com.meetmind.assistant.domain.usecase.transcription.UpdateSessionDurationUseCase
 import com.meetmind.assistant.domain.usecase.transcription.UpdateSegmentTextUseCase
 import com.meetmind.assistant.domain.usecase.transcription.UpdateSegmentSpeakerUseCase
+import com.meetmind.assistant.domain.audio.AudioStorage
+import com.meetmind.assistant.domain.repository.DiarizationRepository
+import com.meetmind.assistant.domain.usecase.transcription.RunDiarizationUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -70,6 +73,16 @@ object UseCaseModule {
         repository: TranscriptionRepository
     ): SaveSegmentUseCase {
         return SaveSegmentUseCase(repository)
+    }
+
+    @Provides
+    @ViewModelScoped
+    fun provideRunDiarizationUseCase(
+        transcriptionRepository: TranscriptionRepository,
+        diarizationRepository: DiarizationRepository,
+        audioStorage: AudioStorage
+    ): RunDiarizationUseCase {
+        return RunDiarizationUseCase(transcriptionRepository, diarizationRepository, audioStorage)
     }
 
     @Provides

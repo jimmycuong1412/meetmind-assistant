@@ -19,6 +19,10 @@ import com.meetmind.assistant.domain.usecase.transcription.RenameSessionUseCase
 import com.meetmind.assistant.domain.usecase.transcription.UpdateInsightContentUseCase
 import com.meetmind.assistant.domain.usecase.transcription.UpdateSegmentTextUseCase
 import com.meetmind.assistant.domain.usecase.transcription.UpdateSegmentSpeakerUseCase
+import com.meetmind.assistant.domain.usecase.transcription.RunDiarizationUseCase
+import com.meetmind.assistant.domain.repository.DiarizationRepository
+import com.meetmind.assistant.domain.repository.TranscriptionRepository
+import com.meetmind.assistant.domain.model.DiarizationStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -59,6 +63,9 @@ class SessionDetailsViewModel @Inject constructor(
     private val llmProcessingServiceController: LlmProcessingServiceController,
     private val actionItemRepository: ActionItemRepository,
     private val crashReporter: com.meetmind.assistant.domain.monitor.CrashReporter,
+    private val runDiarizationUseCase: RunDiarizationUseCase,
+    private val diarizationRepository: DiarizationRepository,
+    private val transcriptionRepository: TranscriptionRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -573,15 +580,97 @@ class SessionDetailsViewModel @Inject constructor(
         _uiState.update { it.copy(speakerAssignmentSegmentId = null) }
     }
 
-    /** Assign or clear a speaker label on a segment. */
+    /**
+     * Assign or clear a speaker label on a segment.
+     *
+     * Cluster-aware propagation: if the segment has a diarization
+     * [TranscriptionSegment.speakerCluster] (set by [runDiarization]), the
+     * label is propagated to every segment of the same session that shares
+     * that cluster. This means tagging "Boss" on one utterance auto-labels
+     * every other segment the diarization model placed in the same speaker
+     * bucket. Most-recent-write-wins on conflicts within a cluster.
+     *
+     * Segments without a cluster (legacy sessions, segments with no offsets,
+     * or sessions where diarization hasn't run) fall back to single-segment
+     * update — same behavior as before this feature.
+     */
     fun setSpeaker(segmentId: String, speaker: String?) {
         viewModelScope.launch {
-            updateSegmentSpeakerUseCase(segmentId, speaker)
-                .onFailure { e ->
-                    _uiState.update { it.copy(error = "Failed to assign speaker: ${e.message}") }
-                }
+            // Look up the cluster on the in-memory segment snapshot before mutating.
+            val cluster = _uiState.value.sessionDetails
+                ?.segments
+                ?.firstOrNull { it.id == segmentId }
+                ?.speakerCluster
+
+            if (cluster != null) {
+                transcriptionRepository.propagateSpeakerLabelByCluster(sessionId, cluster, speaker)
+                    .onFailure { e ->
+                        _uiState.update { it.copy(error = "Failed to assign speaker: ${e.message}") }
+                    }
+            } else {
+                updateSegmentSpeakerUseCase(segmentId, speaker)
+                    .onFailure { e ->
+                        _uiState.update { it.copy(error = "Failed to assign speaker: ${e.message}") }
+                    }
+            }
             _uiState.update { it.copy(speakerAssignmentSegmentId = null) }
         }
+    }
+
+    // ========== Speaker Diarization ==========
+
+    /**
+     * Run end-of-session speaker diarization. The pipeline assumes audio was
+     * retained for this session (i.e. recorded after the diarization feature
+     * was enabled); UI gates the button on that condition.
+     *
+     * Failure modes surfaced as user-facing errors:
+     *   - No retained audio (session predates the feature)
+     *   - Diarization model not yet available on this build
+     *   - Native pipeline failure
+     */
+    fun runDiarization() {
+        if (_uiState.value.isRunningDiarization) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRunningDiarization = true, error = null) }
+            val result = runDiarizationUseCase(sessionId)
+            result
+                .onSuccess { diarization ->
+                    _uiState.update {
+                        it.copy(
+                            isRunningDiarization = false,
+                            lastDiarizationClusterCount = diarization.clusterCount
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(
+                            isRunningDiarization = false,
+                            error = e.message ?: "Speaker diarization failed."
+                        )
+                    }
+                }
+        }
+    }
+
+    /** Dismiss the post-diarization "found N speakers" banner. */
+    fun dismissDiarizationResultBanner() {
+        _uiState.update { it.copy(lastDiarizationClusterCount = null) }
+    }
+
+    /**
+     * Whether the "Identify speakers" button should be available to the user.
+     * Combines: session has retained audio, diarization isn't already
+     * running, and the on-device model is loaded. Read by the UI.
+     */
+    fun canRunDiarization(): Boolean {
+        val session = _uiState.value.sessionDetails?.session ?: return false
+        return session.audioFilePath != null &&
+            session.diarizationStatus != DiarizationStatus.RUNNING &&
+            session.diarizationStatus != DiarizationStatus.UNAVAILABLE &&
+            !_uiState.value.isRunningDiarization &&
+            diarizationRepository.isModelAvailable()
     }
 
     // ========== Insight Editing (unified) ==========

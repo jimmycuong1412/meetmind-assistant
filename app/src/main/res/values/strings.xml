@@ -125,6 +125,10 @@
     <string name="battery_whitelist_message">Your phone may stop background apps after a while, even when they\'re recording. To make sure long meetings record reliably, allow MeetMind Assistant to run in the background.</string>
     <string name="battery_whitelist_open_settings">Open settings</string>
     <string name="battery_whitelist_skip">Not now</string>
+    <string name="identify_speakers">Identify speakers</string>
+    <string name="diarization_running">Identifying speakers…</string>
+    <string name="diarization_completed_count">Identified %1$d speaker(s). Tag any segment to label them all.</string>
+    <string name="diarization_dismiss">OK</string>
     <string name="source_transcription">Source Transcription:</string>
     <string name="segments_not_found">(Segments not found)</string>
 

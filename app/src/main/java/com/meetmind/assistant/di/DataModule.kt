@@ -15,9 +15,11 @@ import com.meetmind.assistant.data.datasource.ModelDownloadManager
 import com.meetmind.assistant.data.datasource.SttDataSource
 import com.meetmind.assistant.data.monitor.AndroidThermalMonitor
 import com.meetmind.assistant.data.provider.AndroidResourceProvider
+import com.meetmind.assistant.data.repository.DiarizationRepositoryImpl
 import com.meetmind.assistant.data.repository.LlmRepositoryImpl
 import com.meetmind.assistant.data.repository.SettingsRepositoryImpl
 import com.meetmind.assistant.data.repository.SttRepositoryImpl
+import com.meetmind.assistant.domain.repository.DiarizationRepository
 import com.meetmind.assistant.domain.monitor.ThermalMonitor
 import com.meetmind.assistant.domain.provider.ResourceProvider
 import com.meetmind.assistant.domain.repository.LlmRepository
@@ -123,4 +125,8 @@ object DataModule {
     @Provides
     @Singleton
     fun provideAudioStorage(impl: AndroidAudioStorage): AudioStorage = impl
+
+    @Provides
+    @Singleton
+    fun provideDiarizationRepository(impl: DiarizationRepositoryImpl): DiarizationRepository = impl
 }

@@ -159,6 +159,33 @@ class TranscriptionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateSegmentCluster(segmentId: String, cluster: Int?): Result<Unit> {
+        return try {
+            segmentDao.updateSpeakerCluster(segmentId, cluster)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun propagateSpeakerLabelByCluster(
+        sessionId: String,
+        cluster: Int,
+        label: String?
+    ): Result<Unit> {
+        return try {
+            segmentDao.updateSpeakerByCluster(sessionId, cluster, label)
+            updateSessionModifiedTime(sessionId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun getSegmentsBySessionOnce(sessionId: String): List<TranscriptionSegment> {
+        return segmentDao.getSegmentsBySessionOnce(sessionId).map { it.toDomain() }
+    }
+
     override suspend fun deleteSession(sessionId: String): Result<Unit> {
         return try {
             sessionDao.deleteSession(sessionId)

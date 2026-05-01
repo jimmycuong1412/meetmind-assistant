@@ -46,6 +46,30 @@ interface TranscriptionSegmentDao {
     suspend fun updateSpeaker(segmentId: String, speaker: String?)
 
     /**
+     * Set the diarization cluster id on a segment. Null clears it (used when
+     * re-running diarization or when the user manually rejects clusters).
+     */
+    @Query("UPDATE transcription_segments SET speaker_cluster = :cluster WHERE id = :segmentId")
+    suspend fun updateSpeakerCluster(segmentId: String, cluster: Int?)
+
+    /**
+     * Propagate a manual speaker label to every segment of [sessionId] that
+     * shares the given diarization cluster id. Powers cluster-aware label
+     * propagation: tagging one segment as "Boss" relabels every segment the
+     * model placed in the same speaker bucket.
+     */
+    @Query("UPDATE transcription_segments SET speaker = :label WHERE session_id = :sessionId AND speaker_cluster = :cluster")
+    suspend fun updateSpeakerByCluster(sessionId: String, cluster: Int, label: String?)
+
+    /**
+     * Fetch all segments for a session, suspending one-shot. Used by the
+     * diarization pipeline which needs to align spans to segments without
+     * subscribing to the live Flow.
+     */
+    @Query("SELECT * FROM transcription_segments WHERE session_id = :sessionId ORDER BY timestamp ASC")
+    suspend fun getSegmentsBySessionOnce(sessionId: String): List<TranscriptionSegmentEntity>
+
+    /**
      * Delete all segments for a session (usually handled by CASCADE).
      */
     @Query("DELETE FROM transcription_segments WHERE session_id = :sessionId")

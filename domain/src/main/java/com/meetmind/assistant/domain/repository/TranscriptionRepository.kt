@@ -123,6 +123,31 @@ interface TranscriptionRepository {
     ): Result<Unit>
 
     /**
+     * Persist a diarization cluster id on a single segment. Used by the
+     * diarization pipeline when aligning speaker spans to text segments.
+     */
+    suspend fun updateSegmentCluster(segmentId: String, cluster: Int?): Result<Unit>
+
+    /**
+     * Propagate a manual speaker label to every segment of [sessionId] that
+     * shares the given diarization cluster. Implements cluster-aware label
+     * propagation: when the user tags one segment in cluster 2 as "Alice",
+     * every segment in cluster 2 of the same session inherits that label.
+     */
+    suspend fun propagateSpeakerLabelByCluster(
+        sessionId: String,
+        cluster: Int,
+        label: String?
+    ): Result<Unit>
+
+    /**
+     * One-shot snapshot of all segments for [sessionId]. Used by the
+     * diarization pipeline which needs ordered segments with audio offsets,
+     * but doesn't need (and shouldn't subscribe to) the live Flow.
+     */
+    suspend fun getSegmentsBySessionOnce(sessionId: String): List<TranscriptionSegment>
+
+    /**
      * Delete all sessions and their associated data.
      *
      * WARNING: This is irreversible.

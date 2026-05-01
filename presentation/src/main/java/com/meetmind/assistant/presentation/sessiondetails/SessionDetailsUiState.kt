@@ -63,7 +63,18 @@ data class SessionDetailsUiState(
     /** ID of the segment for which the speaker assignment bottom sheet is open; null = closed. */
     val speakerAssignmentSegmentId: String? = null,
     /** ID of the insight currently being regenerated; null = no regeneration in progress. */
-    val regeneratingInsightId: String? = null
+    val regeneratingInsightId: String? = null,
+    /**
+     * Whether speaker diarization is currently running for this session. Drives
+     * the spinner / disabled state on the "Identify speakers" button.
+     */
+    val isRunningDiarization: Boolean = false,
+    /**
+     * Number of clusters produced by the most recently completed diarization
+     * run for this session, or null when no run has completed (or completed
+     * but yielded no clusters). Surfaced as a confirmation toast/banner.
+     */
+    val lastDiarizationClusterCount: Int? = null
 )
 
 /**

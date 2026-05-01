@@ -227,6 +227,32 @@ fun SessionDetailsScreen(
                                 )
                             }
                         }
+                        // Speaker diarization trigger. Hidden until the on-device model
+                        // is available AND this session has retained audio — i.e. dead-
+                        // wired today (stub repo returns isModelAvailable()=false), but
+                        // light up automatically once JNI bindings ship. Gating is also
+                        // checked inside the ViewModel so the button can never fire on a
+                        // session that can't actually be diarized.
+                        if (viewModel.canRunDiarization() || uiState.isRunningDiarization) {
+                            IconButton(
+                                onClick = { viewModel.runDiarization() },
+                                enabled = !uiState.isRunningDiarization
+                            ) {
+                                if (uiState.isRunningDiarization) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(22.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color.White
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = AppIcons.RecordVoiceOver,
+                                        contentDescription = stringResource(R.string.identify_speakers),
+                                        tint = Color.White
+                                    )
+                                }
+                            }
+                        }
                         IconButton(
                             onClick = { viewModel.showDeleteConfirmation() },
                             enabled = !actionsBlocked
@@ -266,6 +292,45 @@ fun SessionDetailsScreen(
                     )
                 }
                 uiState.sessionDetails != null -> {
+                    // Post-diarization banner: shown once after a successful run, with
+                    // the cluster count to set expectations ("identified N speakers").
+                    // Dismiss removes it; it does NOT re-appear on recomposition.
+                    val clusterCount = uiState.lastDiarizationClusterCount
+                    if (clusterCount != null) {
+                        androidx.compose.material3.Surface(
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.TopCenter)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.RecordVoiceOver,
+                                    contentDescription = null,
+                                    tint = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                                androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                                androidx.compose.material3.Text(
+                                    text = stringResource(
+                                        R.string.diarization_completed_count,
+                                        clusterCount
+                                    ),
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                    color = androidx.compose.material3.MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                androidx.compose.material3.TextButton(
+                                    onClick = { viewModel.dismissDiarizationResultBanner() }
+                                ) {
+                                    androidx.compose.material3.Text(stringResource(R.string.diarization_dismiss))
+                                }
+                            }
+                        }
+                    }
                     SessionDetailsContent(
                         details = uiState.sessionDetails!!,
                         highlightId = uiState.highlightId,
