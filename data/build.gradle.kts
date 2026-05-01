@@ -25,6 +25,7 @@ android {
 
 dependencies {
     implementation(project(":domain"))
+    implementation(project(":lib-sherpa-onnx"))
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
