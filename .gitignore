@@ -66,3 +66,10 @@ Thumbs.db
 .gradle/
 gradle-app.setting
 !gradle/wrapper/gradle-wrapper.jar
+
+# Local debugging scratch (DB inspectors, JNI symbol dumps, pulled test DBs)
+check_db.py
+check_jni_symbols.py
+check_session.py
+*.db
+!**/schemas/**/*.db
