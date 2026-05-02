@@ -61,6 +61,7 @@ fun SettingsScreen(
     val isLlmDownloaded by viewModel.isLlmDownloaded.collectAsStateWithLifecycle()
     val llmDownloadState by viewModel.llmDownloadState.collectAsStateWithLifecycle()
     val sttDownloadState by viewModel.sttDownloadState.collectAsStateWithLifecycle()
+    val diarizationDownloadState by viewModel.diarizationDownloadState.collectAsStateWithLifecycle()
     val activeSttDownloadLanguage by viewModel.activeSttDownloadLanguage.collectAsStateWithLifecycle()
     val activeDownloadVariant by viewModel.activeDownloadVariant.collectAsStateWithLifecycle()
     val recommendedVariant = viewModel.recommendedVariant
@@ -134,6 +135,21 @@ fun SettingsScreen(
                     sttDownloadState = sttDownloadState,
                     isSttDownloaded = { viewModel.isSttDownloaded(it) },
                     onStartDownload = { viewModel.startSttDownload(it) }
+                )
+            }
+
+            // Diarization Section — pre-download the speaker model so users
+            // don't hit the in-meeting download prompt on first use.
+            SettingsSection(title = stringResource(R.string.settings_section_diarization)) {
+                DiarizationModelSetting(
+                    isDownloaded = remember(diarizationDownloadState) {
+                        // Re-check on every state change (Completed → file is now on disk)
+                        viewModel.isDiarizationDownloaded()
+                    },
+                    estimatedTotalBytes = viewModel.diarizationEstimatedTotalBytes,
+                    downloadState = diarizationDownloadState,
+                    onStartDownload = { viewModel.startDiarizationDownload() },
+                    onCancelDownload = { viewModel.cancelDiarizationDownload() }
                 )
             }
 
@@ -1579,6 +1595,136 @@ private fun LlmModelDownloadSetting(
                 }
             }
         }
+}
+
+/**
+ * Settings card for the speaker diarization (Pyannote + 3D-Speaker) model.
+ *
+ * Mirrors [LlmModelDownloadSetting]'s shape: title + description, status
+ * badge, progress bar while downloading, action button (Download / Resume /
+ * Cancel) at the bottom. The size shown ("~XX MB") comes from the local
+ * estimate so it appears instantly without waiting on a network HEAD.
+ *
+ * Lets users pre-download the ~34 MB model from Settings before their first
+ * meeting instead of being prompted mid-session via the SessionDetails dialog.
+ */
+@Composable
+private fun DiarizationModelSetting(
+    isDownloaded: Boolean,
+    estimatedTotalBytes: Long,
+    downloadState: DownloadState,
+    onStartDownload: () -> Unit,
+    onCancelDownload: () -> Unit
+) {
+    val isDownloading = downloadState is DownloadState.Downloading
+    val isError = downloadState is DownloadState.Error
+    val progressPct = (downloadState as? DownloadState.Downloading)?.progress?.percentage ?: 0
+    val downloadedBytes = (downloadState as? DownloadState.Downloading)?.progress?.bytesDownloaded ?: 0L
+    val sizeMb = if (estimatedTotalBytes > 0)
+        ((estimatedTotalBytes + 999_999) / 1_000_000).toInt()
+    else 34
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressPct / 100f,
+        animationSpec = tween(durationMillis = 300),
+        label = "diarization_settings_progress"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.settings_diarization_title),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.settings_diarization_description),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Surface(
+                color = if (isDownloaded) AccentSuccess.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Text(
+                    text = if (isDownloaded) stringResource(R.string.settings_diarization_downloaded)
+                    else stringResource(R.string.settings_diarization_size_label, sizeMb),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDownloaded) AccentSuccess
+                    else MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+
+        if (isDownloading) {
+            LinearProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.outline
+            )
+            Text(
+                text = stringResource(
+                    R.string.settings_diarization_progress,
+                    downloadedBytes / 1_000_000,
+                    if (estimatedTotalBytes > 0) estimatedTotalBytes / 1_000_000 else sizeMb.toLong()
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            // Allow the user to abort a long download from Settings as well.
+            OutlinedButton(
+                onClick = onCancelDownload,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.settings_diarization_cancel))
+            }
+        }
+
+        if (isError) {
+            val msg = (downloadState as DownloadState.Error).message
+            Text(
+                text = stringResource(R.string.settings_diarization_error, msg),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        if (!isDownloaded && !isDownloading) {
+            Button(
+                onClick = onStartDownload,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(
+                    imageVector = AppIcons.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (isError) stringResource(R.string.settings_diarization_resume)
+                    else stringResource(R.string.settings_diarization_download)
+                )
+            }
+        }
+    }
 }
 
 /**

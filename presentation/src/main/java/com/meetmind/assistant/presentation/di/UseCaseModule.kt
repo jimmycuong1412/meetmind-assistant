@@ -80,9 +80,10 @@ object UseCaseModule {
     fun provideRunDiarizationUseCase(
         transcriptionRepository: TranscriptionRepository,
         diarizationRepository: DiarizationRepository,
-        audioStorage: AudioStorage
+        audioStorage: AudioStorage,
+        notifier: com.meetmind.assistant.domain.notification.DiarizationNotifier
     ): RunDiarizationUseCase {
-        return RunDiarizationUseCase(transcriptionRepository, diarizationRepository, audioStorage)
+        return RunDiarizationUseCase(transcriptionRepository, diarizationRepository, audioStorage, notifier)
     }
 
     @Provides

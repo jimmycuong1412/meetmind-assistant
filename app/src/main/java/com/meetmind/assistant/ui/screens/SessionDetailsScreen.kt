@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import com.meetmind.assistant.domain.model.ActionItem
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
@@ -84,6 +85,15 @@ fun SessionDetailsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // Provide the localized format for default cluster labels ("Speaker %1$d")
+    // so the diarization use case can apply "Speaker 1", "Speaker 2", … in the
+    // user's language without the domain or presentation layer depending on
+    // Android resources.
+    val speakerClusterLabelFormat = stringResource(R.string.speaker_cluster_default)
+    LaunchedEffect(speakerClusterLabelFormat) {
+        viewModel.setSpeakerClusterLabelFormat(speakerClusterLabelFormat)
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
@@ -252,13 +262,12 @@ fun SessionDetailsScreen(
                                 )
                             }
                         }
-                        // Speaker diarization trigger. Hidden until the on-device model
-                        // is available AND this session has retained audio — i.e. dead-
-                        // wired today (stub repo returns isModelAvailable()=false), but
-                        // light up automatically once JNI bindings ship. Gating is also
-                        // checked inside the ViewModel so the button can never fire on a
-                        // session that can't actually be diarized.
-                        if (viewModel.canRunDiarization() || uiState.isRunningDiarization) {
+                        // Speaker diarization trigger. Shown whenever the session has
+                        // retained audio (audioFilePath != null). If the on-device model
+                        // hasn't been downloaded yet, tapping opens a download dialog first.
+                        // Gating logic lives in SessionDetailsUiState.showDiarizationButton
+                        // so it reacts to state changes without stale snapshot reads.
+                        if (uiState.showDiarizationButton) {
                             IconButton(
                                 onClick = { viewModel.runDiarization() },
                                 enabled = !uiState.isRunningDiarization
@@ -460,6 +469,17 @@ fun SessionDetailsScreen(
                         onNavigateToSession
                     )
                 }
+            )
+        }
+
+        // Diarization model download dialog — shown when the user taps "Identify speakers"
+        // but the on-device model files are not yet present.
+        if (uiState.showDiarizationDownloadDialog) {
+            DiarizationDownloadDialog(
+                downloadState = uiState.diarizationDownloadState,
+                estimatedBytes = uiState.diarizationDownloadEstimatedBytes,
+                onConfirm = { viewModel.confirmDiarizationModelDownload() },
+                onDismiss = { viewModel.cancelDiarizationModelDownload() }
             )
         }
     }
@@ -1970,6 +1990,130 @@ private fun EditTextDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.cancel))
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
+}
+
+// ─── Diarization download dialog ─────────────────────────────────────────────
+
+/**
+ * Dialog shown when the user taps "Identify speakers" but the on-device diarization
+ * models (~34 MB total) are not yet downloaded.
+ *
+ * States:
+ * - [DownloadState.Idle] → prompt with "Download (~34 MB)" + Cancel
+ * - [DownloadState.Downloading] → progress bar, Cancel
+ * - [DownloadState.Error] → error message, Retry + Cancel
+ * - [DownloadState.Completed] → auto-dismissed by ViewModel; dialog shouldn't be visible
+ */
+@Composable
+private fun DiarizationDownloadDialog(
+    downloadState: DownloadState,
+    estimatedBytes: Long,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    // Convert bytes → MB for display, rounding up so we never undersell.
+    // Falls back to "~34" while the estimate is still loading (== 0L).
+    val sizeMb = if (estimatedBytes > 0)
+        ((estimatedBytes + 999_999) / 1_000_000).toInt()
+    else 34
+    AlertDialog(
+        onDismissRequest = {
+            // Only allow dismiss while not actively downloading
+            if (downloadState !is DownloadState.Downloading) onDismiss()
+        },
+        icon = {
+            Icon(
+                imageVector = AppIcons.RecordVoiceOver,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.diarization_download_title),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (downloadState) {
+                    is DownloadState.Idle -> {
+                        Text(
+                            text = stringResource(R.string.diarization_download_message, sizeMb),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    is DownloadState.Downloading -> {
+                        val pct = downloadState.progress.percentage
+                        val mb = downloadState.progress.bytesDownloaded / 1_000_000
+                        Text(
+                            text = stringResource(R.string.diarization_downloading, mb),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        if (pct > 0) {
+                            LinearProgressIndicator(
+                                progress = { pct / 100f },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Text(
+                                text = "$pct%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                    is DownloadState.Error -> {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                        ) {
+                            Text(
+                                text = downloadState.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+                    is DownloadState.Completed -> {
+                        // Auto-dismissed; show nothing
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            when (downloadState) {
+                is DownloadState.Idle -> Button(onClick = onConfirm) {
+                    Text(stringResource(R.string.diarization_download_confirm, sizeMb))
+                }
+                is DownloadState.Downloading -> { /* no confirm while downloading */ }
+                is DownloadState.Error -> Button(onClick = onConfirm) {
+                    Text(stringResource(R.string.retry))
+                }
+                else -> {}
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = downloadState !is DownloadState.Downloading
+            ) {
+                Text(
+                    text = stringResource(R.string.cancel),
+                    color = if (downloadState is DownloadState.Downloading)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         },
         containerColor = MaterialTheme.colorScheme.surface

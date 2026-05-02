@@ -2,6 +2,8 @@ package com.meetmind.assistant.presentation.sessiondetails
 
 import com.meetmind.assistant.domain.model.ActionItem
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.DiarizationStatus
+import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
@@ -74,8 +76,41 @@ data class SessionDetailsUiState(
      * run for this session, or null when no run has completed (or completed
      * but yielded no clusters). Surfaced as a confirmation toast/banner.
      */
-    val lastDiarizationClusterCount: Int? = null
-)
+    val lastDiarizationClusterCount: Int? = null,
+    /** Whether to show the diarization model download prompt/progress dialog. */
+    val showDiarizationDownloadDialog: Boolean = false,
+    /** Mirror of DownloadStateManager.diarizationDownloadState for the dialog UI. */
+    val diarizationDownloadState: DownloadState = DownloadState.Idle,
+    /**
+     * Total expected download size for the diarization model in bytes.
+     * Seeded from the local estimate when the dialog opens, then upgraded to
+     * the real HEAD-resolved value once the network call returns. Drives the
+     * "Download (~XX MB)" button label.
+     */
+    val diarizationDownloadEstimatedBytes: Long = 0L
+) {
+    /**
+     * Whether the "Identify speakers" toolbar button should be shown.
+     *
+     * Derived reactively from state so the composable re-renders whenever any
+     * of the underlying fields change — unlike calling a ViewModel function from
+     * the composable, which would read a stale snapshot.
+     *
+     * The button is shown when:
+     * - Session data has loaded
+     * - The session has retained audio (audioFilePath != null)
+     * - Diarization isn't already blocked forever (UNAVAILABLE = no audio was ever retained)
+     *
+     * The button is always shown while [isRunningDiarization] so the spinner stays
+     * visible; it's disabled while running.
+     */
+    val showDiarizationButton: Boolean get() {
+        if (isRunningDiarization) return true
+        val session = sessionDetails?.session ?: return false
+        return session.audioFilePath != null &&
+            session.diarizationStatus != DiarizationStatus.UNAVAILABLE
+    }
+}
 
 /**
  * Polymorphic item for the session details list.

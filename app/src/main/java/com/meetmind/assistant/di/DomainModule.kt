@@ -62,4 +62,12 @@ object DomainModule {
     ): RecordingServiceController {
         return impl
     }
+
+    @Provides
+    @Singleton
+    fun provideDiarizationNotifier(
+        impl: com.meetmind.assistant.notification.AndroidDiarizationNotifier
+    ): com.meetmind.assistant.domain.notification.DiarizationNotifier {
+        return impl
+    }
 }

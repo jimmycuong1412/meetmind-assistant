@@ -5,6 +5,7 @@ import com.meetmind.assistant.domain.model.DiarizationResult
 import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.SpeakerSpan
 import com.meetmind.assistant.domain.model.TranscriptionSegment
+import com.meetmind.assistant.domain.notification.DiarizationNotifier
 import com.meetmind.assistant.domain.repository.DiarizationRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import kotlinx.coroutines.flow.first
@@ -33,7 +34,8 @@ import kotlinx.coroutines.flow.first
 class RunDiarizationUseCase(
     private val transcriptionRepository: TranscriptionRepository,
     private val diarizationRepository: DiarizationRepository,
-    private val audioStorage: AudioStorage
+    private val audioStorage: AudioStorage,
+    private val notifier: DiarizationNotifier? = null
 ) {
 
     /**
@@ -42,7 +44,18 @@ class RunDiarizationUseCase(
      *   COMPLETED (with audio deleted) on success, FAILED (audio preserved)
      *   on failure.
      */
-    suspend operator fun invoke(sessionId: String): Result<DiarizationResult> {
+    /**
+     * @param clusterLabelProvider Receives a 1-indexed speaker number (1, 2, 3, …)
+     *   for each unique cluster found in the diarization result and returns the
+     *   localized default label to apply (e.g. "Speaker 1"). The label is only
+     *   applied to segments that don't already have a manually-assigned speaker,
+     *   so re-runs never overwrite user tags. Defaults to a non-localized
+     *   "Speaker N" string for tests and callers that don't have a Context.
+     */
+    suspend operator fun invoke(
+        sessionId: String,
+        clusterLabelProvider: (Int) -> String = { n -> "Speaker $n" }
+    ): Result<DiarizationResult> {
         val session = transcriptionRepository.getSession(sessionId).first()
             ?: return Result.failure(IllegalStateException("Session not found: $sessionId"))
 
@@ -64,6 +77,13 @@ class RunDiarizationUseCase(
         val result = diarizationRepository.diarize(audioPath)
         if (result.isFailure) {
             transcriptionRepository.updateSessionDiarizationStatus(sessionId, DiarizationStatus.FAILED)
+            // Notify the user even when they backgrounded the app — the run they
+            // kicked off didn't finish and they probably want to know so they can retry.
+            notifier?.notifyDiarizationFailed(
+                sessionId = sessionId,
+                sessionName = session.name,
+                errorMessage = result.exceptionOrNull()?.message
+            )
             return result
         }
         val diarization = result.getOrThrow()
@@ -75,6 +95,25 @@ class RunDiarizationUseCase(
             transcriptionRepository.updateSegmentCluster(segmentId, cluster)
         }
 
+        // Auto-apply default labels ("Speaker 1", "Speaker 2", …) to clusters
+        // so the transcript is immediately readable without forcing the user
+        // to manually tag every speaker. Existing manual labels are preserved
+        // (the DAO clause filters on `speaker IS NULL`), so re-running
+        // diarization on a session you've already partially tagged won't
+        // clobber your work. Cluster ids are renumbered to be 1-based and
+        // contiguous in the order they first appear, so users always see
+        // "Speaker 1, Speaker 2, …" regardless of the model's internal numbering.
+        if (assignments.isNotEmpty()) {
+            val clusterOrder = LinkedHashMap<Int, Int>()
+            for ((_, cluster) in assignments) {
+                if (cluster !in clusterOrder) clusterOrder[cluster] = clusterOrder.size + 1
+            }
+            val labels = clusterOrder.mapValues { (_, oneBasedIndex) ->
+                clusterLabelProvider(oneBasedIndex)
+            }
+            transcriptionRepository.applyDefaultClusterLabels(sessionId, labels)
+        }
+
         // Mark COMPLETED, drop the audio file path on the session, and delete the file.
         transcriptionRepository.updateSessionAudioFile(
             sessionId = sessionId,
@@ -82,6 +121,15 @@ class RunDiarizationUseCase(
             diarizationStatus = DiarizationStatus.COMPLETED
         )
         audioStorage.deleteAudioForSession(sessionId)
+
+        // Notify the user that diarization finished — meaningful only when the
+        // app was in the background; foreground listeners on the session
+        // details screen will dismiss it on resume via [DiarizationNotifier.cancel].
+        notifier?.notifyDiarizationCompleted(
+            sessionId = sessionId,
+            sessionName = session.name,
+            speakerCount = diarization.clusterCount
+        )
 
         return Result.success(diarization)
     }

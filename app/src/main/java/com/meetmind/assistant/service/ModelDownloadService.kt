@@ -79,19 +79,21 @@ class ModelDownloadService : Service() {
             startForeground(ModelDownloadNotificationManager.NOTIFICATION_ID, notification)
         }
 
-        // Observe both download state flows and update the notification with the
-        // combined progress. Stop the service when no download is active.
+        // Observe all three download state flows and update the notification with
+        // the active download's progress. Stop the service when none are active.
         observerJob?.cancel()
         observerJob = serviceScope.launch {
             combine(
                 downloadStateManager.sttDownloadState,
-                downloadStateManager.llmDownloadState
-            ) { sttState, llmState -> Pair(sttState, llmState) }
-                .collect { (sttState, llmState) ->
+                downloadStateManager.llmDownloadState,
+                downloadStateManager.diarizationDownloadState
+            ) { sttState, llmState, diarizationState -> Triple(sttState, llmState, diarizationState) }
+                .collect { (sttState, llmState, diarizationState) ->
                     val sttActive = sttState is DownloadState.Downloading
                     val llmActive = llmState is DownloadState.Downloading
+                    val diarizationActive = diarizationState is DownloadState.Downloading
 
-                    if (!sttActive && !llmActive) {
+                    if (!sttActive && !llmActive && !diarizationActive) {
                         Log.d(TAG, "No active downloads — stopping service")
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
@@ -102,6 +104,7 @@ class ModelDownloadService : Service() {
                     val percentage = when {
                         sttActive -> (sttState as DownloadState.Downloading).progress.percentage
                         llmActive -> (llmState as DownloadState.Downloading).progress.percentage
+                        diarizationActive -> (diarizationState as DownloadState.Downloading).progress.percentage
                         else -> 0
                     }
 

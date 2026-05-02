@@ -28,6 +28,9 @@ class DownloadStateManager @Inject constructor() {
     private val _llmDownloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
     val llmDownloadState: StateFlow<DownloadState> = _llmDownloadState.asStateFlow()
 
+    private val _diarizationDownloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
+    val diarizationDownloadState: StateFlow<DownloadState> = _diarizationDownloadState.asStateFlow()
+
     /**
      * Update STT download state.
      * Called by DownloadService during STT download.
@@ -45,6 +48,14 @@ class DownloadStateManager @Inject constructor() {
     }
 
     /**
+     * Update diarization download state.
+     * Called by DownloadService during diarization model download.
+     */
+    fun updateDiarizationState(state: DownloadState) {
+        _diarizationDownloadState.value = state
+    }
+
+    /**
      * Reset STT state to Idle.
      */
     fun resetSttState() {
@@ -59,10 +70,18 @@ class DownloadStateManager @Inject constructor() {
     }
 
     /**
+     * Reset diarization state to Idle.
+     */
+    fun resetDiarizationState() {
+        _diarizationDownloadState.value = DownloadState.Idle
+    }
+
+    /**
      * Reset all states to Idle.
      */
     fun resetAll() {
         _sttDownloadState.value = DownloadState.Idle
         _llmDownloadState.value = DownloadState.Idle
+        _diarizationDownloadState.value = DownloadState.Idle
     }
 }

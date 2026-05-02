@@ -389,4 +389,220 @@ class ModelDownloadManager(
         "joiner-epoch-12-avg-8.int8.onnx"   -> 5_000_000L
         else                -> 100_000L
     }
+
+    // ── Diarization ────────────────────────────────────────────────────────
+
+    /**
+     * Where on-device diarization models live. Must agree with
+     * `DiarizationRepositoryImpl.MODEL_DIR_NAME` (`filesDir/models/diarization/`).
+     *
+     * Note: this is `filesDir`, NOT `externalFilesDir`, because diarization
+     * models are bound to native sherpa-onnx and we want them in fully
+     * private storage (no external read).
+     */
+    private val diarizationDir = File(context.filesDir, "models/diarization")
+
+    /**
+     * Direct .onnx URLs — both files are hosted unmodified by csukuangfj's
+     * sherpa-onnx Hugging Face mirror. We avoid the .tar.bz2 release archives
+     * because Android has no built-in bzip2 decoder and we don't want to pull
+     * in Apache Commons Compress just for two file downloads.
+     */
+    private val diarizationFiles = listOf(
+        DiarizationFile(
+            name = "segmentation.onnx",
+            url = "https://huggingface.co/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/" +
+                "resolve/main/model.onnx",
+            estimatedSize = 6_000_000L
+        ),
+        DiarizationFile(
+            name = "embedding.onnx",
+            // 3D-Speaker eres2net base — 16 kHz, language-agnostic, ~28 MB.
+            url = "https://huggingface.co/csukuangfj/speaker-embedding-models/" +
+                "resolve/main/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
+            estimatedSize = 28_000_000L
+        )
+    )
+
+    private data class DiarizationFile(
+        val name: String,
+        val url: String,
+        val estimatedSize: Long
+    )
+
+    /**
+     * Pre-network estimate of the total diarization model size in bytes. Used
+     * to render an immediate "~X MB" label in the download dialog before the
+     * real HEAD-resolved size arrives via [diarizationTotalRemoteSize]. Sum
+     * of the two file estimates declared in [diarizationFiles].
+     */
+    val diarizationEstimatedTotalSize: Long
+        get() = diarizationFiles.sumOf { it.estimatedSize }
+
+    /**
+     * Issue HEAD requests for every diarization file and return the precise
+     * total in bytes. Falls back to the declared estimate for any file whose
+     * HEAD fails (offline, server gives no Content-Length, etc.) so this
+     * never returns 0 unless the network is fully unreachable.
+     *
+     * Should be called off the main thread — it performs blocking I/O.
+     */
+    fun diarizationTotalRemoteSize(): Long {
+        return diarizationFiles.sumOf { f ->
+            headSize(f.url) ?: f.estimatedSize
+        }
+    }
+
+    /** True iff both diarization model files are fully present on disk. */
+    fun isDiarizationModelDownloaded(): Boolean {
+        diarizationDir.mkdirs()
+        return diarizationFiles.all { f ->
+            val out = File(diarizationDir, f.name)
+            out.exists() && out.length() > 0
+        }
+    }
+
+    /**
+     * Sum of bytes already on disk for the diarization model — completed
+     * files plus any in-progress .partial files. Used by callers to seed a
+     * "Resuming from X MB" UI before [downloadDiarizationModel] emits its
+     * first progress event. Returns 0 if no partial state exists.
+     */
+    fun diarizationPartialBytes(): Long {
+        if (!diarizationDir.exists()) return 0L
+        return diarizationFiles.sumOf { f ->
+            val out = File(diarizationDir, f.name)
+            val partial = File(diarizationDir, "${f.name}.partial")
+            when {
+                out.exists() && out.length() > 0 -> out.length()
+                partial.exists() && partial.length() > 0 -> partial.length()
+                else -> 0L
+            }
+        }
+    }
+
+    /**
+     * Download the diarization models (segmentation + embedding) sequentially
+     * with Range-header resume per file. Mirrors the STT download pattern.
+     */
+    fun downloadDiarizationModel(): Flow<DownloadProgress> = flow {
+        diarizationDir.mkdirs()
+
+        if (isDiarizationModelDownloaded()) {
+            Log.i(TAG, "Diarization models already downloaded")
+            val totalSize = diarizationFiles.sumOf { File(diarizationDir, it.name).length() }
+            emit(DownloadProgress(totalSize, totalSize, 100))
+            return@flow
+        }
+
+        // Best-effort HEAD requests for real sizes; fall back to estimates.
+        val actualSizes = mutableMapOf<String, Long>()
+        diarizationFiles.forEach { f ->
+            actualSizes[f.name] = headSize(f.url) ?: f.estimatedSize
+        }
+        val totalBytes = actualSizes.values.sum()
+        Log.i(TAG, "Diarization total download size: ${totalBytes / 1_000_000}MB")
+
+        // Seed the running total with bytes already on disk: completed files
+        // PLUS any .partial bytes from a previous interrupted run. This way the
+        // first emitted progress immediately reflects the resumed position
+        // instead of jumping from 0 → 50 % the moment the first byte arrives.
+        var totalBytesDownloaded = diarizationFiles.sumOf { f ->
+            val out = File(diarizationDir, f.name)
+            val partial = File(diarizationDir, "${f.name}.partial")
+            when {
+                out.exists() && out.length() > 0 -> out.length()
+                partial.exists() && partial.length() > 0 -> partial.length()
+                else -> 0L
+            }
+        }
+
+        diarizationFiles.forEachIndexed { index, file ->
+            val outputFile = File(diarizationDir, file.name)
+            val partialFile = File(diarizationDir, "${file.name}.partial")
+
+            if (outputFile.exists() && outputFile.length() > 0) {
+                Log.i(TAG, "Diarization file ${file.name} already complete, skipping")
+                return@forEachIndexed
+            }
+
+            val startByte = partialFile.takeIf { it.exists() }?.length() ?: 0L
+            Log.i(TAG, "Downloading diarization file ${index + 1}/${diarizationFiles.size}: ${file.name}" +
+                if (startByte > 0) " (resuming from ${startByte / 1_000_000}MB)" else "")
+            // NOTE: totalBytesDownloaded already includes `startByte` from the
+            // partial-file scan above — DO NOT add it again here.
+
+            var connection: HttpURLConnection? = null
+            try {
+                connection = URL(file.url).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                connection.instanceFollowRedirects = true
+                if (startByte > 0) connection.setRequestProperty("Range", "bytes=$startByte-")
+                connection.connect()
+
+                val responseCode = connection.responseCode
+                if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_PARTIAL) {
+                    throw Exception("HTTP $responseCode for ${file.name}")
+                }
+                val isResuming = startByte > 0 && responseCode == HttpURLConnection.HTTP_PARTIAL
+                if (startByte > 0 && !isResuming) {
+                    Log.w(TAG, "Server did not honour Range for ${file.name}, restarting this file")
+                    totalBytesDownloaded -= startByte
+                }
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(partialFile, isResuming).use { output ->
+                        val buf = ByteArray(8192)
+                        var read: Int
+                        while (input.read(buf).also { read = it } != -1) {
+                            output.write(buf, 0, read)
+                            totalBytesDownloaded += read
+                            val pct = if (totalBytes > 0)
+                                ((totalBytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 99)
+                            else 0
+                            if (pct % 2 == 0) {
+                                emit(DownloadProgress(totalBytesDownloaded, totalBytes, pct))
+                            }
+                        }
+                    }
+                }
+
+                // Promote .partial → final file
+                if (!partialFile.renameTo(outputFile)) {
+                    partialFile.copyTo(outputFile, overwrite = true)
+                    partialFile.delete()
+                }
+            } catch (e: Exception) {
+                connection?.disconnect()
+                throw Exception("Diarization model download failed: ${e.message}")
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        if (!isDiarizationModelDownloaded()) {
+            throw Exception("Diarization download incomplete — missing files in $diarizationDir")
+        }
+
+        emit(DownloadProgress(totalBytes, totalBytes, 100))
+        Log.i(TAG, "Diarization model download completed")
+    }.flowOn(Dispatchers.IO)
+
+    /** Issue a HEAD request and return Content-Length, or null on failure. */
+    private fun headSize(url: String): Long? {
+        var conn: HttpURLConnection? = null
+        return try {
+            conn = URL(url).openConnection() as HttpURLConnection
+            conn.requestMethod = "HEAD"
+            conn.connectTimeout = 15000
+            conn.instanceFollowRedirects = true
+            conn.connect()
+            conn.contentLengthLong.takeIf { it > 0 }
+        } catch (_: Exception) {
+            null
+        } finally {
+            conn?.disconnect()
+        }
+    }
 }

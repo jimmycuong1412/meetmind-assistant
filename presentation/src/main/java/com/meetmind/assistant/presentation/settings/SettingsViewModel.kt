@@ -49,6 +49,7 @@ class SettingsViewModel @Inject constructor(
 
     val llmDownloadState: StateFlow<DownloadState> = downloadStateManager.llmDownloadState
     val sttDownloadState: StateFlow<DownloadState> = downloadStateManager.sttDownloadState
+    val diarizationDownloadState: StateFlow<DownloadState> = downloadStateManager.diarizationDownloadState
 
     // Tracks which variant is currently being downloaded so that llmModelPath is updated
     // to the correct file when the download completes, regardless of the selected variant.
@@ -167,6 +168,26 @@ class SettingsViewModel @Inject constructor(
         val variant = _settings.value.llmModelVariant
         _activeDownloadVariant.value = variant
         androidDownloadManager.resumeLlmDownload(variant)
+    }
+
+    /** True iff both diarization model files are present on disk. */
+    fun isDiarizationDownloaded(): Boolean = modelDownloadManager.isDiarizationModelDownloaded()
+
+    /**
+     * Local pre-network estimate of the diarization model size in bytes —
+     * used to render an immediate "~XX MB" label in the settings card.
+     */
+    val diarizationEstimatedTotalBytes: Long
+        get() = androidDownloadManager.diarizationEstimatedTotalSize()
+
+    /** Start (or resume) the diarization model download. */
+    fun startDiarizationDownload() {
+        androidDownloadManager.startDiarizationDownload()
+    }
+
+    /** Cancel the in-progress diarization download. */
+    fun cancelDiarizationDownload() {
+        androidDownloadManager.cancelDiarizationDownload()
     }
 
     /**

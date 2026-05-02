@@ -54,12 +54,18 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val ACTION_QUICK_START = "com.meetmind.assistant.ACTION_QUICK_START"
+
+        /** Intent extra: open the session details screen for this session id on launch.
+         *  Set by [com.meetmind.assistant.notification.AndroidDiarizationNotifier] so a
+         *  notification tap deep-links straight into the just-completed session. */
+        const val EXTRA_OPEN_SESSION_ID = "extra_open_session_id"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val isQuickStart = intent?.action == ACTION_QUICK_START
+        val openSessionId = intent?.getStringExtra(EXTRA_OPEN_SESSION_ID)
         setContent {
             // Read theme mode from settings
             val settingsViewModel: SettingsViewModel = hiltViewModel()
@@ -91,7 +97,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LibellulaApp(quickStart = isQuickStart)
+                    LibellulaApp(quickStart = isQuickStart, openSessionId = openSessionId)
                 }
             }
         }
@@ -112,7 +118,7 @@ class MainActivity : ComponentActivity() {
  * 5. Settings screen (configuration)
  */
 @Composable
-fun LibellulaApp(quickStart: Boolean = false) {
+fun LibellulaApp(quickStart: Boolean = false, openSessionId: String? = null) {
     val navController = rememberNavController()
     val setupViewModel: SetupViewModel = hiltViewModel()
 
@@ -131,6 +137,17 @@ fun LibellulaApp(quickStart: Boolean = false) {
             navController.navigate("sessions") {
                 popUpTo("onboarding") { inclusive = true }
             }
+        }
+    }
+
+    // Deep link: if launched with EXTRA_OPEN_SESSION_ID (e.g. tapping a
+    // diarization-completed notification), navigate straight into that
+    // session's details screen as soon as onboarding is complete.
+    // Single-shot — keying on openSessionId means recompositions with the
+    // same value won't re-navigate.
+    LaunchedEffect(openSessionId, isOnboardingComplete) {
+        if (openSessionId != null && isOnboardingComplete) {
+            navController.navigate("session_details/$openSessionId")
         }
     }
 

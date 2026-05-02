@@ -182,6 +182,21 @@ class TranscriptionRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun applyDefaultClusterLabels(
+        sessionId: String,
+        labels: Map<Int, String>
+    ): Result<Unit> {
+        return try {
+            for ((cluster, label) in labels) {
+                segmentDao.applyDefaultSpeakerLabelByCluster(sessionId, cluster, label)
+            }
+            if (labels.isNotEmpty()) updateSessionModifiedTime(sessionId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun getSegmentsBySessionOnce(sessionId: String): List<TranscriptionSegment> {
         return segmentDao.getSegmentsBySessionOnce(sessionId).map { it.toDomain() }
     }

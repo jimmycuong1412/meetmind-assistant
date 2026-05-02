@@ -141,6 +141,20 @@ interface TranscriptionRepository {
     ): Result<Unit>
 
     /**
+     * Apply default labels (e.g. "Speaker 1", "Speaker 2") to clusters in
+     * [sessionId] only where segments don't already have a manually-assigned
+     * speaker. Called by the diarization pipeline so the transcript is
+     * immediately readable after diarization completes, without overwriting
+     * any tags the user applied before re-running diarization.
+     *
+     * @param labels Map from cluster id (0..N-1) to default label.
+     */
+    suspend fun applyDefaultClusterLabels(
+        sessionId: String,
+        labels: Map<Int, String>
+    ): Result<Unit>
+
+    /**
      * One-shot snapshot of all segments for [sessionId]. Used by the
      * diarization pipeline which needs ordered segments with audio offsets,
      * but doesn't need (and shouldn't subscribe to) the live Flow.

@@ -29,6 +29,9 @@ import com.meetmind.assistant.domain.usecase.transcription.RunDiarizationUseCase
 import com.meetmind.assistant.domain.repository.DiarizationRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import com.meetmind.assistant.domain.model.DiarizationStatus
+import com.meetmind.assistant.domain.model.DownloadState
+import com.meetmind.assistant.data.service.AndroidDownloadManager
+import com.meetmind.assistant.data.service.DownloadStateManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -72,6 +75,9 @@ class SessionDetailsViewModel @Inject constructor(
     private val runDiarizationUseCase: RunDiarizationUseCase,
     private val diarizationRepository: DiarizationRepository,
     private val transcriptionRepository: TranscriptionRepository,
+    private val androidDownloadManager: AndroidDownloadManager,
+    private val downloadStateManager: DownloadStateManager,
+    private val diarizationNotifier: com.meetmind.assistant.domain.notification.DiarizationNotifier,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -111,6 +117,58 @@ class SessionDetailsViewModel @Inject constructor(
         loadActionItems()
         checkHistoryInsightCoachmark()
         maybeAutoTriggerHistoryInsight()
+        observeDiarizationDownload()
+        // If the user opened this screen by tapping a "diarization completed"
+        // notification, dismiss it now so they don't see a stale entry in the
+        // tray for a session they're already viewing.
+        diarizationNotifier.cancel(sessionId)
+    }
+
+    /**
+     * Mirror the global [DownloadStateManager.diarizationDownloadState] into our
+     * UiState so the dialog can drive its own progress bar without a second
+     * subscription, and so completion can transparently trigger
+     * [runDiarizationInternal] when the user originally requested diarization
+     * but had to wait through the model download first.
+     */
+    private fun observeDiarizationDownload() {
+        viewModelScope.launch {
+            downloadStateManager.diarizationDownloadState.collect { state ->
+                _uiState.update { it.copy(diarizationDownloadState = state) }
+                if (state is DownloadState.Completed && pendingDiarizationAfterDownload) {
+                    pendingDiarizationAfterDownload = false
+                    // Close the dialog and kick off the actual diarization run.
+                    _uiState.update { it.copy(showDiarizationDownloadDialog = false) }
+                    downloadStateManager.resetDiarizationState()
+                    runDiarizationInternal()
+                }
+            }
+        }
+    }
+
+    /**
+     * True iff the user tapped "Identify speakers" while the model was missing,
+     * triggering a download. On [DownloadState.Completed] we automatically run
+     * diarization without requiring a second tap.
+     */
+    private var pendingDiarizationAfterDownload: Boolean = false
+
+    /**
+     * Localized format string for default cluster labels (e.g. "Speaker %1$d").
+     * Set by the composable via [setSpeakerClusterLabelFormat] so the use case
+     * can apply localized "Speaker 1", "Speaker 2", … without the domain
+     * layer needing access to Android resources. Falls back to a non-localized
+     * default for tests and pre-set callsites.
+     */
+    private var speakerClusterLabelFormat: String = "Speaker %1\$d"
+
+    /**
+     * Called from the composable on first composition so that the use case
+     * can produce localized cluster labels. The composable resolves the
+     * format string via [androidx.compose.ui.res.stringResource].
+     */
+    fun setSpeakerClusterLabelFormat(format: String) {
+        speakerClusterLabelFormat = format
     }
 
     /**
@@ -875,20 +933,57 @@ class SessionDetailsViewModel @Inject constructor(
     // ========== Speaker Diarization ==========
 
     /**
-     * Run end-of-session speaker diarization. The pipeline assumes audio was
-     * retained for this session (i.e. recorded after the diarization feature
-     * was enabled); UI gates the button on that condition.
+     * Entry point for the "Identify speakers" button.
+     *
+     * Branches based on model availability:
+     *   - Model present → run diarization immediately
+     *   - Model missing → open the download confirmation dialog. If the user
+     *     confirms, [confirmDiarizationModelDownload] kicks off the download;
+     *     [observeDiarizationDownload] auto-runs diarization when it completes.
      *
      * Failure modes surfaced as user-facing errors:
      *   - No retained audio (session predates the feature)
-     *   - Diarization model not yet available on this build
      *   - Native pipeline failure
      */
     fun runDiarization() {
         if (_uiState.value.isRunningDiarization) return
+        if (diarizationRepository.isModelAvailable()) {
+            runDiarizationInternal()
+        } else {
+            // Seed the dialog with the local size estimate immediately so the
+            // user sees a real "~XX MB" label at first paint. Then in a
+            // background coroutine, ask the network for the precise total via
+            // HEAD requests and overwrite the estimate when it lands.
+            val initialEstimate = androidDownloadManager.diarizationEstimatedTotalSize()
+            _uiState.update {
+                it.copy(
+                    showDiarizationDownloadDialog = true,
+                    diarizationDownloadEstimatedBytes = initialEstimate
+                )
+            }
+            viewModelScope.launch {
+                val real = runCatching { androidDownloadManager.diarizationRemoteTotalSize() }
+                    .getOrNull()
+                if (real != null && real > 0) {
+                    _uiState.update { it.copy(diarizationDownloadEstimatedBytes = real) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Actually run the diarization pipeline. Always called with the model
+     * known-present (either initially, or after the download flow).
+     */
+    private fun runDiarizationInternal() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRunningDiarization = true, error = null) }
-            val result = runDiarizationUseCase(sessionId)
+            val result = runDiarizationUseCase(sessionId) { oneBasedIndex ->
+                // Format the localized "Speaker N" label. Use String.format
+                // explicitly to keep the Android Resources dependency out of
+                // the domain layer.
+                String.format(speakerClusterLabelFormat, oneBasedIndex)
+            }
             result
                 .onSuccess { diarization ->
                     _uiState.update {
@@ -909,6 +1004,27 @@ class SessionDetailsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * User confirmed the download prompt. Kick off the model download and
+     * remember to auto-run diarization once it lands ([pendingDiarizationAfterDownload]).
+     * The dialog stays open and switches to a progress view driven by
+     * [SessionDetailsUiState.diarizationDownloadState].
+     */
+    fun confirmDiarizationModelDownload() {
+        pendingDiarizationAfterDownload = true
+        androidDownloadManager.startDiarizationDownload()
+    }
+
+    /**
+     * User dismissed the download dialog (or tapped Cancel during download).
+     * Clears the pending flag and cancels any in-flight download.
+     */
+    fun cancelDiarizationModelDownload() {
+        pendingDiarizationAfterDownload = false
+        androidDownloadManager.cancelDiarizationDownload()
+        _uiState.update { it.copy(showDiarizationDownloadDialog = false) }
+    }
+
     /** Dismiss the post-diarization "found N speakers" banner. */
     fun dismissDiarizationResultBanner() {
         _uiState.update { it.copy(lastDiarizationClusterCount = null) }
@@ -916,16 +1032,19 @@ class SessionDetailsViewModel @Inject constructor(
 
     /**
      * Whether the "Identify speakers" button should be available to the user.
-     * Combines: session has retained audio, diarization isn't already
-     * running, and the on-device model is loaded. Read by the UI.
+     *
+     * Note: this no longer requires [DiarizationRepository.isModelAvailable] —
+     * the user can tap the button to *trigger* the model download. We only
+     * gate on conditions that can never be fixed by downloading models:
+     * the session must have retained audio, must not already be running,
+     * and must not have status UNAVAILABLE.
      */
     fun canRunDiarization(): Boolean {
         val session = _uiState.value.sessionDetails?.session ?: return false
         return session.audioFilePath != null &&
             session.diarizationStatus != DiarizationStatus.RUNNING &&
             session.diarizationStatus != DiarizationStatus.UNAVAILABLE &&
-            !_uiState.value.isRunningDiarization &&
-            diarizationRepository.isModelAvailable()
+            !_uiState.value.isRunningDiarization
     }
 
     // ========== Insight Editing (unified) ==========

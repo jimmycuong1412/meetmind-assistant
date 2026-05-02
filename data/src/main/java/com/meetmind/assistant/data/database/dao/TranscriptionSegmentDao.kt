@@ -62,6 +62,15 @@ interface TranscriptionSegmentDao {
     suspend fun updateSpeakerByCluster(sessionId: String, cluster: Int, label: String?)
 
     /**
+     * Apply a default cluster label only to segments that don't already have a
+     * manually-assigned speaker. Used by the diarization pipeline to seed
+     * "Speaker 1", "Speaker 2", … so the transcript is immediately readable
+     * without clobbering anything the user already tagged before re-running.
+     */
+    @Query("UPDATE transcription_segments SET speaker = :label WHERE session_id = :sessionId AND speaker_cluster = :cluster AND speaker IS NULL")
+    suspend fun applyDefaultSpeakerLabelByCluster(sessionId: String, cluster: Int, label: String)
+
+    /**
      * Fetch all segments for a session, suspending one-shot. Used by the
      * diarization pipeline which needs to align spans to segments without
      * subscribing to the live Flow.

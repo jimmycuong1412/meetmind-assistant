@@ -31,6 +31,14 @@
     <string name="notification_download_progress">%1$d%% downloaded</string>
     <string name="notification_download_completing">Finalizing download…</string>
 
+    <!-- Diarization Result Notification (posted when speaker ID finishes while app is in background) -->
+    <string name="notification_channel_diarization_name">Speaker identification</string>
+    <string name="notification_channel_diarization_description">Tells you when speaker identification finishes for a session</string>
+    <string name="diarization_notification_completed_title">Speakers identified</string>
+    <string name="diarization_notification_completed_body">Identified %1$d speaker(s) in %2$s. Tap to review.</string>
+    <string name="diarization_notification_failed_title">Speaker identification failed</string>
+    <string name="diarization_notification_failed_body">Couldn\'t identify speakers in %1$s. Tap to retry</string>
+
     <!-- LLM Processing Notification -->
     <string name="notification_channel_llm_processing_name">AI Processing</string>
     <string name="notification_channel_llm_processing_description">Shows when AI is analyzing your transcription</string>
@@ -129,6 +137,11 @@
     <string name="diarization_running">Identifying speakers…</string>
     <string name="diarization_completed_count">Identified %1$d speaker(s). Tag any segment to label them all.</string>
     <string name="diarization_dismiss">OK</string>
+    <string name="diarization_download_title">Download Speaker Model</string>
+    <string name="diarization_download_message">Speaker identification requires a ~%1$d MB on-device model. Download it now? The download continues in the background even if you leave this screen.</string>
+    <string name="diarization_download_confirm">Download (~%1$d MB)</string>
+    <string name="diarization_downloading">Downloading… %1$d MB received</string>
+    <string name="retry">Retry</string>
     <string name="source_transcription">Source Transcription:</string>
     <string name="segments_not_found">(Segments not found)</string>
 
@@ -557,6 +570,23 @@
     <string name="speaker_person_c">Person C</string>
     <string name="speaker_person_d">Person D</string>
     <string name="speaker_clear">Remove speaker label</string>
+    <!-- Default cluster label assigned automatically after diarization. %1$d is 1-indexed cluster number. -->
+    <string name="speaker_cluster_default">Speaker %1$d</string>
+    <!-- Sessions list diarization status chip -->
+    <string name="diarization_status_completed">Speakers ID\'d</string>
+    <string name="diarization_status_running">Identifying speakers</string>
+    <string name="diarization_status_failed">Diarization failed</string>
+    <!-- Settings → Speaker Identification section -->
+    <string name="settings_section_diarization">Speaker Identification</string>
+    <string name="settings_diarization_title">Speaker model</string>
+    <string name="settings_diarization_description">Identifies who said what in your recordings. Runs entirely on-device after a one-time download.</string>
+    <string name="settings_diarization_size_label">~%1$d MB</string>
+    <string name="settings_diarization_downloaded">Downloaded</string>
+    <string name="settings_diarization_download">Download</string>
+    <string name="settings_diarization_resume">Resume</string>
+    <string name="settings_diarization_cancel">Cancel</string>
+    <string name="settings_diarization_progress">Downloading… %1$d MB / %2$d MB</string>
+    <string name="settings_diarization_error">Download failed: %1$s</string>
 
     <!-- Session templates -->
     <string name="templates_title">Templates</string>

@@ -66,6 +66,7 @@ class AndroidDownloadManager @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO)
     private var sttProgressJob: Job? = null
     private var llmProgressJob: Job? = null
+    private var diarizationProgressJob: Job? = null
 
     // Tracks a legacy DM download ID so resumeLlmDownload() can remove it before renaming
     private var llmDownloadId: Long? = null
@@ -340,9 +341,76 @@ class AndroidDownloadManager @Inject constructor(
         // State reset above triggers the service observer → service stops itself.
     }
 
+    // ── Diarization ─────────────────────────────────────────────────────────
+
+    /**
+     * Start diarization model download (Pyannote segmentation + 3D-Speaker
+     * embedding) via [ModelDownloadManager]. Mirrors the STT download path:
+     * sequential per-file Range-resume, progress aggregated, foreground
+     * service elevated for the duration.
+     */
+    fun startDiarizationDownload() {
+        Log.i(TAG, "Starting diarization model download")
+        diarizationProgressJob?.cancel()
+
+        // Seed the dialog with the resumable byte count from any pre-existing
+        // .partial files so the user sees "Resuming from XX MB" instead of a
+        // jarring 0% flash before the first emit arrives. Best-effort — falls
+        // back to 0 if the directory doesn't exist yet.
+        val resumedBytes = try {
+            modelDownloadManager.diarizationPartialBytes()
+        } catch (_: Exception) { 0L }
+        downloadStateManager.updateDiarizationState(
+            DownloadState.Downloading(progress = DownloadProgress(resumedBytes, 0, 0))
+        )
+        startDownloadService()
+
+        diarizationProgressJob = scope.launch {
+            try {
+                modelDownloadManager.downloadDiarizationModel().collect { p ->
+                    downloadStateManager.updateDiarizationState(
+                        DownloadState.Downloading(
+                            DownloadProgress(p.bytesDownloaded, p.totalBytes, p.percentage)
+                        )
+                    )
+                }
+                downloadStateManager.updateDiarizationState(DownloadState.Completed)
+            } catch (e: Exception) {
+                Log.e(TAG, "Diarization download failed", e)
+                downloadStateManager.updateDiarizationState(
+                    DownloadState.Error(e.message ?: "Download failed")
+                )
+            }
+        }
+    }
+
+    /** Cancel an in-progress diarization model download. */
+    fun cancelDiarizationDownload() {
+        diarizationProgressJob?.cancel()
+        downloadStateManager.resetDiarizationState()
+    }
+
+    /**
+     * Pre-network estimate of the diarization model size in bytes — safe to
+     * call on the main thread for an instant "~X MB" label before HEAD
+     * lookups land. See also [diarizationRemoteTotalSize].
+     */
+    fun diarizationEstimatedTotalSize(): Long =
+        modelDownloadManager.diarizationEstimatedTotalSize
+
+    /**
+     * Real total via HEAD requests — blocking, must be called off main thread.
+     * Falls back to declared estimates for any file whose HEAD fails.
+     */
+    suspend fun diarizationRemoteTotalSize(): Long =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            modelDownloadManager.diarizationTotalRemoteSize()
+        }
+
     /** Cancel all downloads and release resources. */
     fun cleanup() {
         sttProgressJob?.cancel()
         llmProgressJob?.cancel()
+        diarizationProgressJob?.cancel()
     }
 }

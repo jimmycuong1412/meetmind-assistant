@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meetmind.assistant.ui.R
 import androidx.compose.ui.graphics.Brush
 import com.meetmind.assistant.ui.ui.theme.*
+import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.SessionTemplate
 import com.meetmind.assistant.domain.model.TranscriptionSession
@@ -557,6 +558,13 @@ private fun SessionCard(
                         )
                     }
                 }
+                // Diarization status badge — only shown for terminal/active states.
+                // NOT_RUN and UNAVAILABLE produce nothing so the card height stays
+                // identical to the pre-feature layout for the common case.
+                DiarizationStatusBadge(
+                    status = session.diarizationStatus,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
             }
 
             // Action Buttons
@@ -591,6 +599,82 @@ private fun SessionCard(
         }
     }
 }
+
+/**
+ * Compact pill chip showing diarization state on a session card.
+ *
+ * Only rendered for terminal/active states — NOT_RUN and UNAVAILABLE collapse
+ * to a no-op so the card stays compact for sessions where diarization isn't
+ * relevant. RUNNING shows a tiny spinner inline; COMPLETED uses a subtle
+ * tertiary tint; FAILED uses an error tint.
+ */
+@Composable
+private fun DiarizationStatusBadge(
+    status: DiarizationStatus,
+    modifier: Modifier = Modifier
+) {
+    val (label, container, content, showSpinner) = when (status) {
+        DiarizationStatus.COMPLETED -> DiarizationBadgeStyle(
+            label = stringResource(R.string.diarization_status_completed),
+            container = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
+            content = MaterialTheme.colorScheme.onTertiaryContainer,
+            showSpinner = false
+        )
+        DiarizationStatus.RUNNING -> DiarizationBadgeStyle(
+            label = stringResource(R.string.diarization_status_running),
+            container = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+            showSpinner = true
+        )
+        DiarizationStatus.FAILED -> DiarizationBadgeStyle(
+            label = stringResource(R.string.diarization_status_failed),
+            container = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+            content = MaterialTheme.colorScheme.onErrorContainer,
+            showSpinner = false
+        )
+        DiarizationStatus.NOT_RUN, DiarizationStatus.UNAVAILABLE -> return
+    }
+    Surface(
+        modifier = modifier,
+        color = container,
+        shape = RoundedCornerShape(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (showSpinner) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(10.dp),
+                    strokeWidth = 1.5.dp,
+                    color = content
+                )
+            } else {
+                Icon(
+                    imageVector = AppIcons.RecordVoiceOver,
+                    contentDescription = null,
+                    tint = content,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = content,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/** Lightweight value class for the badge style table — only used by [DiarizationStatusBadge]. */
+private data class DiarizationBadgeStyle(
+    val label: String,
+    val container: Color,
+    val content: Color,
+    val showSpinner: Boolean
+)
 
 /** Vertical overlap between the hero and the steps sheet, in dp. */
 /**
