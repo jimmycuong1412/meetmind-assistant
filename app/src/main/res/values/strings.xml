@@ -326,6 +326,7 @@
     <string name="settings_section_short_meeting">Short Meeting</string>
     <string name="settings_section_long_meeting">Long Meeting</string>
     <string name="settings_section_translation">Live Translation</string>
+    <string name="settings_section_interview">Interview Coach</string>
     <string name="settings_section_vad">Voice Activity Detection (VAD)</string>
     <string name="settings_interval_analysis">Analysis Interval</string>
     <string name="settings_interval_translation">Translation Interval</string>

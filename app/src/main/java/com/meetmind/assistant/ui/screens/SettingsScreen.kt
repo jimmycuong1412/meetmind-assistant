@@ -318,6 +318,30 @@ private fun RecordingModesAccordion(
                 onStrategyChange = { viewModel.updateModeDefaultStrategy(RecordingMode.REAL_TIME_TRANSLATION, it) }
             )
         }
+
+        // Interview Coach — same shape as the other modes; uses the 10s
+        // minimum (MIN_INTERVAL_SECONDS default) since responses must feel
+        // real-time during a live conversation, not analysis-paced.
+        ModeAccordionCard(
+            title = stringResource(R.string.settings_section_interview),
+            icon = AppIcons.ModeInterview,
+            isExpanded = RecordingMode.INTERVIEW in expandedModes,
+            onToggle = { toggle(RecordingMode.INTERVIEW) }
+        ) {
+            LlmIntervalSetting(
+                currentInterval = settings.interviewIntervalSeconds,
+                onIntervalChange = { viewModel.updateModeInterval(RecordingMode.INTERVIEW, it) }
+            )
+            LlmSystemPromptSetting(
+                currentPrompt = settings.interviewSystemPrompt,
+                onPromptChange = { viewModel.updateModeSystemPrompt(RecordingMode.INTERVIEW, it) },
+                onReset = { viewModel.resetModeSystemPrompt(RecordingMode.INTERVIEW) }
+            )
+            DefaultStrategySetting(
+                currentStrategy = settings.interviewDefaultStrategy,
+                onStrategyChange = { viewModel.updateModeDefaultStrategy(RecordingMode.INTERVIEW, it) }
+            )
+        }
     }
 }
 
