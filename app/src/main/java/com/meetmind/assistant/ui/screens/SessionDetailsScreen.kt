@@ -56,8 +56,10 @@ import com.meetmind.assistant.domain.model.ActionItem
 import com.meetmind.assistant.domain.model.BatchInsightProgress
 import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.LlmInsight
+import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
+import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
 import com.meetmind.assistant.presentation.sessiondetails.SessionDetailsViewModel
 import com.meetmind.assistant.domain.model.SupportedLanguages
 import com.meetmind.assistant.ui.components.RenameSessionDialog
@@ -517,12 +519,39 @@ private fun SessionDetailsContent(
         if (isGeneratingHistoryInsight) selectedTab = 1
     }
     val pendingCount = actionItems.count { !it.isDone }
-    val tabTitles = listOf(
-        stringResource(R.string.tab_transcript),
-        stringResource(R.string.tab_insights),
-        if (pendingCount > 0) stringResource(R.string.tab_tasks_badge, pendingCount)
-        else stringResource(R.string.tab_tasks)
-    )
+
+    // Detect interview-mode insights with an actual question (not coaching notes).
+    // The parser writes the question text directly as the title; coaching-only
+    // notes get the "coaching:Role" prefix instead. This rule is the same one
+    // the unit tests assert, so it stays in sync as long as we re-use the
+    // canonical COACHING_NOTE_PREFIX constant from the parser.
+    val isInterviewSession = details.session.mode == RecordingMode.INTERVIEW
+    val questionInsights = remember(details.insights, isInterviewSession) {
+        if (!isInterviewSession) emptyList()
+        else details.insights.filter { insight ->
+            val title = insight.title.orEmpty()
+            title.isNotBlank() && !title.startsWith(InterviewOutputParser.COACHING_NOTE_PREFIX)
+        }
+    }
+
+    val tabTitles = buildList {
+        add(stringResource(R.string.tab_transcript))
+        add(stringResource(R.string.tab_insights))
+        add(
+            if (pendingCount > 0) stringResource(R.string.tab_tasks_badge, pendingCount)
+            else stringResource(R.string.tab_tasks)
+        )
+        // Questions tab — only for INTERVIEW-mode sessions. The badge always
+        // shows the count (including zero) so the tab title stays stable
+        // and users can find it even before any question is detected.
+        if (isInterviewSession) {
+            add(
+                if (questionInsights.isNotEmpty())
+                    stringResource(R.string.tab_questions_badge, questionInsights.size)
+                else stringResource(R.string.tab_questions)
+            )
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Hero header
@@ -572,6 +601,72 @@ private fun SessionDetailsContent(
                 actionItems = actionItems,
                 onToggle = onToggleTask,
                 onDelete = onDeleteTask
+            )
+            3 -> QuestionsTab(
+                questions = questionInsights,
+                segments = details.segments,
+                onEditInsight = onEditInsight
+            )
+        }
+    }
+}
+
+// ─── Questions tab (Interview mode only) ─────────────────────────────────────
+
+/**
+ * Filtered view of insights for INTERVIEW-mode sessions: shows only the
+ * cards where a real question was detected (title is the question text,
+ * not the "coaching:" prefix). Re-uses [InsightCard] so question cards
+ * here look identical to the same cards in the AI Insights tab — there's
+ * no second renderer to keep in sync.
+ */
+@Composable
+private fun QuestionsTab(
+    questions: List<LlmInsight>,
+    segments: List<TranscriptionSegment>,
+    onEditInsight: (LlmInsight) -> Unit
+) {
+    if (questions.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    imageVector = AppIcons.Lightbulb,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+                Text(
+                    text = stringResource(R.string.questions_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+        return
+    }
+
+    // Sort newest-first so the most recently asked question is on top — this
+    // is what users want during a live interview to see their latest answer.
+    val sorted = remember(questions) { questions.sortedByDescending { it.timestamp } }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(sorted, key = { it.id }) { insight ->
+            InsightCard(
+                insight = insight,
+                segments = segments,
+                isFinal = false,
+                onEditInsight = { onEditInsight(insight) },
+                onRegenerate = null,
+                isRegenerating = false
             )
         }
     }

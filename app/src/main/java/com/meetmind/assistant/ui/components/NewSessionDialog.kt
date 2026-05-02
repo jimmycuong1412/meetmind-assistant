@@ -595,15 +595,29 @@ private fun InterviewRoleSelector(
     selectedRole: String,
     onRoleSelected: (String) -> Unit
 ) {
-    val roles = listOf(
+    // Preset roles. The last entry ("Custom role…") is a SENTINEL — picking it
+    // opens an inline text field whose value becomes the real role string.
+    // All other entries store their literal text as the role.
+    val presetRoles = listOf(
         stringResource(R.string.interview_role_developer),
         stringResource(R.string.interview_role_devops),
         stringResource(R.string.interview_role_tester),
         stringResource(R.string.interview_role_product_manager),
         stringResource(R.string.interview_role_designer),
-        stringResource(R.string.interview_role_data_scientist),
-        stringResource(R.string.interview_role_other)
+        stringResource(R.string.interview_role_data_scientist)
     )
+    val customRoleSentinel = stringResource(R.string.interview_role_other)
+    val roles = presetRoles + customRoleSentinel
+
+    // Determine current display state from the role string passed in:
+    //  - If it matches a preset → show preset name in button, no text field
+    //  - If it doesn't → user is in custom mode; button shows current text or
+    //    the sentinel placeholder, and the text field is visible
+    val isCustom = selectedRole !in presetRoles
+    var customText by remember(selectedRole) {
+        mutableStateOf(if (isCustom) selectedRole else "")
+    }
+
     var expanded by remember { mutableStateOf(false) }
     var buttonSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
@@ -622,7 +636,12 @@ private fun InterviewRoleSelector(
                     .onGloballyPositioned { buttonSize = it.size },
                 shape = MaterialTheme.shapes.medium
             ) {
-                Text(selectedRole, modifier = Modifier.weight(1f))
+                Text(
+                    text = if (isCustom && customText.isNotBlank()) customText
+                    else if (isCustom) customRoleSentinel
+                    else selectedRole,
+                    modifier = Modifier.weight(1f)
+                )
                 Icon(
                     imageVector = AppIcons.ExpandMore,
                     contentDescription = null,
@@ -635,10 +654,23 @@ private fun InterviewRoleSelector(
                 modifier = Modifier.width(with(density) { buttonSize.width.toDp() })
             ) {
                 roles.forEachIndexed { index, role ->
+                    val isSelected = role == customRoleSentinel && isCustom ||
+                        role != customRoleSentinel && role == selectedRole
                     DropdownMenuItem(
                         text = { Text(role) },
-                        onClick = { onRoleSelected(role); expanded = false },
-                        leadingIcon = if (role == selectedRole) {
+                        onClick = {
+                            expanded = false
+                            if (role == customRoleSentinel) {
+                                // Switching to custom: seed the role with whatever
+                                // is in the text field so the parent never sees
+                                // the sentinel string as a real role. Falls back
+                                // to a placeholder so the role is never empty.
+                                onRoleSelected(customText.ifBlank { customRoleSentinel })
+                            } else {
+                                onRoleSelected(role)
+                            }
+                        },
+                        leadingIcon = if (isSelected) {
                             { Icon(AppIcons.CheckCircle, null, modifier = Modifier.size(16.dp)) }
                         } else null
                     )
@@ -650,6 +682,22 @@ private fun InterviewRoleSelector(
                     }
                 }
             }
+        }
+        // Inline text field — only visible when "Custom role…" is selected.
+        // Live-syncs back to the parent so the role tracks every keystroke;
+        // this means effectiveTopic updates without the user needing to confirm.
+        if (isCustom) {
+            OutlinedTextField(
+                value = customText,
+                onValueChange = {
+                    customText = it
+                    onRoleSelected(it.ifBlank { customRoleSentinel })
+                },
+                placeholder = { Text(stringResource(R.string.interview_role_custom_hint)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.medium
+            )
         }
     }
 }

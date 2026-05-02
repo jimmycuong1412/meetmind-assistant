@@ -381,7 +381,8 @@
     <string name="interview_role_product_manager">Product Manager</string>
     <string name="interview_role_designer">UX Designer</string>
     <string name="interview_role_data_scientist">Data Scientist</string>
-    <string name="interview_role_other">Other</string>
+    <string name="interview_role_other">Custom role…</string>
+    <string name="interview_role_custom_hint">e.g. SRE, Pharmacy Tech, Backend Engineer (Rust)</string>
 
     <!-- Session Details - Tabs and Insight Card -->
     <string name="tab_transcript">Transcript</string>
@@ -548,6 +549,10 @@
     <!-- Session Details - Tasks tab -->
     <string name="tab_tasks">Tasks</string>
     <string name="tab_tasks_badge">Tasks (%d)</string>
+    <!-- Interview-mode "Questions Asked" tab -->
+    <string name="tab_questions">Questions</string>
+    <string name="tab_questions_badge">Questions (%d)</string>
+    <string name="questions_empty">No interview questions detected yet. As the interviewer asks questions, they\'ll appear here with your AI-generated answers.</string>
     <string name="tasks_empty">No action items yet.\nAction items are extracted from AI insights automatically.</string>
     <string name="tasks_pending">Pending (%d)</string>
     <string name="tasks_completed">Completed (%d)</string>
