@@ -366,7 +366,7 @@ fun InsightsSection(
             visible = showSyncButton,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 16.dp),
+                .padding(end = 24.dp, bottom = 16.dp),
             enter = fadeIn() + slideInVertically { it / 2 },
             exit = fadeOut() + slideOutVertically { it / 2 }
         ) {

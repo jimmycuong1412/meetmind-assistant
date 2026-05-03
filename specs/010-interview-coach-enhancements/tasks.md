@@ -1,0 +1,220 @@
+# Tasks: Interview Coach Enhancements
+
+**Input**: Design documents from `/specs/010-interview-coach-enhancements/`  
+**Branch**: `feature/010-interview-coach-enhancements`  
+**Prerequisites**: plan.md ✅ spec.md ✅ research.md ✅ data-model.md ✅ quickstart.md ✅
+
+**Organization**: Tasks grouped by user story — each story is independently implementable and testable.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel with other [P] tasks in the same phase (different files, no shared dependencies)
+- **[Story]**: Which user story this task belongs to
+- No test tasks generated (not requested in spec)
+
+---
+
+## Phase 1: Setup (Shared Infrastructure)
+
+**Purpose**: Room migration, new data class files, and DB version bump — must land before any story touches persistence.
+
+- [ ] T001 Increment `@Database(version = 10)` in `data/src/main/java/com/meetmind/assistant/data/database/AppDatabase.kt` and add `MIGRATION_9_10` that executes `ALTER TABLE llm_insights ADD COLUMN question_type TEXT`; register migration in the `addMigrations()` call
+- [ ] T002 Add `val questionType: String? = null` field with `@ColumnInfo(name = "question_type")` to `LlmInsightEntity` in `data/src/main/java/com/meetmind/assistant/data/database/entity/LlmInsightEntity.kt`
+- [ ] T003 Add `val questionType: String? = null` field to the `LlmInsight` domain model in `domain/src/main/java/com/meetmind/assistant/domain/model/LlmInsight.kt`
+- [ ] T004 [P] Create `FillerWordStats` data class (`totalCount: Int = 0`, `ratePerMinute: Float = 0f`) in `domain/src/main/java/com/meetmind/assistant/domain/model/FillerWordStats.kt`
+- [ ] T005 [P] Create `CardTimerEntry` data class (`elapsedMs: Long = 0L`, `nudge: String? = null`) in `app/src/main/java/com/meetmind/assistant/presentation/main/CardTimerEntry.kt`
+- [ ] T006 Verify the app compiles and installs cleanly after migration (run `./gradlew :app:assembleDebug`; install on device; confirm no crash on launch — Room auto-migrates)
+
+**Checkpoint**: DB schema at v10, new domain models exist, app launches without crash.
+
+---
+
+## Phase 2: Foundational (Blocking Prerequisites)
+
+**Purpose**: Core logic changes that multiple stories depend on — `InterviewOutputParser` extension and `InterviewPromptBuilder` speaker-label overload. Must be complete before stories 1, 2, and 5 can progress.
+
+- [ ] T007 In `InterviewInsight` (inside `domain/src/main/java/com/meetmind/assistant/domain/usecase/llm/InterviewOutputParser.kt`), add `val questionType: String? = null` field to the `InterviewInsight` data class
+- [ ] T008 In `InterviewOutputParser.parse()`, add extraction of the `question_type` JSON field after the existing `coaching_tips` extraction; coerce any value not in `{"behavioural", "technical", "situational"}` to `null`; pass `questionType` into the returned `InterviewInsight`
+- [ ] T009 Update `toLlmInsight()` (or equivalent mapping function that converts `InterviewInsight` → `LlmInsight`) in `domain/src/main/java/com/meetmind/assistant/domain/usecase/llm/InterviewOutputParser.kt` (or its call-site in `SyncSttLlmUseCase`) to map `InterviewInsight.questionType` → `LlmInsight.questionType`
+- [ ] T010 Update the mapper from `LlmInsight` → `LlmInsightEntity` (and back) in `data/src/main/java/com/meetmind/assistant/data/` to include `questionType` ↔ `question_type` round-trip
+- [ ] T011 Add `buildWithSpeakerLabels(role: String, segments: List<TranscriptionSegment>): String` overload to `InterviewPromptBuilder` in `domain/src/main/java/com/meetmind/assistant/domain/usecase/llm/InterviewPromptBuilder.kt`; when all segments have `speakerCluster == null`, delegate to existing `build()`; otherwise prefix each segment text with `[Interviewer]:` or `[You]:` (first-observed cluster = Interviewer) and join, then `takeLast(MAX_TRANSCRIPT_CHARS)`
+
+**Checkpoint**: Parser extracts `question_type`, mapper round-trips it to/from DB, `buildWithSpeakerLabels` compiles.
+
+---
+
+## Phase 3: User Story 1 — Question-Reactive Instant Trigger (Priority: P1) 🎯 MVP
+
+**Goal**: Coaching card appears within 3 seconds of a `?`-terminated or question-opener segment — independent of the 30-second interval.
+
+**Independent Test**: Start Interview recording → say "Tell me about a challenge you've faced" → coaching card must appear within 3 seconds. See `quickstart.md` Story 1 smoke test.
+
+- [ ] T012 [US1] Add `private const val MIN_REACTIVE_DEBOUNCE_MS = 10_000L` and `private fun isLikelyQuestion(text: String): Boolean` (checks `endsWith("?")` and a list of opener phrases: "tell me about", "walk me through", "describe a", "give me an example", "how would you", "what would you", "why did you", "can you explain") to `SyncSttLlmUseCase` in `domain/src/main/java/com/meetmind/assistant/domain/usecase/sync/SyncSttLlmUseCase.kt`
+- [ ] T013 [US1] In `SyncSttLlmUseCase`, inside the `transcriptionFlow.collect` block, after appending a completed segment to `newSegmentsSinceLastLlm` (around line 202), add the reactive trigger guard: `if (recordingMode == RecordingMode.INTERVIEW && isLikelyQuestion(segment.text) && (currentTimeMs - lastInferenceTimestamp) >= MIN_REACTIVE_DEBOUNCE_MS)` → call `runInference()` and update `lastInferenceTimestamp`; do NOT remove the existing 30-second interval path in `SyncSttLlmUseCase.kt`
+- [ ] T014 [US1] Smoke-test: install APK → Interview mode → speak a question ending in `?` → verify card appears < 3 s; speak a non-question statement → verify no card fires early
+
+**Checkpoint**: US1 fully functional. Coaching card reactive to questions. Interval fallback still works.
+
+---
+
+## Phase 4: User Story 2 — Speaker-Aware Question Detection (Priority: P2)
+
+**Goal**: Speaker labels `[Interviewer]` / `[You]` in LLM prompt; false positives from candidate's own questions eliminated.
+
+**Independent Test**: Two-voice session (or playback) → only the interviewer's question generates a card. See `quickstart.md` Story 2 smoke test.
+
+- [ ] T015 [US2] Add `private val speakerMapping = mutableMapOf<Int, String>()` to `SyncSttLlmUseCase`; clear it in the session-start path (wherever `newSegmentsSinceLastLlm` and `lastInferenceTimestamp` are reset) in `domain/src/main/java/com/meetmind/assistant/domain/usecase/sync/SyncSttLlmUseCase.kt`
+- [ ] T016 [US2] In `SyncSttLlmUseCase`, when building the prompt for Interview mode, check if any segment in `newSegmentsSinceLastLlm` has a non-null `speakerCluster`; if yes, populate `speakerMapping` (first unseen cluster → `"[Interviewer]"`, subsequent unseen clusters → `"[You]"`) and call `InterviewPromptBuilder.buildWithSpeakerLabels(role, segments)`; otherwise call existing `InterviewPromptBuilder.build(role, text)` in `domain/src/main/java/com/meetmind/assistant/domain/usecase/sync/SyncSttLlmUseCase.kt`
+- [ ] T017 [US2] Update the `prompt_interview` string in `app/src/main/res/values/strings.xml` to add one sentence after the existing instructions: `"Speaker labels [Interviewer] and [You] prefix each turn when available. Only flag questions from [Interviewer] turns."`
+- [ ] T018 [US2] Smoke-test: two-voice session → confirm only interviewer questions produce cards; single-voice session → confirm no crash (falls back to unlabelled prompt)
+
+**Checkpoint**: US2 functional. Speaker-labelled prompts work; unlabelled fallback intact.
+
+---
+
+## Phase 5: User Story 3 — Filler Word Counter Badge (Priority: P3)
+
+**Goal**: Real-time filler word badge on Insights tab; colour-coded at 3/min (amber) and 6/min (red).
+
+**Independent Test**: Say filler-heavy sentences → badge appears and updates within 1 second of segment completion. See `quickstart.md` Story 3 smoke test.
+
+- [ ] T019 [US3] Create `FillerWordCounter` object in `domain/src/main/java/com/meetmind/assistant/domain/usecase/llm/FillerWordCounter.kt` with `fun count(text: String): Int`; tokenise lowercased, de-punctuated text; match single-word fillers (`um`, `uh`, `like`, `basically`, `literally`, `so`) and multi-word fillers (`you know`) via substring scan before tokenisation
+- [ ] T020 [US3] Add `val fillerWordStats: FillerWordStats = FillerWordStats()` to `MainUiState` in `app/src/main/java/com/meetmind/assistant/presentation/main/MainUiState.kt`
+- [ ] T021 [US3] In `MainViewModel` (`app/src/main/java/com/meetmind/assistant/presentation/main/MainViewModel.kt`), on each completed segment update: if `isRecording && recordingMode == INTERVIEW`, call `FillerWordCounter.count(segment.text)` and update `_uiState` with accumulated `totalCount` and recomputed `ratePerMinute = totalCount / max(1f, recordingDurationMillis / 60_000f)`; reset `fillerWordStats` to default when a new session starts
+- [ ] T022 [US3] In `InsightsSection` (`app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`), add a `fillerWordStats: FillerWordStats` parameter and a `recordingMode: RecordingMode` parameter; inside the outer `Box`, add an `AnimatedVisibility`-wrapped filler badge at `Alignment.TopEnd` with `padding(end = 12.dp, top = 8.dp)`; visible only when `isRecording && recordingMode == INTERVIEW`; badge shows `"Fillers: ${stats.ratePerMinute.roundToInt()}/min"` in a small `Surface` pill; colour: neutral below 3, amber `Color(0xFFF59E0B)` at ≥ 3, `MaterialTheme.colorScheme.error` at ≥ 6
+- [ ] T023 [US3] Thread `fillerWordStats` and `recordingMode` from `MainScreen.kt` (line ~608) down into the `InsightsSection` call in `app/src/main/java/com/meetmind/assistant/ui/screens/MainScreen.kt`
+- [ ] T024 [US3] Smoke-test: record filler-heavy speech → badge appears and colour changes at correct thresholds; non-interview mode → badge not shown
+
+**Checkpoint**: US3 functional. Filler badge visible and colour-coded in Interview mode only.
+
+---
+
+## Phase 6: User Story 4 — Answer Duration Timer (Priority: P4)
+
+**Goal**: Per-card elapsed timer with amber (≥90s) / red (≥120s) border; "Consider elaborating" nudge for answers < 30s.
+
+**Independent Test**: Trigger a question card → speak > 90s → border turns amber → speak > 120s → border turns red. See `quickstart.md` Story 4 smoke test.
+
+- [ ] T025 [US4] Add `val cardTimers: Map<String, CardTimerEntry> = emptyMap()` to `MainUiState` in `app/src/main/java/com/meetmind/assistant/presentation/main/MainUiState.kt`
+- [ ] T026 [US4] In `MainViewModel`, when a new `LlmInsight` is added to `insights` while `isRecording && recordingMode == INTERVIEW`, insert a new `CardTimerEntry(elapsedMs = 0L)` into `cardTimers` keyed by `insight.id`; also launch a 1-second ticker coroutine (cancel on session stop) that increments all entries in `cardTimers` by 1000ms each tick in `app/src/main/java/com/meetmind/assistant/presentation/main/MainViewModel.kt`
+- [ ] T027 [US4] In `MainViewModel`, when `isRecording` transitions to `false`, stop the ticker and for every entry in `cardTimers` where `elapsedMs < 30_000L`, set `nudge = "Consider elaborating"` in `app/src/main/java/com/meetmind/assistant/presentation/main/MainViewModel.kt`
+- [ ] T028 [US4] Add `timerEntry: CardTimerEntry?` parameter to `InterviewInsightItem` in `app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`; in the card header row, when `timerEntry != null`, render a small `Text` showing elapsed time formatted as `mm:ss`; apply a `border()` modifier to the card's `Surface`: no border below 90s, `BorderStroke(1.5.dp, Color(0xFFF59E0B))` at ≥ 90s, `BorderStroke(1.5.dp, MaterialTheme.colorScheme.error)` at ≥ 120s
+- [ ] T029 [US4] When `timerEntry?.nudge != null`, render a small `"Consider elaborating"` chip below the coaching tips section inside `InterviewInsightItem` in `app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`
+- [ ] T030 [US4] Thread `cardTimers` from `MainScreen.kt` → `InsightsSection` → `InsightItem` → `InterviewInsightItem`; update all intermediate call-sites in `app/src/main/java/com/meetmind/assistant/ui/screens/MainScreen.kt` and `app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`
+- [ ] T031 [US4] Smoke-test: question card appears → timer ticks → amber at 90s → red at 120s → "Consider elaborating" chip after short answer
+
+**Checkpoint**: US4 functional. Per-card timers tick live; colour thresholds and nudge chip work correctly.
+
+---
+
+## Phase 7: User Story 5 — STAR-Structured Answer Cards (Priority: P5)
+
+**Goal**: Behavioural questions generate STAR-structured cards with four labelled sections (Situation / Task / Action / Result).
+
+**Independent Test**: Say "Tell me about a time you handled a conflict" → coaching card shows four labelled STAR blocks. See `quickstart.md` Story 5 smoke test.
+
+- [ ] T032 [US5] Update `prompt_interview` in `app/src/main/res/values/strings.xml` to add `question_type` to the required JSON output schema and add STAR formatting instruction: `"question_type": "behavioural" when question begins with Tell me about a time/Give an example/Describe a situation/Walk me through a time/Have you ever; "technical" for implementation or architecture questions; "situational" for What would you do if; null if question_detected is false. When question_type is "behavioural", structure the answer field as four sections separated by |||: Situation: … ||| Task: … ||| Action: … ||| Result: …`
+- [ ] T033 [US5] In `InterviewOutputParser`, after extracting `answerSuggestion`, if `questionType == "behavioural"` and the raw answer does NOT contain `|||`, apply a client-side keyword pre-filter: if the `detectedQuestion` (lowercased) matches any behavioural opener from the list in research.md R-06, set `questionType = "behavioural"` even if the LLM returned a different value — this ensures STAR card renders for known behavioural questions regardless of LLM classification in `domain/src/main/java/com/meetmind/assistant/domain/usecase/llm/InterviewOutputParser.kt`
+- [ ] T034 [US5] Create `StarAnswerSection` composable in `app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`; it accepts `content: String` (the `|||`-delimited answer), splits on `|||`, and renders four labelled `Surface` blocks with labels **Situation**, **Task**, **Action**, **Result**; each block has a left `border` of `2.dp` in the card's accent colour (`ModeInterviewTint`); if splitting yields fewer than 4 parts, render the unsplit content as plain `FormattedInsightText` (graceful degradation)
+- [ ] T035 [US5] In `InterviewInsightItem`, replace the `FormattedInsightText(insight.content)` call in the "Answer Suggestion" section with: `if (insight.questionType == "behavioural" && insight.content.contains("|||")) StarAnswerSection(insight.content) else FormattedInsightText(insight.content)` in `app/src/main/java/com/meetmind/assistant/ui/screens/InsightsSection.kt`
+- [ ] T036 [US5] Smoke-test: behavioural question → STAR card with 4 labelled blocks; technical question → standard bullet card; LLM returns non-STAR answer for behavioural → plain text fallback, no crash
+
+**Checkpoint**: US5 functional. STAR cards render for behavioural questions; all other question types unaffected.
+
+---
+
+## Phase 8: Polish & Cross-Cutting Concerns
+
+**Purpose**: Edge cases, graceful degradation verification, and quickstart validation.
+
+- [ ] T037 [P] Verify all 5 edge cases from `spec.md` manually: (1) single-speaker diarization fallback; (2) reactive trigger queue when LLM busy; (3) filler word at segment boundary; (4) silence during answer timer; (5) 3-word question with STAR → skip STAR format
+- [ ] T038 [P] Confirm `isLikelyQuestion()` does NOT fire on partial segments — add a guard in `SyncSttLlmUseCase` if not already present (reactive trigger only on `segment.isComplete == true`) in `domain/src/main/java/com/meetmind/assistant/domain/usecase/sync/SyncSttLlmUseCase.kt`
+- [ ] T039 Run all existing `InterviewOutputParserTest` cases to confirm no regressions from the `question_type` and STAR extraction additions in `domain/src/test/java/com/meetmind/assistant/domain/usecase/llm/InterviewOutputParserTest.kt`
+- [ ] T040 Run `quickstart.md` full smoke-test sequence (all 5 stories) on Lenovo Legion Y700 Gen 3
+- [ ] T041 [P] Delete the stale `specs/006-mock-apk-testing/plan.md` that was accidentally generated by the setup script during branch creation (contains only the blank template)
+
+---
+
+## Dependencies & Execution Order
+
+### Phase Dependencies
+
+```
+Phase 1 (Setup / Migration)
+    │
+    └──► Phase 2 (Foundational: parser + prompt builder)
+              │
+              ├──► Phase 3 (US1 — Reactive Trigger)     ← MVP, ship here
+              │         │
+              │         └──► Phase 4 (US2 — Speaker Labels)  ← depends on US1 trigger path
+              │
+              ├──► Phase 5 (US3 — Filler Badge)          ← independent of US1/US2
+              │
+              ├──► Phase 6 (US4 — Answer Timer)          ← independent of US1/US2/US3
+              │
+              └──► Phase 7 (US5 — STAR Cards)            ← depends on Phase 2 parser work
+                        │
+                        └──► Phase 8 (Polish)
+```
+
+### User Story Dependencies
+
+| Story | Depends on | Can start after |
+|-------|-----------|-----------------|
+| US1 (Reactive Trigger) | Phase 2 complete | T011 |
+| US2 (Speaker Labels) | Phase 2 + US1 trigger path (T013) | T014 |
+| US3 (Filler Badge) | Phase 1 (FillerWordStats) | T006 |
+| US4 (Answer Timer) | Phase 1 (CardTimerEntry) | T006 |
+| US5 (STAR Cards) | Phase 2 (parser T008) + Phase 1 DB (T001–T003) | T011 |
+
+### Parallel Opportunities
+
+**Within Phase 1**: T004 and T005 can run in parallel (different new files).  
+**Within Phase 2**: T007–T010 (parser/mapper) and T011 (prompt builder) can run in parallel — different files.  
+**After Phase 2**: US3 (Filler, T019–T024) and US4 (Timer, T025–T031) are fully independent of US1/US2 and can be worked simultaneously.
+
+---
+
+## Parallel Example: After Phase 2 Complete
+
+```
+Stream A (US1 + US2):  T012 → T013 → T014 → T015 → T016 → T017 → T018
+Stream B (US3):        T019 → T020 → T021 → T022 → T023 → T024
+Stream C (US4):        T025 → T026 → T027 → T028 → T029 → T030 → T031
+Stream D (US5):        T032 → T033 → T034 → T035 → T036
+```
+
+All four streams can run in parallel after Phase 2; merge into Phase 8 (Polish).
+
+---
+
+## Implementation Strategy
+
+### MVP First (US1 only — ship after T014)
+
+1. Complete Phase 1 (T001–T006)
+2. Complete Phase 2 (T007–T011)
+3. Complete Phase 3 (T012–T014)
+4. **STOP and VALIDATE**: Coaching card fires reactively on questions < 3s
+5. Sideload APK and demo — already materially better than the 30-second baseline
+
+### Incremental Delivery
+
+| After | Value delivered |
+|-------|----------------|
+| Phase 3 (US1) | Reactive coaching — biggest UX improvement |
+| Phase 4 (US2) | Eliminates false positives (requires diarization active) |
+| Phase 5 (US3) | Real-time filler coaching with zero inference cost |
+| Phase 6 (US4) | Time-management feedback per answer |
+| Phase 7 (US5) | Structured STAR coaching for behavioural questions |
+
+---
+
+## Notes
+
+- Tasks T001–T006 (migration + new data classes) MUST land before any story starts — Room schema must match entity definitions at compile time
+- Reactive trigger (T013) inserts into the segment collector at ~line 202 of `SyncSttLlmUseCase.kt` — read the file before editing to confirm exact line
+- Speaker mapping (T015–T016) resets per-session — verify the reset is co-located with wherever `newSegmentsSinceLastLlm.clear()` is called
+- The `prompt_interview` string is updated twice (T017 in US2, T032 in US5) — do these in order to avoid conflicts
+- `InsightsSection` receives new parameters in US3, US4 — update the composable signature and all call-sites together (compiler will catch missing args)
+- Commit after each phase checkpoint to keep the branch bisectable
