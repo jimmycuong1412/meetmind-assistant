@@ -13,6 +13,8 @@ package com.meetmind.assistant.domain.model
  * @property tasks Extracted action items/tasks (JSON array) for meeting modes, null otherwise
  * @property timestamp Unix timestamp (milliseconds) when this insight was generated
  * @property sourceSegmentIds List of TranscriptionSegment IDs that contributed to this insight
+ * @property questionType Interview Mode question classification: "behavioural" | "technical" |
+ *   "situational" | null. Null for all non-interview insights and unclassified interview outputs.
  */
 data class LlmInsight(
     val id: String,
@@ -21,5 +23,6 @@ data class LlmInsight(
     val content: String,
     val tasks: String? = null, // JSON array of tasks: [{"task": "...", "priority": "high|medium|low"}]
     val timestamp: Long,
-    val sourceSegmentIds: List<String>
+    val sourceSegmentIds: List<String>,
+    val questionType: String? = null
 )

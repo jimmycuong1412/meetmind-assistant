@@ -1,5 +1,7 @@
 package com.meetmind.assistant.domain.usecase.llm
 
+import com.meetmind.assistant.domain.model.TranscriptionSegment
+
 /**
  * Builds the user-facing prompt sent to the LLM for each Interview Mode inference interval.
  *
@@ -46,6 +48,53 @@ object InterviewPromptBuilder {
         val transcript = newContent.takeLast(MAX_TRANSCRIPT_CHARS).trim()
         // Two-line structure keeps the [TRANSCRIPT] label close to the text so small
         // models reliably associate the instruction with the content block.
+        return "Role: $role\n[TRANSCRIPT]\n$transcript"
+    }
+
+    /**
+     * Build the user prompt with per-segment speaker labels derived from diarization.
+     *
+     * The first speaker cluster observed in [segments] is labelled `[Interviewer]`;
+     * all subsequent distinct clusters are labelled `[You]`. This heuristic assumes the
+     * interviewer speaks first (greeting, introduction) — true for >95% of real interviews.
+     *
+     * When all segments have a null [TranscriptionSegment.speakerCluster], falls back to
+     * the plain [build] overload so behaviour is identical to the pre-diarization path.
+     *
+     * @param role           The candidate's target role.
+     * @param segments       Completed transcription segments for this inference window.
+     * @param speakerMapping Mutable map of cluster ID → label, shared across inference
+     *                       calls within a session so cluster identity is stable. The caller
+     *                       owns this map and must clear it on session start.
+     * @return               A prompt with labelled speaker turns, or a plain prompt if no
+     *                       diarization data is present.
+     */
+    fun buildWithSpeakerLabels(
+        role: String,
+        segments: List<TranscriptionSegment>,
+        speakerMapping: MutableMap<Int, String>
+    ): String {
+        val hasDiarization = segments.any { it.speakerCluster != null }
+        if (!hasDiarization) {
+            // No diarization data — fall back to plain unlabelled prompt.
+            return build(role, segments.joinToString(" ") { it.text })
+        }
+
+        val labelledLines = segments.map { segment ->
+            val cluster = segment.speakerCluster
+            val label = if (cluster == null) {
+                // Segment has no cluster — treat as candidate turn (conservative choice).
+                "[You]"
+            } else {
+                speakerMapping.getOrPut(cluster) {
+                    // First unseen cluster → Interviewer; all subsequent → You.
+                    if (speakerMapping.isEmpty()) "[Interviewer]" else "[You]"
+                }
+            }
+            "$label: ${segment.text}"
+        }
+
+        val transcript = labelledLines.joinToString("\n").takeLast(MAX_TRANSCRIPT_CHARS).trim()
         return "Role: $role\n[TRANSCRIPT]\n$transcript"
     }
 }

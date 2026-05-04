@@ -2,6 +2,7 @@ package com.meetmind.assistant.presentation.main
 
 import com.meetmind.assistant.domain.model.AppSettings
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.FillerWordStats
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
@@ -60,7 +61,9 @@ data class MainUiState(
      * the user has not yet seen the whitelist prompt. The dialog explains the
      * issue and offers a button that deep-links to the OEM's autostart settings.
      */
-    val batteryWhitelistPromptVisible: Boolean = false
+    val batteryWhitelistPromptVisible: Boolean = false,
+    val fillerWordStats: FillerWordStats = FillerWordStats(),
+    val cardTimers: Map<String, CardTimerEntry> = emptyMap()
 ) {
     /**
      * Returns all segments for display: completed + current partial (if exists).

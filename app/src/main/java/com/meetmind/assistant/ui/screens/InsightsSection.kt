@@ -48,13 +48,16 @@ import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.ui.components.GradientButton
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.FillerWordStats
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
+import com.meetmind.assistant.presentation.main.CardTimerEntry
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 // ─── Scroll-proximity threshold ──────────────────────────────────────────────
 // Auto-scroll only fires when the user is within this many items of the last
@@ -90,6 +93,8 @@ fun InsightsSection(
     onDownloadLlm: () -> Unit = {},
     onRegenerate: ((LlmInsight) -> Unit)? = null,
     regeneratingInsightId: String? = null,
+    fillerWordStats: FillerWordStats = FillerWordStats(),
+    cardTimers: Map<String, CardTimerEntry> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
@@ -348,12 +353,42 @@ fun InsightsSection(
                         segments = segments,
                         recordingMode = recordingMode,
                         onRegenerate = onRegenerate?.let { { it(insight) } },
-                        isRegenerating = regeneratingInsightId == insight.id
+                        isRegenerating = regeneratingInsightId == insight.id,
+                        timerEntry = cardTimers[insight.id]
                     )
                 }
                 if (isFinalizingSession) {
                     item { ShimmerInsightCard(modifier = Modifier.padding(horizontal = 0.dp)) }
                 }
+            }
+        }
+
+        // ── Filler word badge (Interview mode only) ───────────────────────────
+        AnimatedVisibility(
+            visible = isRecording && isInterviewMode,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 12.dp, top = 8.dp),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            val fillerColor = when {
+                fillerWordStats.ratePerMinute >= 6f -> MaterialTheme.colorScheme.error
+                fillerWordStats.ratePerMinute >= 3f -> Color(0xFFF59E0B)
+                else -> MaterialTheme.colorScheme.onSurfaceVariant
+            }
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shadowElevation = 2.dp
+            ) {
+                Text(
+                    text = "Fillers: ${fillerWordStats.ratePerMinute.roundToInt()}/min",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = fillerColor,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
             }
         }
 
@@ -485,7 +520,8 @@ private fun InsightItem(
     segments: List<TranscriptionSegment>,
     recordingMode: RecordingMode = RecordingMode.SHORT_MEETING,
     onRegenerate: (() -> Unit)? = null,
-    isRegenerating: Boolean = false
+    isRegenerating: Boolean = false,
+    timerEntry: CardTimerEntry? = null
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
     val isCoachingNote = isInterviewMode &&
@@ -497,7 +533,8 @@ private fun InsightItem(
             segments = segments,
             isCoachingNote = isCoachingNote,
             onRegenerate = onRegenerate,
-            isRegenerating = isRegenerating
+            isRegenerating = isRegenerating,
+            timerEntry = timerEntry
         )
     } else {
         StandardInsightItem(
@@ -506,6 +543,62 @@ private fun InsightItem(
             onRegenerate = onRegenerate,
             isRegenerating = isRegenerating
         )
+    }
+}
+
+// ─── StarAnswerSection ────────────────────────────────────────────────────────
+
+/**
+ * Renders a STAR-structured answer with four labelled Surface blocks.
+ *
+ * The [content] string is expected to contain four sections joined by `|||`:
+ * `"Situation: … ||| Task: … ||| Action: … ||| Result: …"`.
+ *
+ * Graceful degradation: if splitting yields fewer than 4 parts, renders the
+ * unsplit content as plain [FormattedInsightText] so the UI never crashes.
+ */
+@Composable
+private fun StarAnswerSection(content: String) {
+    val parts = content.split("|||").map { it.trim() }
+    if (parts.size < 4) {
+        FormattedInsightText(content)
+        return
+    }
+    val labels = listOf("Situation", "Task", "Action", "Result")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        parts.take(4).forEachIndexed { index, part ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(androidx.compose.foundation.layout.IntrinsicSize.Min)
+                    .background(
+                        color = ModeInterviewTint.copy(alpha = 0.04f),
+                        shape = MaterialTheme.shapes.small
+                    )
+            ) {
+                // Left accent bar
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .fillMaxHeight()
+                        .background(color = ModeInterviewTint, shape = MaterialTheme.shapes.small)
+                )
+                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                    Text(
+                        text = labels[index],
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ModeInterviewTint,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = part.removePrefix("${labels[index]}:").trim(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -524,7 +617,8 @@ private fun InterviewInsightItem(
     segments: List<TranscriptionSegment>,
     isCoachingNote: Boolean,
     onRegenerate: (() -> Unit)? = null,
-    isRegenerating: Boolean = false
+    isRegenerating: Boolean = false,
+    timerEntry: CardTimerEntry? = null
 ) {
     // ── Derived display values ────────────────────────────────────────────────
     // For coaching notes the title encodes the role as "coaching:<role>"; strip the prefix.
@@ -548,12 +642,20 @@ private fun InterviewInsightItem(
         insight.sourceSegmentIds.mapNotNull { id -> segmentMap[id] }
     }
 
+    // Timer-based border: amber at ≥ 90s, error/red at ≥ 120s
+    val timerBorderColor = when {
+        timerEntry != null && timerEntry.elapsedMs >= 120_000L -> MaterialTheme.colorScheme.error
+        timerEntry != null && timerEntry.elapsedMs >= 90_000L -> Color(0xFFF59E0B)
+        else -> accentColor.copy(alpha = 0.3f)
+    }
+    val timerBorderWidth = if (timerEntry != null && timerEntry.elapsedMs >= 90_000L) 1.5.dp else 1.dp
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .border(
-                width = 1.dp,
-                color = accentColor.copy(alpha = 0.3f),
+                width = timerBorderWidth,
+                color = timerBorderColor,
                 shape = MaterialTheme.shapes.medium
             ),
         shape = MaterialTheme.shapes.medium,
@@ -593,6 +695,18 @@ private fun InterviewInsightItem(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                // Elapsed timer display
+                if (timerEntry != null) {
+                    val totalSec = timerEntry.elapsedMs / 1_000L
+                    val mm = totalSec / 60
+                    val ss = totalSec % 60
+                    Text(
+                        text = "%02d:%02d".format(mm, ss),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = timerBorderColor,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 // Regenerate button
                 if (onRegenerate != null) {
                     if (isRegenerating) {
@@ -651,12 +765,32 @@ private fun InterviewInsightItem(
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(4.dp))
-            FormattedInsightText(insight.content)
+            if (insight.questionType == "behavioural" && insight.content.contains("|||")) {
+                StarAnswerSection(insight.content)
+            } else {
+                FormattedInsightText(insight.content)
+            }
 
             // ── Coaching tips ──────────────────────────────────────────────
             insight.tasks?.let { tasksJson ->
                 Spacer(modifier = Modifier.height(12.dp))
                 CoachingTipsList(tasksJson, accentColor)
+            }
+
+            // ── Nudge chip (short answer) ──────────────────────────────────
+            if (timerEntry?.nudge != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = timerEntry.nudge,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             // ── Source transcription (collapsed) ───────────────────────────

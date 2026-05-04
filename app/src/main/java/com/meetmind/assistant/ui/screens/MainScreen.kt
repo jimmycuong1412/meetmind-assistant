@@ -628,6 +628,8 @@ fun MainScreen(
                                     }
                                 } else null,
                                 regeneratingInsightId = uiState.regeneratingInsightId,
+                                fillerWordStats = uiState.fillerWordStats,
+                                cardTimers = uiState.cardTimers,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

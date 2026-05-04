@@ -19,6 +19,8 @@ import com.meetmind.assistant.domain.repository.SttRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import com.meetmind.assistant.domain.service.LlmProcessingServiceController
 import com.meetmind.assistant.domain.service.RecordingServiceController
+import com.meetmind.assistant.domain.model.FillerWordStats
+import com.meetmind.assistant.domain.usecase.llm.FillerWordCounter
 import com.meetmind.assistant.domain.usecase.llm.GenerateBatchInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateFinalInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.InitializeLlmUseCase
@@ -115,6 +117,10 @@ class MainViewModel @Inject constructor(
     private var insightsJob: Job? = null
     private var settingsWatcherJob: Job? = null
     private var timerJob: Job? = null
+    private var cardTickerJob: Job? = null
+
+    // Filler word accumulation for Interview mode
+    private var fillerTotalCount: Int = 0
     // Cumulative duration of all completed recording segments within this session.
     // Updated on each stop so the next start can offset the timer correctly.
     private var accumulatedDurationMs: Long = 0L
@@ -474,6 +480,10 @@ class MainViewModel @Inject constructor(
 
         _uiState.update { it.copy(isRecording = true, error = null, recordingDurationMillis = accumulatedDurationMs) }
 
+        // Reset per-session interview state on each new recording segment.
+        fillerTotalCount = 0
+        _uiState.update { it.copy(fillerWordStats = FillerWordStats(), cardTimers = emptyMap()) }
+
         // Start recording timer offset by any previously accumulated duration so that
         // resuming within the same session produces a cumulative elapsed time display.
         timerJob = viewModelScope.launch {
@@ -577,6 +587,15 @@ class MainViewModel @Inject constructor(
                         if (existing.isBlank()) segmentWithSession.text
                         else "$existing ${segmentWithSession.text}"
                     }
+                    // Filler word accumulation for Interview mode
+                    if (currentRecordingMode == RecordingMode.INTERVIEW) {
+                        fillerTotalCount += FillerWordCounter.count(segmentWithSession.text)
+                        val durationMin = _uiState.value.recordingDurationMillis / 60_000f
+                        val rate = fillerTotalCount / maxOf(1f, durationMin)
+                        _uiState.update { state ->
+                            state.copy(fillerWordStats = FillerWordStats(fillerTotalCount, rate))
+                        }
+                    }
                     // Clear partial since this segment is now complete
                     _uiState.update { state ->
                         state.copy(currentPartialSegment = null)
@@ -628,6 +647,15 @@ class MainViewModel @Inject constructor(
                         // does not double-cover the same content in the final insight call.
                         pendingContent.set("")
 
+                        // For Interview mode: start a per-card timer entry.
+                        if (currentRecordingMode == RecordingMode.INTERVIEW) {
+                            _uiState.update { state ->
+                                state.copy(
+                                    cardTimers = state.cardTimers + (insight.id to CardTimerEntry())
+                                )
+                            }
+                        }
+
                         // Save insight to database — UI updates automatically via
                         // the database Flow collector in init block
                         saveInsightUseCase(insight)
@@ -641,6 +669,23 @@ class MainViewModel @Inject constructor(
             }
         } else {
             Log.i(TAG, "END_OF_SESSION strategy: skipping real-time LLM job")
+        }
+
+        // For Interview mode: 1-second ticker that increments all active card timers.
+        if (currentRecordingMode == RecordingMode.INTERVIEW) {
+            cardTickerJob = viewModelScope.launch {
+                while (true) {
+                    delay(1_000L)
+                    _uiState.update { state ->
+                        if (state.cardTimers.isEmpty()) state
+                        else state.copy(
+                            cardTimers = state.cardTimers.mapValues { (_, entry) ->
+                                entry.copy(elapsedMs = entry.elapsedMs + 1_000L)
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         Log.i(TAG, "STT streaming started with service support - screen-off recording enabled")
@@ -705,8 +750,22 @@ class MainViewModel @Inject constructor(
             // Cancel non-essential jobs immediately.
             settingsWatcherJob?.cancel()
             timerJob?.cancel()
+            cardTickerJob?.cancel()
             settingsWatcherJob = null
             timerJob = null
+            cardTickerJob = null
+
+            // Mark short-answer cards with a nudge in Interview mode.
+            if (currentRecordingMode == RecordingMode.INTERVIEW) {
+                _uiState.update { state ->
+                    state.copy(
+                        cardTimers = state.cardTimers.mapValues { (_, entry) ->
+                            if (entry.elapsedMs < 30_000L) entry.copy(nudge = "Consider elaborating")
+                            else entry
+                        }
+                    )
+                }
+            }
 
             // Persist total cumulative recording duration before tearing down.
             // accumulatedDurationMs is updated so that a subsequent startStreaming() call
@@ -1080,5 +1139,6 @@ class MainViewModel @Inject constructor(
         insightsJob?.cancel()
         settingsWatcherJob?.cancel()
         timerJob?.cancel()
+        cardTickerJob?.cancel()
     }
 }

@@ -49,7 +49,7 @@ A real-time counter tracks filler words ("um", "uh", "like", "you know", "basica
 
 **Acceptance Scenarios**:
 
-1. **Given** recording is active in Interview mode, **When** a completed segment contains filler words, **Then** the running count and rate (per minute) update on screen within 1 second.
+1. **Given** recording is active in Interview mode, **When** a completed segment contains filler words, **Then** the running count and rate (per minute) update on screen within 1 second. Rate is computed as `totalCount / max(1f, durationMin)` from the first segment onward — no minimum duration threshold; early inflated values are accepted.
 2. **Given** count < 3/min, **Then** badge is neutral colour. ≥3/min → amber. ≥6/min → red.
 3. **Given** recording stops, **Then** badge freezes at the final rate and is included in the session summary.
 
@@ -65,10 +65,10 @@ After a question card is generated, the UI starts a visible countdown/count-up t
 
 **Acceptance Scenarios**:
 
-1. **Given** a coaching card is generated, **When** the candidate begins speaking (new segment), **Then** a timer starts on that card.
+1. **Given** a coaching card is generated, **When** any completed segment arrives after `insight.timestamp` (regardless of speaker), **Then** a timer starts on that card. When diarization is active and the next segment is labelled `[Interviewer]`, the timer still starts — speaker filtering is not applied to timer start.
 2. **Given** the candidate speaks > 90s, **Then** card border or timer turns amber.
 3. **Given** the candidate speaks > 120s, **Then** card border or timer turns red.
-4. **Given** the candidate stops speaking in < 30s, **Then** a "consider elaborating" nudge appears on the card.
+4. **Given** the candidate's answer was < 30s total, **When** recording stops or a new question card fires (end of turn), **Then** a "consider elaborating" nudge appears retrospectively on that card (not shown live during the answer).
 
 ---
 
@@ -105,17 +105,17 @@ The system prompt detects behavioural questions ("Tell me about a time…", "Giv
 - **FR-003**: `InterviewPromptBuilder` MUST prepend diarization speaker labels (`[Interviewer]` / `[You]`) to each segment when diarization data is available.
 - **FR-004**: System MUST count filler words (`um`, `uh`, `like`, `you know`, `basically`, `literally`, `so`) in candidate segments and display a running rate badge.
 - **FR-005**: Filler word badge MUST update within 1 second of a completed segment being processed.
-- **FR-006**: System MUST start an answer duration timer on the active coaching card when the candidate's first post-question segment arrives.
-- **FR-007**: Answer duration timer MUST change colour at 90s (amber) and 120s (red), and show a "too brief" nudge if answer ends before 30s.
-- **FR-008**: System MUST classify detected questions as `behavioural`, `technical`, or `situational` and include this in the LLM JSON output.
+- **FR-006**: System MUST start an answer duration timer on the active coaching card when the first completed transcription segment arrives after `insight.timestamp`, independent of speaker label (diarization-agnostic).
+- **FR-007**: Answer duration timer MUST change colour at 90s (amber) and 120s (red). A "consider elaborating" nudge MUST appear retrospectively on the card when recording stops or a new question card fires and total elapsed time was < 30s — the nudge MUST NOT appear live during an ongoing answer.
+- **FR-008**: System MUST classify detected questions as `"behavioural"`, `"technical"`, or `"situational"` (String values) and include `question_type` in the LLM JSON output; `null` when no question is detected. No enum class — `String?` is the canonical type at all layers.
 - **FR-009**: Behavioural questions MUST render a STAR-structured answer card with four labelled sections.
 - **FR-010**: All enhancements MUST degrade gracefully when diarization is unavailable, LLM is busy, or parse errors occur — no crashes.
 
 ### Key Entities
 
-- **FillerWordStats**: `{ count: Int, ratePerMinute: Float, recordingDurationMs: Long }` — computed from completed candidate segments.
+- **FillerWordStats**: `{ count: Int, ratePerMinute: Float, recordingDurationMs: Long }` — computed from completed candidate segments. `ratePerMinute = totalCount / max(1f, recordingDurationMs / 60_000f)` applied from the first segment onward with no minimum duration gate; early inflated values are accepted behaviour.
 - **AnswerTimer**: `{ questionTimestamp: Long, firstAnswerSegmentTimestamp: Long?, durationMs: Long }` — per coaching card state.
-- **QuestionType**: enum `BEHAVIOURAL | TECHNICAL | SITUATIONAL | UNKNOWN` — added to `InterviewOutputParser` output and `LlmInsight`.
+- **QuestionType**: `String?` throughout — values `"behavioural"`, `"technical"`, `"situational"`, or `null` (null means no question detected or unclassifiable; no enum class). Stored as TEXT in Room, parsed directly from LLM JSON string output.
 - **ReactiveTrigerState**: tracks last trigger timestamp to suppress duplicates.
 
 ## Success Criteria *(mandatory)*
@@ -125,8 +125,18 @@ The system prompt detects behavioural questions ("Tell me about a time…", "Giv
 - **SC-001**: Coaching card appears within 3 seconds of a `?`-terminated segment ending (reactive trigger), measured on Lenovo Legion Y700 Gen 3.
 - **SC-002**: Zero false-positive coaching cards from candidate's own questions in a dual-speaker session (requires diarization active).
 - **SC-003**: Filler word badge updates within 1 second of each completed segment in a real recording session.
-- **SC-004**: STAR-structured cards render correctly for ≥ 90% of behavioural questions in a 10-question test set.
+- **SC-004**: STAR-structured cards render correctly for ≥ 90% of behavioural questions in a 10-question test set. Validated via automated JUnit test in `domain/src/test/` using hardcoded JSON fixtures (mocked LLM responses) covering the 10 canonical behavioural question patterns — not dependent on live LLM output.
 - **SC-005**: No crash or ANR in any of the 5 edge cases listed above.
+
+## Clarifications
+
+### Session 2026-05-04
+
+- Q: How should the answer timer start when diarization is unavailable — wait for a `[You]`-labelled segment, use any segment after `insight.timestamp`, or wait for a 2-second silence? → A: Option B — start on any completed segment after `insight.timestamp`, diarization-agnostic.
+- Q: When does the "too brief" nudge appear — live during recording after 30s, retrospectively on turn end/stop, or only in post-session summary? → A: Option B — retrospectively when recording stops or a new question card fires; never shown live during an ongoing answer.
+- Q: Should QuestionType be a Kotlin enum, a String? everywhere, or enum in domain / String at DB boundary? → A: Option A — `String?` throughout all layers; `null` replaces UNKNOWN; no enum class.
+- Q: How to validate SC-004 (≥ 90% STAR rendering on 10 behavioural questions) — automated JUnit fixtures, manual spot-check, or remove target? → A: Option A — automated JUnit test with 10 hardcoded JSON fixtures in `InterviewOutputParserTest.kt`; ≥ 9/10 must pass.
+- Q: How should the filler badge handle sub-10s sessions where rate is artificially inflated — always show rate, suppress until 30s, or hide badge? → A: Option A — always show `totalCount / max(1f, durationMin)` from the first segment; no minimum duration gate; early inflated values accepted.
 
 ## Assumptions
 

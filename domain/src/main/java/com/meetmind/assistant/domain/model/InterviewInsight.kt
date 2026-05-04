@@ -30,11 +30,15 @@ package com.meetmind.assistant.domain.model
  * @property coachingTips Ordered list of follow-up coaching tips or behavioural
  *   recommendations. Always non-empty (minimum one tip).
  * @property role The target role used for prompt generation (e.g. "Developer").
+ * @property questionType Interview question classification extracted from LLM JSON output:
+ *   "behavioural" | "technical" | "situational" | null. Null when [questionDetected] is false
+ *   or the LLM did not classify the question.
  */
 data class InterviewInsight(
     val questionDetected: Boolean,
     val detectedQuestion: String?,
     val answerSuggestion: String,
     val coachingTips: List<String>,
-    val role: String
+    val role: String,
+    val questionType: String? = null
 )

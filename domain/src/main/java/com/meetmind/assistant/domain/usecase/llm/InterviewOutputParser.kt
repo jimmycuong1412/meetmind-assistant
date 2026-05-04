@@ -48,6 +48,21 @@ object InterviewOutputParser {
     // Used by the UI to distinguish coaching notes from answer suggestions.
     const val COACHING_NOTE_PREFIX = "coaching:"
 
+    // Behavioural question opener phrases (R-06 from research.md).
+    // Used by the client-side pre-filter when the LLM classifies a known behavioural
+    // question as something other than "behavioural" (e.g. small model misses it).
+    private val BEHAVIOURAL_OPENERS = listOf(
+        "tell me about a time",
+        "give me an example",
+        "give an example",
+        "describe a situation",
+        "describe a time",
+        "walk me through a time",
+        "have you ever",
+        "tell me about when",
+        "can you describe a time"
+    )
+
     /**
      * Parse the raw LLM output into an [InterviewInsight].
      *
@@ -76,12 +91,34 @@ object InterviewOutputParser {
             val coachingTips = extractJsonArray(cleaned, "coaching_tips")
                 .ifEmpty { extractJsonArray(cleaned, "action_items") } // backward compat
 
+            // Extract question_type; coerce any value not in the allowed set to null.
+            val questionType = if (questionDetected) {
+                val raw = InsightOutputParser.extractJsonField(cleaned, "question_type")
+                    ?.lowercase()?.trim()
+                when (raw) {
+                    "behavioural", "behavioral" -> "behavioural" // accept US spelling too
+                    "technical"                 -> "technical"
+                    "situational"               -> "situational"
+                    else                        -> null
+                }
+            } else null
+
+            // Client-side behavioural keyword pre-filter (T033 / R-06):
+            // If the LLM failed to classify a known behavioural opener, upgrade it here.
+            // Only applied when the detected question is non-null and the LLM did not
+            // already return "behavioural" — prevents downgrading a correct classification.
+            val resolvedQuestionType = if (questionType == null && detectedQuestion != null) {
+                val qLower = detectedQuestion.lowercase()
+                if (BEHAVIOURAL_OPENERS.any { qLower.contains(it) }) "behavioural" else null
+            } else questionType
+
             InterviewInsight(
                 questionDetected = questionDetected,
                 detectedQuestion = detectedQuestion,
                 answerSuggestion = answer.trim(),
                 coachingTips = coachingTips,
-                role = role
+                role = role,
+                questionType = resolvedQuestionType
             )
         } catch (e: Exception) {
             // Fully degraded fallback: treat raw output as an answer with no tips
@@ -130,7 +167,8 @@ object InterviewOutputParser {
             content = interviewInsight.answerSuggestion,
             tasks = tasksJson,
             timestamp = timestamp,
-            sourceSegmentIds = sourceSegmentIds
+            sourceSegmentIds = sourceSegmentIds,
+            questionType = interviewInsight.questionType
         )
     }
 

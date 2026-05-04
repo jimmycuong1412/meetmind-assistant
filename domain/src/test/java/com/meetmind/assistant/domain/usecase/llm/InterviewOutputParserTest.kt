@@ -228,4 +228,112 @@ class InterviewOutputParserTest {
         val insight = InterviewOutputParser.toLlmInsight(parsed, "s1", 1L, emptyList())
         assertNull(insight.tasks)
     }
+
+    // ─── question_type extraction & STAR (T039 / SC-004) ────────────────────────
+    // 10 hardcoded behavioural JSON fixtures. SC-004 requires ≥ 9/10 to pass.
+
+    private fun behaviouralFixture(question: String, starAnswer: String, llmClassification: String = "behavioural"): String =
+        """{"question_detected": true, "detected_question": "$question",
+           "question_type": "$llmClassification",
+           "answer": "$starAnswer",
+           "coaching_tips": ["Be specific", "Quantify your impact"]}"""
+
+    @Test fun `BQ-01 classic tell-me-about-a-time`() {
+        val raw = behaviouralFixture(
+            "Tell me about a time you had to meet a tight deadline.",
+            "Situation: Sprint crunch ||| Task: Deliver auth feature ||| Action: Pair-programmed ||| Result: Shipped on time"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("behavioural", parsed.questionType)
+        assertTrue(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-02 give me an example`() {
+        val raw = behaviouralFixture(
+            "Give me an example of when you resolved a conflict.",
+            "Situation: Disagreement on architecture ||| Task: Align team ||| Action: Facilitated spike ||| Result: Consensus reached"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("behavioural", parsed.questionType)
+        assertTrue(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-03 describe a situation`() {
+        val raw = behaviouralFixture(
+            "Describe a situation where you had to learn something new quickly.",
+            "Situation: On-call incident ||| Task: Fix Kafka lag ||| Action: Read docs, wrote fix ||| Result: Lag cleared"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("behavioural", parsed.questionType)
+        assertTrue(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-04 walk me through a time`() {
+        val raw = behaviouralFixture(
+            "Walk me through a time you failed and what you learned.",
+            "Situation: Prod outage ||| Task: Root-cause ||| Action: Blameless post-mortem ||| Result: Improved SLO"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("behavioural", parsed.questionType)
+        assertTrue(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-05 have you ever led a project`() {
+        val raw = behaviouralFixture(
+            "Have you ever led a project from start to finish?",
+            "Situation: Solo greenfield service ||| Task: Lead design ||| Action: Drafted RFC ||| Result: Launched to 50k users"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("behavioural", parsed.questionType)
+        assertTrue(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-06 client-side pre-filter upgrades missed classification`() {
+        // LLM returns null/no question_type but the question is clearly behavioural.
+        val raw = """{"question_detected": true,
+            "detected_question": "Tell me about a time you had to prioritise competing tasks.",
+            "answer": "Situation: Three deadlines ||| Task: Prioritise ||| Action: MoSCoW matrix ||| Result: All shipped",
+            "coaching_tips": []}"""
+        val parsed = InterviewOutputParser.parse(raw, role)
+        // Client-side pre-filter must upgrade to behavioural
+        assertEquals("behavioural", parsed.questionType)
+    }
+
+    @Test fun `BQ-07 star answer has all four sections`() {
+        val starAnswer = "Situation: Legacy monolith ||| Task: Extract payment service ||| Action: Strangler fig pattern ||| Result: 40pct latency drop"
+        val raw = behaviouralFixture(
+            "Describe a time you improved system performance.",
+            starAnswer
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals(4, parsed.answerSuggestion.split("|||").size)
+    }
+
+    @Test fun `BQ-08 question_type technical does not trigger STAR`() {
+        val raw = """{"question_detected": true, "detected_question": "How does Kafka handle consumer lag?",
+            "question_type": "technical",
+            "answer": "Kafka tracks offsets per partition…", "coaching_tips": []}"""
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("technical", parsed.questionType)
+        assertFalse(parsed.answerSuggestion.contains("|||"))
+    }
+
+    @Test fun `BQ-09 question_type situational preserved`() {
+        val raw = """{"question_detected": true, "detected_question": "What would you do if a key engineer left mid-project?",
+            "question_type": "situational",
+            "answer": "I would document current state and…", "coaching_tips": []}"""
+        val parsed = InterviewOutputParser.parse(raw, role)
+        assertEquals("situational", parsed.questionType)
+    }
+
+    @Test fun `BQ-10 toLlmInsight maps questionType through correctly`() {
+        val raw = behaviouralFixture(
+            "Give me an example of a time you influenced without authority.",
+            "Situation: Cross-team project ||| Task: Align PMs ||| Action: Weekly syncs ||| Result: Feature shipped"
+        )
+        val parsed = InterviewOutputParser.parse(raw, role)
+        val insight = InterviewOutputParser.toLlmInsight(parsed, "s1", 1L, emptyList())
+        assertEquals("behavioural", insight.questionType)
+        assertTrue(insight.content.contains("|||"))
+    }
 }

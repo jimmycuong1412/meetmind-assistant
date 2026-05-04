@@ -65,6 +65,26 @@ class SyncSttLlmUseCase(
         // Number of completed segments kept in the rolling context buffer.
         private const val MAX_CONTEXT_SEGMENTS = 3
 
+        // Minimum gap between two reactive (question-triggered) inferences.
+        // Prevents duplicate cards when the interviewer asks a multi-sentence question
+        // where each sentence ends with "?" (e.g. "Who are you? Tell me about yourself?").
+        private const val MIN_REACTIVE_DEBOUNCE_MS = 10_000L
+
+        // Opener phrases that signal an interview question even without a trailing "?".
+        private val QUESTION_OPENERS = listOf(
+            "tell me about",
+            "walk me through",
+            "describe a",
+            "describe an",
+            "give me an example",
+            "how would you",
+            "what would you",
+            "why did you",
+            "can you explain",
+            "have you ever",
+            "talk me through"
+        )
+
         // Minimum new word count required before triggering LLM inference.
         // Prevents wasting inference calls on near-empty content (e.g. a single word
         // captured between intervals). Not applied to REAL_TIME_TRANSLATION because
@@ -180,6 +200,11 @@ class SyncSttLlmUseCase(
         val contextBuffer = mutableListOf<String>()
 
         val newSegmentsSinceLastLlm = mutableListOf<String>()
+        // Tracks completed TranscriptionSegment objects for speaker-labelled prompts (US2).
+        val newSegmentObjectsSinceLastLlm = mutableListOf<TranscriptionSegment>()
+        // Per-session speaker cluster → label map. First cluster seen = "[Interviewer]".
+        // Cleared (reset) each time inference fires so future sessions start fresh.
+        val speakerMapping = mutableMapOf<Int, String>()
         var currentPartialSegment = ""
         var lastPartialSent = ""
         // Only track IDs of finalized (isComplete=true) segments — these are guaranteed
@@ -206,6 +231,7 @@ class SyncSttLlmUseCase(
                         } else {
                             newSegmentsSinceLastLlm.add(segment.text)
                         }
+                        newSegmentObjectsSinceLastLlm.add(segment)
                         currentPartialSegment = ""
                         lastPartialSent = ""
 
@@ -221,6 +247,82 @@ class SyncSttLlmUseCase(
 
                 val now = System.currentTimeMillis()
                 val timeSinceLastInference = now - lastInferenceTime
+
+                // ── Reactive question trigger (Interview Mode only) ─────────────────
+                // Fires immediately when a completed segment looks like a question,
+                // bypassing the fixed interval. Debounced by MIN_REACTIVE_DEBOUNCE_MS
+                // to suppress duplicate cards for multi-sentence questions.
+                if (segment.isComplete &&
+                    mode == RecordingMode.INTERVIEW &&
+                    !isLlmBusy.get() &&
+                    isLikelyQuestion(segment.text) &&
+                    timeSinceLastInference >= MIN_REACTIVE_DEBOUNCE_MS
+                ) {
+                    val deltaSegments = mutableListOf<String>()
+                    deltaSegments.addAll(newSegmentsSinceLastLlm)
+                    val newContent = deltaSegments.joinToString(" ").trim()
+                    val wordCount = newContent.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
+                    if (newContent.isNotBlank() && wordCount >= MIN_NEW_WORDS_FOR_INFERENCE) {
+                        println("[SyncSttLlm] Reactive trigger: question detected — \"${segment.text.take(60)}\"")
+                        lastInferenceTime = now
+                        val sourceIds = completeSegmentIds.toList()
+                        lastPartialSent = currentPartialSegment
+                        val segmentsForPrompt = newSegmentObjectsSinceLastLlm.toList()
+                        newSegmentsSinceLastLlm.clear()
+                        newSegmentObjectsSinceLastLlm.clear()
+                        completeSegmentIds.clear()
+                        val insightTimestamp = System.currentTimeMillis()
+                        val interviewRole = if (mode == RecordingMode.INTERVIEW) {
+                            topic?.takeIf { it.isNotBlank() } ?: "Software Engineer"
+                        } else null
+
+                        val finalPrompt = if (interviewRole != null) {
+                            InterviewPromptBuilder.buildWithSpeakerLabels(
+                                role = interviewRole,
+                                segments = segmentsForPrompt,
+                                speakerMapping = speakerMapping
+                            )
+                        } else {
+                            InterviewPromptBuilder.build(interviewRole ?: "Software Engineer", newContent)
+                        }
+
+                        if (llmRepository.isLargeContext(finalPrompt.length)) {
+                            llmRepository.useConservativeThreads()
+                        }
+                        isLlmBusy.set(true)
+                        launch {
+                            try {
+                                llmRepository.beginInference()
+                                llmRepository.reloadModel()
+                                llmRepository.checkAndCacheMemoryConstraint()
+                                val insightBuilder = StringBuilder()
+                                llmRepository.generateInsight(finalPrompt, currentSystemPrompt, maxTokens)
+                                    .collect { token -> insightBuilder.append(token) }
+                                val rawOutput = insightBuilder.toString().trim()
+                                if (rawOutput.isNotBlank() && interviewRole != null) {
+                                    val interviewInsight = InterviewOutputParser.parse(rawOutput, interviewRole)
+                                    val insight = InterviewOutputParser.toLlmInsight(
+                                        interviewInsight = interviewInsight,
+                                        sessionId = sessionId,
+                                        timestamp = insightTimestamp,
+                                        sourceSegmentIds = sourceIds
+                                    )
+                                    send(insight)
+                                }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                println("LLM reactive trigger error: ${e.message}")
+                            } finally {
+                                withContext(NonCancellable) {
+                                    llmRepository.endInference()
+                                    llmRepository.recordConstrainedInference(finalPrompt.length)
+                                    isLlmBusy.set(false)
+                                }
+                            }
+                        }
+                        return@collect // Skip the interval check this tick
+                    }
+                }
 
                 // For long intervals (>= 10 min) fire 30 s early so LLM generation
                 // completes by the time the declared interval elapses for the user.
@@ -255,7 +357,9 @@ class SyncSttLlmUseCase(
                         // Source IDs reference only complete segments (always persisted in DB)
                         val sourceIds = completeSegmentIds.toList()
                         lastPartialSent = currentPartialSegment
+                        val segmentsForPrompt = newSegmentObjectsSinceLastLlm.toList()
                         newSegmentsSinceLastLlm.clear()
+                        newSegmentObjectsSinceLastLlm.clear()
                         completeSegmentIds.clear()
 
                         // Capture timestamp before LLM call so the insight
@@ -264,10 +368,14 @@ class SyncSttLlmUseCase(
 
                         // Build the prompt before launching so its char count is available
                         // for the isLargeContext() check before the model reload.
-                        // Interview Mode uses a dedicated prompt builder that restates the
-                        // role and omits the rolling context prefix (questions are self-contained).
+                        // Interview Mode uses speaker-labelled prompt when diarization is active,
+                        // falling back to the plain builder when no cluster data is available.
                         val finalPrompt = if (mode == RecordingMode.INTERVIEW && interviewRole != null) {
-                            InterviewPromptBuilder.build(interviewRole, newContent)
+                            InterviewPromptBuilder.buildWithSpeakerLabels(
+                                role = interviewRole,
+                                segments = segmentsForPrompt,
+                                speakerMapping = speakerMapping
+                            )
                         } else {
                             buildUserPrompt(mode, contextBuffer, newContent)
                         }
@@ -514,4 +622,19 @@ class SyncSttLlmUseCase(
         mode: RecordingMode,
         settings: AppSettings
     ): InsightOutputParser.ParsedInsight = InsightOutputParser.parse(rawOutput, mode, settings)
+
+    // ─── Interview Mode helpers ───────────────────────────────────────────────────
+
+    /**
+     * Returns true if [text] looks like an interview question.
+     *
+     * Only called on *completed* segments (isComplete == true) to avoid reacting to
+     * in-progress partial speech. Checks for a trailing `?` or a known opener phrase.
+     */
+    private fun isLikelyQuestion(text: String): Boolean {
+        val trimmed = text.trim()
+        if (trimmed.endsWith("?")) return true
+        val lower = trimmed.lowercase()
+        return QUESTION_OPENERS.any { lower.contains(it) }
+    }
 }
