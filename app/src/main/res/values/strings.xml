@@ -612,6 +612,22 @@
     <string name="shortcut_quick_start_label">Quick Start</string>
     <string name="shortcut_quick_start_short_label">Start</string>
 
+    <!-- English Coach mode -->
+    <string name="mode_english_coach">English Coach</string>
+    <string name="mode_english_coach_desc">Real-time grammar and phrasing coach</string>
+    <string name="english_coach_context_label">Conversation context</string>
+    <string name="english_coach_context_daily">Daily Conversation</string>
+    <string name="english_coach_context_professional">Professional / Work</string>
+    <!-- English Coach insight card section labels -->
+    <string name="english_coach_original">Original</string>
+    <string name="english_coach_corrected">Corrected</string>
+    <string name="english_coach_polish">More Natural</string>
+    <string name="english_coach_why">Why</string>
+    <string name="english_coach_no_errors">✓ No changes needed</string>
+    <string name="english_coach_already_natural">Already sounds great!</string>
+    <!-- English Coach system prompt. {context} replaced at runtime. -->
+    <string name="prompt_english_coach">You are an expert English language coach. The user is practising {context} English.\n\nAnalyse the EXACT phrase they just said and return a JSON object with these fields:\n\"original\": the phrase as spoken (copy verbatim).\n\"corrected\": the grammatically correct version. If already correct, copy original verbatim.\n\"is_correct\": true if the phrase has no grammar errors, false otherwise.\n\"polish\": a more natural, native-speaker phrasing appropriate for {context} English. Set to null if the original is already fully idiomatic.\n\"coaching_tip\": one concise sentence explaining what changed and why. Set to null if is_correct is true and polish is null.\n\nContext guidance:\n- daily conversation: use contractions, informal vocabulary, everyday idioms, friendly tone.\n- professional / work: use formal vocabulary, hedging language, business register, no slang.\n\nOutput ONLY valid JSON. No markdown. No code fences. No backticks:\n{\"original\":\"…\",\"corrected\":\"…\",\"is_correct\":false,\"polish\":\"…\",\"coaching_tip\":\"…\"}\nBe concise. One coaching tip maximum.</string>
+
     <!-- Interview Mode insight card labels -->
     <!-- Header shown above a detected interview question in an insight card -->
     <string name="interview_question_detected">Question Detected</string>

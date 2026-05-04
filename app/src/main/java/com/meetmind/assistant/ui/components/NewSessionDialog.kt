@@ -75,6 +75,8 @@ fun NewSessionDialog(
     var selectedMode by remember { mutableStateOf(RecordingMode.SIMPLE_LISTENING) }
     // Interview role — used as the topic when INTERVIEW mode is selected
     var interviewRole by remember { mutableStateOf("Developer") }
+    // English Coach context — "daily" or "professional"
+    var englishCoachContext by remember { mutableStateOf("daily") }
     // Input language (what the user will speak)
     var inputLanguage by remember { mutableStateOf(deviceLanguageCode) }
     // Always a valid BCP-47 code — device locale for analysis modes, translation target for translation mode.
@@ -101,12 +103,18 @@ fun NewSessionDialog(
             RecordingMode.LONG_MEETING          -> settings.longMeetingDefaultStrategy
             RecordingMode.REAL_TIME_TRANSLATION -> settings.translationDefaultStrategy
             RecordingMode.INTERVIEW             -> settings.interviewDefaultStrategy
+            RecordingMode.ENGLISH_COACH         -> settings.englishCoachDefaultStrategy
         }
     }
 
-    // For INTERVIEW mode, role is the effective topic; otherwise use the text field value.
-    val effectiveTopic = if (selectedMode == RecordingMode.INTERVIEW) interviewRole
-                         else sessionTopic.trim().takeIf { it.isNotBlank() }
+    // For INTERVIEW mode, role is the effective topic.
+    // For ENGLISH_COACH, context ("daily"/"professional") is the effective topic.
+    // Otherwise use the text field value.
+    val effectiveTopic = when (selectedMode) {
+        RecordingMode.INTERVIEW     -> interviewRole
+        RecordingMode.ENGLISH_COACH -> englishCoachContext
+        else                        -> sessionTopic.trim().takeIf { it.isNotBlank() }
+    }
 
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.88f
 
@@ -302,6 +310,7 @@ fun NewSessionDialog(
                                         RecordingMode.LONG_MEETING          -> "${settings.longMeetingIntervalMinutes}min"
                                         RecordingMode.REAL_TIME_TRANSLATION -> "${settings.translationIntervalSeconds}s"
                                         RecordingMode.INTERVIEW             -> "${settings.interviewIntervalSeconds}s"
+                                        RecordingMode.ENGLISH_COACH         -> "${settings.englishCoachIntervalSeconds}s"
                                     }
                                 }
                             } else null
@@ -320,6 +329,14 @@ fun NewSessionDialog(
                         InterviewRoleSelector(
                             selectedRole = interviewRole,
                             onRoleSelected = { interviewRole = it }
+                        )
+                    }
+
+                    // English Coach context picker — shown only in ENGLISH_COACH mode
+                    if (selectedMode == RecordingMode.ENGLISH_COACH) {
+                        EnglishCoachContextPicker(
+                            selectedContext = englishCoachContext,
+                            onContextSelected = { englishCoachContext = it }
                         )
                     }
 
@@ -447,6 +464,7 @@ private fun ModeCard(
         RecordingMode.LONG_MEETING          -> ModeAmberTint
         RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
         RecordingMode.INTERVIEW             -> ModeInterviewTint
+        RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
     }
     val borderColor = if (isSelected) accentColor else MaterialTheme.colorScheme.outlineVariant
     val bgColor = if (isSelected) accentColor.copy(alpha = 0.07f) else MaterialTheme.colorScheme.surface
@@ -457,6 +475,7 @@ private fun ModeCard(
         RecordingMode.LONG_MEETING          -> AppIcons.ModeLongMeeting
         RecordingMode.REAL_TIME_TRANSLATION -> AppIcons.ModeTranslation
         RecordingMode.INTERVIEW             -> AppIcons.ModeInterview
+        RecordingMode.ENGLISH_COACH         -> AppIcons.ModeEnglishCoach
     }
 
     Row(
@@ -501,6 +520,7 @@ private fun ModeCard(
                     RecordingMode.LONG_MEETING          -> stringResource(R.string.mode_long_meeting)
                     RecordingMode.REAL_TIME_TRANSLATION -> stringResource(R.string.mode_translation_live)
                     RecordingMode.INTERVIEW             -> stringResource(R.string.mode_interview)
+                    RecordingMode.ENGLISH_COACH         -> stringResource(R.string.mode_english_coach)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
@@ -513,6 +533,7 @@ private fun ModeCard(
                     RecordingMode.LONG_MEETING          -> stringResource(R.string.mode_long_meeting_desc)
                     RecordingMode.REAL_TIME_TRANSLATION -> stringResource(R.string.mode_translation_desc)
                     RecordingMode.INTERVIEW             -> stringResource(R.string.mode_interview_desc)
+                    RecordingMode.ENGLISH_COACH         -> stringResource(R.string.mode_english_coach_desc)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -772,6 +793,42 @@ fun LanguageSelector(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Two-chip picker for the English Coach conversation context.
+ * The selected context ("daily" | "professional") is passed to the LLM as {context}.
+ */
+@Composable
+private fun EnglishCoachContextPicker(
+    selectedContext: String,
+    onContextSelected: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.english_coach_context_label),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = selectedContext == "daily",
+                onClick = { onContextSelected("daily") },
+                label = { Text(stringResource(R.string.english_coach_context_daily)) },
+                leadingIcon = {
+                    Icon(AppIcons.ModeEnglishCoach, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            )
+            FilterChip(
+                selected = selectedContext == "professional",
+                onClick = { onContextSelected("professional") },
+                label = { Text(stringResource(R.string.english_coach_context_professional)) },
+                leadingIcon = {
+                    Icon(AppIcons.ModeInterview, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
+            )
         }
     }
 }

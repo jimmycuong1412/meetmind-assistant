@@ -64,7 +64,10 @@ object InsightOutputParser {
                     ParsedInsight(title = "Meeting Notes", content = cleaned, tasks = null)
                 }
             }
-            RecordingMode.REAL_TIME_TRANSLATION -> {
+            RecordingMode.REAL_TIME_TRANSLATION,
+            RecordingMode.ENGLISH_COACH -> {
+                // English Coach has its own dedicated parser (EnglishCoachOutputParser).
+                // This branch is only a safety fallback — the reactive trigger never routes here.
                 ParsedInsight(title = null, content = cleaned, tasks = null)
             }
         }

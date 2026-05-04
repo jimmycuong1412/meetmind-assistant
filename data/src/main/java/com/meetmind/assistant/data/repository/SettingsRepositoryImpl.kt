@@ -44,6 +44,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val LONG_MEETING_INTERVAL = intPreferencesKey("long_meeting_interval_minutes")
         val TRANSLATION_INTERVAL = intPreferencesKey("translation_interval_seconds")
         val INTERVIEW_INTERVAL = intPreferencesKey("interview_interval_seconds")
+        val ENGLISH_COACH_INTERVAL = intPreferencesKey("english_coach_interval_seconds")
 
         // Mode-specific system prompts
         val SIMPLE_LISTENING_PROMPT = stringPreferencesKey("simple_listening_system_prompt")
@@ -51,6 +52,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val LONG_MEETING_PROMPT = stringPreferencesKey("long_meeting_system_prompt")
         val TRANSLATION_PROMPT = stringPreferencesKey("translation_system_prompt")
         val INTERVIEW_PROMPT = stringPreferencesKey("interview_system_prompt")
+        val ENGLISH_COACH_PROMPT = stringPreferencesKey("english_coach_system_prompt")
 
         // Translation settings
         val TRANSLATION_TARGET_LANGUAGE = stringPreferencesKey("translation_target_language")
@@ -72,6 +74,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val LONG_MEETING_DEFAULT_STRATEGY = stringPreferencesKey("long_meeting_default_strategy")
         val TRANSLATION_DEFAULT_STRATEGY = stringPreferencesKey("translation_default_strategy")
         val INTERVIEW_DEFAULT_STRATEGY = stringPreferencesKey("interview_default_strategy")
+        val ENGLISH_COACH_DEFAULT_STRATEGY = stringPreferencesKey("english_coach_default_strategy")
 
         // LLM model variant selection (Q8_0 / IQ4_NL)
         val LLM_MODEL_VARIANT = stringPreferencesKey("llm_model_variant")
@@ -111,6 +114,8 @@ class SettingsRepositoryImpl @Inject constructor(
                     ?: defaults.translationIntervalSeconds,
                 interviewIntervalSeconds = preferences[Keys.INTERVIEW_INTERVAL]
                     ?: defaults.interviewIntervalSeconds,
+                englishCoachIntervalSeconds = preferences[Keys.ENGLISH_COACH_INTERVAL]
+                    ?: defaults.englishCoachIntervalSeconds,
 
                 // Mode-specific system prompts (load from localized resources)
                 simpleListeningSystemPrompt = preferences[Keys.SIMPLE_LISTENING_PROMPT]
@@ -123,6 +128,8 @@ class SettingsRepositoryImpl @Inject constructor(
                     ?: resourceProvider.getTranslationPrompt(),
                 interviewSystemPrompt = preferences[Keys.INTERVIEW_PROMPT]
                     ?: resourceProvider.getInterviewPrompt(),
+                englishCoachSystemPrompt = preferences[Keys.ENGLISH_COACH_PROMPT]
+                    ?: resourceProvider.getEnglishCoachPrompt(),
 
                 // Translation settings
                 translationTargetLanguage = preferences[Keys.TRANSLATION_TARGET_LANGUAGE]
@@ -190,6 +197,10 @@ class SettingsRepositoryImpl @Inject constructor(
                 interviewDefaultStrategy = parseStrategy(
                     preferences[Keys.INTERVIEW_DEFAULT_STRATEGY],
                     InsightStrategy.REAL_TIME
+                ),
+                englishCoachDefaultStrategy = parseStrategy(
+                    preferences[Keys.ENGLISH_COACH_DEFAULT_STRATEGY],
+                    InsightStrategy.REAL_TIME
                 )
             )
         }
@@ -211,6 +222,7 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[Keys.LONG_MEETING_INTERVAL] = settings.longMeetingIntervalMinutes
             preferences[Keys.TRANSLATION_INTERVAL] = settings.translationIntervalSeconds
             preferences[Keys.INTERVIEW_INTERVAL] = settings.interviewIntervalSeconds
+            preferences[Keys.ENGLISH_COACH_INTERVAL] = settings.englishCoachIntervalSeconds
 
             // Mode-specific system prompts
             preferences[Keys.SIMPLE_LISTENING_PROMPT] = settings.simpleListeningSystemPrompt
@@ -218,6 +230,7 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[Keys.LONG_MEETING_PROMPT] = settings.longMeetingSystemPrompt
             preferences[Keys.TRANSLATION_PROMPT] = settings.translationSystemPrompt
             preferences[Keys.INTERVIEW_PROMPT] = settings.interviewSystemPrompt
+            preferences[Keys.ENGLISH_COACH_PROMPT] = settings.englishCoachSystemPrompt
 
             // Translation settings
             preferences[Keys.TRANSLATION_TARGET_LANGUAGE] = settings.translationTargetLanguage
@@ -253,6 +266,7 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[Keys.LONG_MEETING_DEFAULT_STRATEGY] = settings.longMeetingDefaultStrategy.name
             preferences[Keys.TRANSLATION_DEFAULT_STRATEGY] = settings.translationDefaultStrategy.name
             preferences[Keys.INTERVIEW_DEFAULT_STRATEGY] = settings.interviewDefaultStrategy.name
+            preferences[Keys.ENGLISH_COACH_DEFAULT_STRATEGY] = settings.englishCoachDefaultStrategy.name
         }
     }
 
@@ -278,6 +292,7 @@ class SettingsRepositoryImpl @Inject constructor(
         RecordingMode.LONG_MEETING          -> resourceProvider.getLongMeetingPrompt()
         RecordingMode.REAL_TIME_TRANSLATION -> resourceProvider.getTranslationPrompt()
         RecordingMode.INTERVIEW             -> resourceProvider.getInterviewPrompt()
+        RecordingMode.ENGLISH_COACH         -> resourceProvider.getEnglishCoachPrompt()
     }
 
     // ========== Session Templates ==========

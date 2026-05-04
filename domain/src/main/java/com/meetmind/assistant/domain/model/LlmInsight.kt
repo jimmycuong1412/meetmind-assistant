@@ -21,5 +21,10 @@ data class LlmInsight(
     val content: String,
     val tasks: String? = null, // JSON array of tasks: [{"task": "...", "priority": "high|medium|low"}]
     val timestamp: Long,
-    val sourceSegmentIds: List<String>
+    val sourceSegmentIds: List<String>,
+    // Multi-purpose mode context field:
+    //   INTERVIEW     → detected question type ("behavioral" | "technical" | …)
+    //   ENGLISH_COACH → conversation context ("daily" | "professional")
+    //   other modes   → null
+    val questionType: String? = null
 )

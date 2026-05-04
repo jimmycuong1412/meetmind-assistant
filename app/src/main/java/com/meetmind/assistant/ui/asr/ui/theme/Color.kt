@@ -200,6 +200,16 @@ val ModeInterviewGradient = Brush.linearGradient(
     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
 )
 
+// English Coach Mode — teal/green (learning, growth, language)
+val ModeEnglishCoachLight = Color(0xFF2DD4BF)
+val ModeEnglishCoachDark  = Color(0xFF0D9488)
+val ModeEnglishCoachTint  = Color(0xFF14B8A6)
+val ModeEnglishCoachGradient = Brush.linearGradient(
+    colors = listOf(ModeEnglishCoachLight, ModeEnglishCoachDark),
+    start = Offset(0f, 0f),
+    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
+)
+
 // ── Download immersive screen ────────────────────────────────────────────────
 /** Deep navy used as the bottom stop of the full-screen download gradient. */
 val DownloadImmersiveNavy = Color(0xFF1A1A2E)

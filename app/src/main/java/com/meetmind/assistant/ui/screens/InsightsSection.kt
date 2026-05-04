@@ -488,19 +488,23 @@ private fun InsightItem(
     isRegenerating: Boolean = false
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
+    val isEnglishCoachMode = recordingMode == RecordingMode.ENGLISH_COACH
     val isCoachingNote = isInterviewMode &&
             insight.title?.startsWith(InterviewOutputParser.COACHING_NOTE_PREFIX) == true
 
-    if (isInterviewMode) {
-        InterviewInsightItem(
+    when {
+        isInterviewMode -> InterviewInsightItem(
             insight = insight,
             segments = segments,
             isCoachingNote = isCoachingNote,
             onRegenerate = onRegenerate,
             isRegenerating = isRegenerating
         )
-    } else {
-        StandardInsightItem(
+        isEnglishCoachMode -> EnglishCoachInsightItem(
+            insight = insight,
+            segments = segments
+        )
+        else -> StandardInsightItem(
             insight = insight,
             segments = segments,
             onRegenerate = onRegenerate,
@@ -837,6 +841,178 @@ private fun parseTasksJson(tasksJson: String): List<String> = try {
     List(arr.length()) { i -> arr.optString(i) }.filter { it.isNotBlank() }
 } catch (e: Exception) {
     emptyList()
+}
+
+/**
+ * Card for English Coach insights. Green (teal) accent. Four sections:
+ *  - Original phrase (what the user said)
+ *  - Corrected phrase (or a "no changes" badge if isCorrect)
+ *  - Polish (more natural native-speaker rephrasing), if present
+ *  - Why (coaching tip explaining the grammar point), if present
+ *
+ * The `tasks` JSON array encodes [polish?, coachingTip?] — same slot reused from
+ * InterviewInsightItem to avoid a schema migration.
+ */
+@Composable
+private fun EnglishCoachInsightItem(
+    insight: LlmInsight,
+    segments: List<TranscriptionSegment>
+) {
+    val accentColor = ModeEnglishCoachTint
+    val tips = remember(insight.tasks) {
+        insight.tasks?.let { parseTasksJson(it) } ?: emptyList()
+    }
+    val polish = tips.getOrNull(0)?.takeIf { it.isNotBlank() }
+    val coachingTip = tips.getOrNull(1)?.takeIf { it.isNotBlank() }
+    val isCorrect = insight.title == insight.content
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                color = accentColor.copy(alpha = 0.3f),
+                shape = MaterialTheme.shapes.medium
+            ),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(accentColor.copy(alpha = 0.12f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = AppIcons.ModeEnglishCoach,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    text = stringResource(R.string.mode_english_coach),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = accentColor,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            // Original
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(R.string.english_coach_original),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = insight.title ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontStyle = if (isCorrect) FontStyle.Normal else FontStyle.Italic
+                )
+            }
+
+            // Corrected (or no-errors badge)
+            if (isCorrect) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = accentColor.copy(alpha = 0.10f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.english_coach_no_errors),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = accentColor,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.english_coach_corrected),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accentColor
+                    )
+                    Text(
+                        text = insight.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            // Polish (more natural rephrasing)
+            if (!polish.isNullOrBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = accentColor.copy(alpha = 0.07f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.english_coach_polish),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = accentColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = polish,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+
+            // Why (coaching tip)
+            if (!coachingTip.isNullOrBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = AppIcons.Lightbulb,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = stringResource(R.string.english_coach_why),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = accentColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = coachingTip,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

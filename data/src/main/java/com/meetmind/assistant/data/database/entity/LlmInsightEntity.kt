@@ -49,5 +49,10 @@ data class LlmInsightEntity(
     val timestamp: Long,
 
     @ColumnInfo(name = "source_segment_ids")
-    val sourceSegmentIds: String // Stored as JSON array string
+    val sourceSegmentIds: String, // Stored as JSON array string
+
+    // Multi-purpose mode context (nullable — added in migration 12).
+    // INTERVIEW: detected question type; ENGLISH_COACH: "daily" | "professional"
+    @ColumnInfo(name = "question_type", defaultValue = "null")
+    val questionType: String? = null
 )

@@ -355,6 +355,7 @@ private fun FilterChipsRow(
                     RecordingMode.LONG_MEETING -> stringResource(R.string.mode_long_meeting)
                     RecordingMode.REAL_TIME_TRANSLATION -> stringResource(R.string.mode_translation_live)
                     RecordingMode.INTERVIEW -> stringResource(R.string.mode_interview)
+                    RecordingMode.ENGLISH_COACH -> stringResource(R.string.mode_english_coach)
                 }
                 FilterChip(
                     selected = selectedModeFilter == mode,
@@ -916,6 +917,7 @@ private fun recordingModeLabel(mode: RecordingMode): Int = when (mode) {
     RecordingMode.LONG_MEETING          -> R.string.mode_long_meeting
     RecordingMode.REAL_TIME_TRANSLATION -> R.string.mode_translation_live
     RecordingMode.INTERVIEW             -> R.string.mode_interview
+    RecordingMode.ENGLISH_COACH         -> R.string.mode_english_coach
 }
 
 /**
@@ -927,6 +929,7 @@ private fun recordingModeGradient(mode: RecordingMode): Brush = when (mode) {
     RecordingMode.LONG_MEETING          -> ModeLongMeetingGradient
     RecordingMode.REAL_TIME_TRANSLATION -> ModeTranslationGradient
     RecordingMode.INTERVIEW             -> ModeInterviewGradient
+    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachGradient
 }
 
 /**
@@ -938,6 +941,7 @@ private fun recordingModeTint(mode: RecordingMode): Color = when (mode) {
     RecordingMode.LONG_MEETING          -> ModeAmberTint
     RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
     RecordingMode.INTERVIEW             -> ModeInterviewTint
+    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
 }
 
 /**

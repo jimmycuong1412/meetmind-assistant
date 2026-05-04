@@ -51,7 +51,7 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         LlmInsightEntity::class,
         ActionItemEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -179,6 +179,20 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN speaker_cluster INTEGER")
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN start_offset_ms INTEGER")
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN end_offset_ms INTEGER")
+            }
+        }
+
+        /**
+         * Database version 10:
+         * - Added question_type column (nullable TEXT) to llm_insights.
+         *   INTERVIEW mode: detected question type ("behavioral" | "technical" | …).
+         *   ENGLISH_COACH mode: conversation context ("daily" | "professional").
+         *   All other modes: NULL.
+         * Existing rows default to NULL (no question type).
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE llm_insights ADD COLUMN question_type TEXT")
             }
         }
     }

@@ -28,6 +28,11 @@ interface ResourceProvider {
     fun getInterviewPrompt(): String
 
     /**
+     * Get the English Coach prompt template (contains {context} placeholder).
+     */
+    fun getEnglishCoachPrompt(): String
+
+    /**
      * Get the system prompt for a specific recording mode translated into the given locale.
      *
      * @param mode Recording mode determining which prompt key to load

@@ -277,6 +277,7 @@ private fun RecordingMode.label(): String = when (this) {
     RecordingMode.LONG_MEETING -> stringResource(R.string.mode_long_meeting)
     RecordingMode.REAL_TIME_TRANSLATION -> stringResource(R.string.mode_translation_live)
     RecordingMode.INTERVIEW -> stringResource(R.string.mode_interview)
+    RecordingMode.ENGLISH_COACH -> stringResource(R.string.mode_english_coach)
 }
 
 private fun RecordingMode.accentColor(): Color = when (this) {
@@ -285,6 +286,7 @@ private fun RecordingMode.accentColor(): Color = when (this) {
     RecordingMode.LONG_MEETING -> ModeAmberTint
     RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
     RecordingMode.INTERVIEW -> ModeInterviewTint
+    RecordingMode.ENGLISH_COACH -> ModeEnglishCoachTint
 }
 
 @Composable

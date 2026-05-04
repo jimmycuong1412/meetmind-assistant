@@ -125,7 +125,8 @@ fun LlmInsightEntity.toDomain(): LlmInsight {
         content = content,
         tasks = tasks,
         timestamp = timestamp,
-        sourceSegmentIds = parseSourceSegmentIds(sourceSegmentIds)
+        sourceSegmentIds = parseSourceSegmentIds(sourceSegmentIds),
+        questionType = questionType
     )
 }
 
@@ -142,7 +143,8 @@ fun LlmInsight.toEntity(): LlmInsightEntity {
         content = content,
         tasks = tasks,
         timestamp = timestamp,
-        sourceSegmentIds = serializeSourceSegmentIds(sourceSegmentIds)
+        sourceSegmentIds = serializeSourceSegmentIds(sourceSegmentIds),
+        questionType = questionType
     )
 }
 
