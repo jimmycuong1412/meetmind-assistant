@@ -612,6 +612,9 @@
     <string name="shortcut_quick_start_label">Quick Start</string>
     <string name="shortcut_quick_start_short_label">Start</string>
 
+    <!-- Thermal protection badge (mid-session gate active) -->
+    <string name="thermal_mode_badge">Thermal mode — summary at session end</string>
+
     <!-- Interview Mode insight card labels -->
     <!-- Header shown above a detected interview question in an insight card -->
     <string name="interview_question_detected">Question Detected</string>

@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.Collections
 
 /**
  * Orchestrates periodic LLM inference based on accumulated transcription.
@@ -50,6 +51,90 @@ class SyncSttLlmUseCase(
     private val settingsRepository: SettingsRepository,
     private val resourceProvider: ResourceProvider
 ) {
+    // ─── Thermal gate (mid-session) ───────────────────────────────────────────
+    // Suppresses live inference when the device is hot (MODERATE+ thermal status).
+    // All segments received while the gate is active are buffered for a single
+    // end-of-session flush call instead.
+    //
+    // Thread-safety: isHot written by MainViewModel timer (1s tick), read by the
+    // collect coroutine — AtomicBoolean ensures visibility across threads.
+    val isHot = AtomicBoolean(false)
+    private val thermalBuffer: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    private var coolReadingCount = 0
+
+    /**
+     * Update the thermal gate state. Called by [MainViewModel] on each 1-second timer tick.
+     *
+     * Hysteresis: gate activates immediately on any warm reading (isOverheating=true),
+     * but deactivates only after two consecutive cool readings to prevent flapping.
+     */
+    fun setThermalGate(isOverheating: Boolean) {
+        if (isOverheating) {
+            isHot.set(true)
+            coolReadingCount = 0
+        } else {
+            coolReadingCount++
+            if (coolReadingCount >= 2) {
+                isHot.set(false)
+            }
+        }
+    }
+
+    /** Clear the thermal buffer — called at session start so buffers don't bleed across sessions. */
+    fun clearThermalBuffer() {
+        thermalBuffer.clear()
+        coolReadingCount = 0
+    }
+
+    /**
+     * Flush all buffered segments as a single LLM call, returning a "Session Summary" insight.
+     * Returns null if the buffer is empty or inference fails.
+     *
+     * Must be called from a coroutine — suspends during LLM generation.
+     */
+    suspend fun flushThermalBuffer(
+        role: String,
+        sessionId: String,
+        timestamp: Long,
+        systemPrompt: String,
+        maxTokens: Int
+    ): LlmInsight? {
+        val segments = synchronized(thermalBuffer) {
+            if (thermalBuffer.isEmpty()) return null
+            thermalBuffer.toList().also { thermalBuffer.clear() }
+        }
+        val fullText = segments.joinToString("\n").trim()
+        if (fullText.isBlank()) return null
+
+        val prompt = InterviewPromptBuilder.build(role, fullText)
+        return try {
+            llmRepository.beginInference()
+            llmRepository.reloadModel()
+            val insightBuilder = StringBuilder()
+            llmRepository.generateInsight(prompt, systemPrompt, maxTokens)
+                .collect { token -> insightBuilder.append(token) }
+            val rawOutput = insightBuilder.toString().trim()
+            if (rawOutput.isBlank()) return null
+
+            val interviewInsight = InterviewOutputParser.parse(rawOutput, role)
+            val base = InterviewOutputParser.toLlmInsight(
+                interviewInsight = interviewInsight,
+                sessionId = sessionId,
+                timestamp = timestamp,
+                sourceSegmentIds = emptyList()
+            )
+            base.copy(title = "Session Summary")
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            println("[SyncSttLlm] Thermal flush error: ${e.message}")
+            null
+        } finally {
+            withContext(NonCancellable) {
+                llmRepository.endInference()
+            }
+        }
+    }
+
     companion object {
         // Max tokens the LLM is allowed to generate per inference call, by mode.
         // Translation needs fewer tokens (just the translated text).
@@ -248,6 +333,14 @@ class SyncSttLlmUseCase(
                 val now = System.currentTimeMillis()
                 val timeSinceLastInference = now - lastInferenceTime
 
+                // ── Thermal gate: buffer segment and skip inference when hot ───────
+                // When the device is at MODERATE+ thermal status, suppress all LLM
+                // calls and accumulate segment text for a single end-of-session flush.
+                if (segment.isComplete && isHot.get()) {
+                    thermalBuffer.add(segment.text)
+                    return@collect
+                }
+
                 // ── Reactive question trigger (Interview Mode only) ─────────────────
                 // Fires immediately when a completed segment looks like a question,
                 // bypassing the fixed interval. Debounced by MIN_REACTIVE_DEBOUNCE_MS
@@ -332,6 +425,9 @@ class SyncSttLlmUseCase(
                     intervalMs
 
                 if (timeSinceLastInference >= effectiveIntervalMs) {
+                    // Skip if thermal gate is active — partial segments are not buffered
+                    // (only completed segments go to thermalBuffer above).
+                    if (isHot.get()) return@collect
                     // Skip if a previous LLM call is still running — prevents queuing
                     // inference requests on slow devices and wastes battery.
                     if (isLlmBusy.get()) return@collect

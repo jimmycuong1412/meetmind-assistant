@@ -482,7 +482,8 @@ class MainViewModel @Inject constructor(
 
         // Reset per-session interview state on each new recording segment.
         fillerTotalCount = 0
-        _uiState.update { it.copy(fillerWordStats = FillerWordStats(), cardTimers = emptyMap()) }
+        syncSttLlmUseCase.clearThermalBuffer()
+        _uiState.update { it.copy(fillerWordStats = FillerWordStats(), cardTimers = emptyMap(), thermalMode = false) }
 
         // Start recording timer offset by any previously accumulated duration so that
         // resuming within the same session produces a cumulative elapsed time display.
@@ -494,11 +495,14 @@ class MainViewModel @Inject constructor(
                 val totalDurationMs = accumulatedDurationMs + segmentElapsed
                 _uiState.update { it.copy(recordingDurationMillis = totalDurationMs) }
 
-                // Conservative thread management is now handled adaptively by LlmRepositoryImpl:
-                // - Post-load check (checkAndCacheMemoryConstraint) detects RAM pressure accurately.
-                // - Per-inference recording (recordConstrainedInference) learns the char threshold.
-                // - isLargeContext() proactively applies conservative threads before each reload.
-                // The timer-based check is no longer needed.
+                // Mid-session thermal gate: poll isOverheating() on each tick and propagate
+                // to SyncSttLlmUseCase (with hysteresis). Update thermalMode badge flag.
+                val overheating = thermalMonitor.isOverheating()
+                syncSttLlmUseCase.setThermalGate(overheating)
+                val gateActive = syncSttLlmUseCase.isHot.get()
+                if (gateActive != _uiState.value.thermalMode) {
+                    _uiState.update { it.copy(thermalMode = gateActive) }
+                }
             }
         }
 
@@ -846,6 +850,43 @@ class MainViewModel @Inject constructor(
             }
             insightsJob?.cancel()
             insightsJob = null
+
+            // Thermal buffer flush: if the mid-session gate was active during this session
+            // and buffered segments exist, run a single end-of-session LLM call and emit
+            // the result as a "Session Summary" insight. Only applies in INTERVIEW + REAL_TIME.
+            if (currentInsightStrategy == InsightStrategy.REAL_TIME &&
+                currentRecordingMode == RecordingMode.INTERVIEW
+            ) {
+                val role = currentTopic?.takeIf { it.isNotBlank() } ?: "Software Engineer"
+                val flushTimestamp = System.currentTimeMillis()
+                launch {
+                    val summary = try {
+                        llmProcessingServiceController.startProcessing()
+                        val settings = settingsRepository.getSettings().first()
+                        val sysPrompt = settings.interviewSystemPrompt.replace("{role}", role)
+                        syncSttLlmUseCase.flushThermalBuffer(
+                            role = role,
+                            sessionId = sessionId,
+                            timestamp = flushTimestamp,
+                            systemPrompt = sysPrompt,
+                            maxTokens = 768
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Thermal flush failed: ${e.message}")
+                        null
+                    } finally {
+                        llmProcessingServiceController.stopProcessing()
+                    }
+                    if (summary != null) {
+                        saveInsightUseCase(summary)
+                            .onFailure { e -> Log.e(TAG, "Failed to save thermal summary: ${e.message}") }
+                            .onSuccess { Log.i(TAG, "Thermal session summary saved: ${summary.id}") }
+                    } else if (syncSttLlmUseCase.isHot.get()) {
+                        _uiState.update { it.copy(error = "Could not generate session summary") }
+                    }
+                    _uiState.update { it.copy(thermalMode = false) }
+                }
+            }
 
             val snapshot = pendingContent.getAndSet("").trim()
             // Fall back to the captured partial text if no complete segments arrived

@@ -63,7 +63,8 @@ data class MainUiState(
      */
     val batteryWhitelistPromptVisible: Boolean = false,
     val fillerWordStats: FillerWordStats = FillerWordStats(),
-    val cardTimers: Map<String, CardTimerEntry> = emptyMap()
+    val cardTimers: Map<String, CardTimerEntry> = emptyMap(),
+    val thermalMode: Boolean = false
 ) {
     /**
      * Returns all segments for display: completed + current partial (if exists).

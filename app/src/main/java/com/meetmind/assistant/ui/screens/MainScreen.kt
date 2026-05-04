@@ -630,6 +630,7 @@ fun MainScreen(
                                 regeneratingInsightId = uiState.regeneratingInsightId,
                                 fillerWordStats = uiState.fillerWordStats,
                                 cardTimers = uiState.cardTimers,
+                                thermalMode = uiState.thermalMode,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

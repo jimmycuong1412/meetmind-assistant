@@ -95,6 +95,7 @@ fun InsightsSection(
     regeneratingInsightId: String? = null,
     fillerWordStats: FillerWordStats = FillerWordStats(),
     cardTimers: Map<String, CardTimerEntry> = emptyMap(),
+    thermalMode: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
@@ -386,6 +387,30 @@ fun InsightsSection(
                     text = "Fillers: ${fillerWordStats.ratePerMinute.roundToInt()}/min",
                     style = MaterialTheme.typography.labelSmall,
                     color = fillerColor,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        // ── Thermal mode badge ────────────────────────────────────────────────
+        AnimatedVisibility(
+            visible = thermalMode && isRecording,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 12.dp, top = 8.dp),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = Color(0xFFF59E0B).copy(alpha = 0.15f),
+                shadowElevation = 2.dp
+            ) {
+                Text(
+                    text = stringResource(R.string.thermal_mode_badge),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFFF59E0B),
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
@@ -778,14 +803,14 @@ private fun InterviewInsightItem(
             }
 
             // ── Nudge chip (short answer) ──────────────────────────────────
-            if (timerEntry?.nudge != null) {
+            timerEntry?.nudge?.let { nudgeText ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Text(
-                        text = timerEntry.nudge,
+                        text = nudgeText,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
