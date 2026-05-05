@@ -357,31 +357,43 @@ class SyncSttLlmUseCase(
                                 val rawOutput = insightBuilder.toString().trim()
 
                                 if (rawOutput.isNotBlank()) {
-                                    val insight = if (mode == RecordingMode.INTERVIEW &&
-                                                      interviewRole != null) {
-                                        // Dual-output path: parse into InterviewInsight then
-                                        // map to LlmInsight for uniform persistence and UI.
-                                        val interviewInsight = InterviewOutputParser.parse(
-                                            rawOutput = rawOutput,
-                                            role = interviewRole
-                                        )
-                                        InterviewOutputParser.toLlmInsight(
-                                            interviewInsight = interviewInsight,
-                                            sessionId = sessionId,
-                                            timestamp = insightTimestamp,
-                                            sourceSegmentIds = sourceIds
-                                        )
-                                    } else {
-                                        val parsed = parseInsightOutput(rawOutput, mode, parseSettings)
-                                        LlmInsight(
-                                            id = UUID.randomUUID().toString(),
-                                            sessionId = sessionId,
-                                            title = parsed.title,
-                                            content = parsed.content,
-                                            tasks = parsed.tasks,
-                                            timestamp = insightTimestamp,
-                                            sourceSegmentIds = sourceIds
-                                        )
+                                    val insight = when {
+                                        mode == RecordingMode.INTERVIEW && interviewRole != null -> {
+                                            // Dual-output path: parse into InterviewInsight then
+                                            // map to LlmInsight for uniform persistence and UI.
+                                            val interviewInsight = InterviewOutputParser.parse(
+                                                rawOutput = rawOutput,
+                                                role = interviewRole
+                                            )
+                                            InterviewOutputParser.toLlmInsight(
+                                                interviewInsight = interviewInsight,
+                                                sessionId = sessionId,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
+                                        mode == RecordingMode.ENGLISH_COACH -> {
+                                            val coachContext = topic?.takeIf { it.isNotBlank() } ?: "daily conversation"
+                                            val coachInsight = EnglishCoachOutputParser.parse(rawOutput, coachContext)
+                                            EnglishCoachOutputParser.toLlmInsight(
+                                                insight = coachInsight,
+                                                sessionId = sessionId,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
+                                        else -> {
+                                            val parsed = parseInsightOutput(rawOutput, mode, parseSettings)
+                                            LlmInsight(
+                                                id = UUID.randomUUID().toString(),
+                                                sessionId = sessionId,
+                                                title = parsed.title,
+                                                content = parsed.content,
+                                                tasks = parsed.tasks,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
                                     }
                                     send(insight)
                                 }
