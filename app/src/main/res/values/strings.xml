@@ -637,4 +637,7 @@
     <string name="interview_answer_suggestion">Answer Suggestion</string>
     <!-- Section header for coaching tips list in an interview card -->
     <string name="interview_coaching_tips">Coaching Tips</string>
+    <!-- Translation split-view panel headers -->
+    <string name="translation_panel_original">Original</string>
+    <string name="translation_panel_translation">Translation</string>
 </resources>
