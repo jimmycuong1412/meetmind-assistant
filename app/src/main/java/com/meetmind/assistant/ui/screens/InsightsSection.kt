@@ -94,9 +94,9 @@ fun InsightsSection(
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
 
-    // Live-sync is on by default only in Interview Mode so the coach panel tracks
-    // the conversation automatically. For other modes the user can still enable it.
-    var isLiveSyncEnabled by remember(isInterviewMode) { mutableStateOf(isInterviewMode) }
+    // Live-sync is on by default whenever recording is active so new insights are
+    // scrolled into view automatically. The user can toggle it off mid-session.
+    var isLiveSyncEnabled by remember(isInterviewMode, isRecording) { mutableStateOf(isInterviewMode || isRecording) }
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
