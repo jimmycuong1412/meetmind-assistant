@@ -7,10 +7,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionGroupDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
 import com.meetmind.assistant.data.database.entity.LlmInsightEntity
+import com.meetmind.assistant.data.database.entity.SessionGroupEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSegmentEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
 
@@ -49,9 +51,10 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         TranscriptionSessionEntity::class,
         TranscriptionSegmentEntity::class,
         LlmInsightEntity::class,
-        ActionItemEntity::class
+        ActionItemEntity::class,
+        SessionGroupEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,6 +64,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun llmInsightDao(): LlmInsightDao
     abstract fun searchDao(): SearchDao
     abstract fun actionItemDao(): ActionItemDao
+    abstract fun sessionGroupDao(): SessionGroupDao
 
     companion object {
         const val DATABASE_NAME = "libellula_transcription.db"
@@ -193,6 +197,27 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE llm_insights ADD COLUMN question_type TEXT")
+            }
+        }
+
+        /**
+         * Database version 11:
+         * - Added session_groups table for user-defined session organisation.
+         * - Added nullable group_id column to transcription_sessions.
+         *   NULL = session is not assigned to any group ("Other").
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS session_groups (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        created_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("ALTER TABLE transcription_sessions ADD COLUMN group_id TEXT")
             }
         }
     }

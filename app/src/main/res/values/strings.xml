@@ -640,4 +640,14 @@
     <!-- Translation split-view panel headers -->
     <string name="translation_panel_original">Original</string>
     <string name="translation_panel_translation">Translation</string>
+    <!-- Session groups -->
+    <string name="group_section_other">Other</string>
+    <string name="group_new">New group</string>
+    <string name="group_name_hint">Group name</string>
+    <string name="group_assign_title">Move to group</string>
+    <string name="group_no_group">No group</string>
+    <string name="group_delete_title">Delete group?</string>
+    <string name="group_delete_message">Delete group \"%1$s\"? Sessions will be moved to Other.</string>
+    <string name="group_create_confirm">Create</string>
+    <string name="group_move_to_group">Move to group</string>
 </resources>

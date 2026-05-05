@@ -33,7 +33,8 @@ data class TranscriptionSession(
     val insightStrategy: InsightStrategy = InsightStrategy.REAL_TIME,
     val topic: String? = null, // Optional main subject for focused AI insights
     val audioFilePath: String? = null,
-    val diarizationStatus: DiarizationStatus = DiarizationStatus.NOT_RUN
+    val diarizationStatus: DiarizationStatus = DiarizationStatus.NOT_RUN,
+    val groupId: String? = null
 )
 
 /**

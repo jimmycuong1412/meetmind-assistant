@@ -97,4 +97,8 @@ object AppIcons {
     // Speaker labeling
     val Person: ImageVector get() = Icons.Outlined.Person
     val Bookmark: ImageVector get() = Icons.Outlined.Bookmark
+
+    // Groups / folders
+    val FolderOpen: ImageVector get() = Icons.Outlined.FolderOpen
+    val Folder: ImageVector get() = Icons.Outlined.Folder
 }

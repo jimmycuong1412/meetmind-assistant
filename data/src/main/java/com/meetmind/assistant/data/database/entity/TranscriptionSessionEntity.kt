@@ -47,5 +47,8 @@ data class TranscriptionSessionEntity(
     val audioFilePath: String? = null,
 
     @ColumnInfo(name = "diarization_status")
-    val diarizationStatus: String = "UNAVAILABLE"
+    val diarizationStatus: String = "UNAVAILABLE",
+
+    @ColumnInfo(name = "group_id")
+    val groupId: String? = null
 )

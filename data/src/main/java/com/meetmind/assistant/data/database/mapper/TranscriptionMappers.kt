@@ -50,7 +50,8 @@ fun TranscriptionSessionEntity.toDomain(): TranscriptionSession {
             DiarizationStatus.valueOf(diarizationStatus)
         } catch (e: IllegalArgumentException) {
             DiarizationStatus.UNAVAILABLE
-        }
+        },
+        groupId = groupId
     )
 }
 
@@ -70,7 +71,8 @@ fun TranscriptionSession.toEntity(): TranscriptionSessionEntity {
         insightStrategy = insightStrategy.name,
         topic = topic,
         audioFilePath = audioFilePath,
-        diarizationStatus = diarizationStatus.name
+        diarizationStatus = diarizationStatus.name,
+        groupId = groupId
     )
 }
 

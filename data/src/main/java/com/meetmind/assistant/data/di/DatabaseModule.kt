@@ -6,11 +6,14 @@ import com.meetmind.assistant.data.database.AppDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionGroupDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.repository.ActionItemRepositoryImpl
+import com.meetmind.assistant.data.repository.GroupRepositoryImpl
 import com.meetmind.assistant.data.repository.TranscriptionRepositoryImpl
 import com.meetmind.assistant.domain.repository.ActionItemRepository
+import com.meetmind.assistant.domain.repository.GroupRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import dagger.Module
 import dagger.Provides
@@ -19,21 +22,10 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
-/**
- * Hilt module providing database and repository dependencies.
- *
- * All database-related dependencies are scoped as Singleton to ensure
- * a single database instance throughout the app lifecycle.
- */
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
 
-    /**
-     * Provide the Room database instance.
-     *
-     * Includes proper database migrations to preserve user data across schema updates.
-     */
     @Provides
     @Singleton
     fun provideAppDatabase(
@@ -53,58 +45,51 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
                 AppDatabase.MIGRATION_8_9,
-                AppDatabase.MIGRATION_9_10
+                AppDatabase.MIGRATION_9_10,
+                AppDatabase.MIGRATION_10_11
             )
             .build()
     }
 
-    /**
-     * Provide TranscriptionSessionDao from the database.
-     */
     @Provides
     @Singleton
-    fun provideTranscriptionSessionDao(database: AppDatabase): TranscriptionSessionDao {
-        return database.transcriptionSessionDao()
-    }
-
-    /**
-     * Provide TranscriptionSegmentDao from the database.
-     */
-    @Provides
-    @Singleton
-    fun provideTranscriptionSegmentDao(database: AppDatabase): TranscriptionSegmentDao {
-        return database.transcriptionSegmentDao()
-    }
-
-    /**
-     * Provide LlmInsightDao from the database.
-     */
-    @Provides
-    @Singleton
-    fun provideLlmInsightDao(database: AppDatabase): LlmInsightDao {
-        return database.llmInsightDao()
-    }
-
-    /**
-     * Provide TranscriptionRepository implementation.
-     */
-    @Provides
-    @Singleton
-    fun provideSearchDao(database: AppDatabase): SearchDao {
-        return database.searchDao()
-    }
+    fun provideTranscriptionSessionDao(database: AppDatabase): TranscriptionSessionDao =
+        database.transcriptionSessionDao()
 
     @Provides
     @Singleton
-    fun provideActionItemDao(database: AppDatabase): ActionItemDao {
-        return database.actionItemDao()
-    }
+    fun provideTranscriptionSegmentDao(database: AppDatabase): TranscriptionSegmentDao =
+        database.transcriptionSegmentDao()
 
     @Provides
     @Singleton
-    fun provideActionItemRepository(dao: ActionItemDao): ActionItemRepository {
-        return ActionItemRepositoryImpl(dao)
-    }
+    fun provideLlmInsightDao(database: AppDatabase): LlmInsightDao =
+        database.llmInsightDao()
+
+    @Provides
+    @Singleton
+    fun provideSearchDao(database: AppDatabase): SearchDao =
+        database.searchDao()
+
+    @Provides
+    @Singleton
+    fun provideActionItemDao(database: AppDatabase): ActionItemDao =
+        database.actionItemDao()
+
+    @Provides
+    @Singleton
+    fun provideSessionGroupDao(database: AppDatabase): SessionGroupDao =
+        database.sessionGroupDao()
+
+    @Provides
+    @Singleton
+    fun provideActionItemRepository(dao: ActionItemDao): ActionItemRepository =
+        ActionItemRepositoryImpl(dao)
+
+    @Provides
+    @Singleton
+    fun provideGroupRepository(dao: SessionGroupDao): GroupRepository =
+        GroupRepositoryImpl(dao)
 
     @Provides
     @Singleton
