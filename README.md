@@ -1,18 +1,57 @@
-# MeetMind Assistant
+<p align="center">
+  <img src="docs/images/app-icon.png" alt="MeetMind Assistant" width="120">
+</p>
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Min SDK](https://img.shields.io/badge/Min%20SDK-API%2030-green.svg)](https://developer.android.com/about/versions/11/highlights)
-[![Build](https://github.com/Helldez/MeetMind Assistant-App/actions/workflows/build.yml/badge.svg)](https://github.com/Helldez/MeetMind Assistant-App/actions/workflows/build.yml)
+<h1 align="center">MeetMind Assistant</h1>
 
-<a href="https://play.google.com/store/apps/details?id=com.meetmind.assistant">
-  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="60">
-</a>
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/Min%20SDK-API%2030-green.svg" alt="Min SDK">
+  <img src="https://img.shields.io/badge/Price-100%25%20Free-brightgreen.svg" alt="Free">
+  <img src="https://img.shields.io/badge/AI-100%25%20On--device-orange.svg" alt="On-device AI">
+</p>
 
-**On-device audio transcription and AI insights for Android**
+<p align="center"><b>On-device audio transcription and AI insights for Android</b></p>
 
 MeetMind Assistant combines a local Speech-to-Text engine with a local Large Language Model to deliver
 real-time transcription and AI-generated insights — entirely offline, with no data sent to any
 server.
+
+---
+
+## 🔒 Privacy-first, on-device AI — and completely free
+
+MeetMind Assistant is built around a single principle: **your conversations never leave your phone.**
+
+- **100% on-device AI** — both the Speech-to-Text engine (Sherpa-ONNX) and the Large Language Model
+  (llama.cpp) run entirely on your device. There is **no cloud, no API key, and no account**. The app
+  makes **zero network calls during recording**, so even sensitive meetings stay completely private.
+- **No data collection** — transcripts, AI insights, and recordings are stored only in app-private
+  storage on your device. Nothing is uploaded, sold, or shared.
+- **Completely free, forever** — the entire app is free to use with **no subscriptions, no ads, and no
+  paywalled features**. Every capability described below is available to everyone.
+- **Open source under Apache 2.0** — the full source code is released under the
+  [Apache License 2.0](LICENSE). You are free to use, study, modify, and redistribute it. The
+  permissive license means anyone can verify exactly what the app does — privacy you can audit, not
+  just trust.
+
+---
+
+## 📸 Screenshots
+
+> _Screenshots coming soon. The app icon below; feature screenshots will be added here._
+
+<p align="center">
+  <img src="docs/images/app-icon.png" alt="MeetMind Assistant" width="100">
+</p>
+
+<!--
+To add feature screenshots, drop the image files into docs/images/ and replace the block above, e.g.:
+
+| Recording | AI Insights | Global Search |
+|---|---|---|
+| ![Recording](docs/images/recording.png) | ![Insights](docs/images/insights.png) | ![Search](docs/images/search.png) |
+-->
 
 ---
 
@@ -253,8 +292,8 @@ Token budget flows from `SyncSttLlmUseCase` → `LlmRepository` → `LlamaAndroi
 git lfs install
 
 # 2. Clone (LFS objects are downloaded automatically)
-git clone https://github.com/Helldez/MeetMind Assistant-App.git
-cd MeetMind Assistant
+git clone https://github.com/jimmycuong1412/meetmind-assistant.git
+cd meetmind-assistant
 
 # 3. Configure Firebase
 #    Copy the example file and fill in your own Firebase project credentials.
@@ -308,8 +347,24 @@ consistent JSON parsing.
 
 ---
 
+## 🙏 Acknowledgements
+
+MeetMind Assistant is built on top of the excellent open-source project
+**[HearoPilot](https://github.com/Helldez/HearoPilot-App)** by **[Helldez](https://github.com/Helldez)**,
+which is also released under the Apache License 2.0.
+
+A huge thank-you to the author for creating and open-sourcing HearoPilot. This project would not exist
+without that foundation — the on-device STT + LLM architecture, the privacy-first design, and the
+multilingual prompt system all trace back to their work. 🙌
+
+If you find MeetMind Assistant useful, please consider starring the original
+[HearoPilot repository](https://github.com/Helldez/HearoPilot-App) as well.
+
+---
+
 ## Credits
 
+- **Original project** — [HearoPilot](https://github.com/Helldez/HearoPilot-App) by [Helldez](https://github.com/Helldez)
 - **STT engine** — [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) by k2-fsa
 - **LLM engine** — [llama.cpp](https://github.com/ggerganov/llama.cpp) by ggerganov
 - **STT model** — NeMo Parakeet TDT 0.6B by NVIDIA
