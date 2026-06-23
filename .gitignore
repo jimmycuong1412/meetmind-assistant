@@ -5,6 +5,7 @@ local.properties
 .idea/
 .DS_Store
 build/
+bin/
 captures/
 .externalNativeBuild/
 .cxx/
@@ -52,6 +53,9 @@ Thumbs.db
 .vscode/
 *.suo
 *.user
+
+# Obsidian vault config
+.obsidian/
 
 # AI tool local data (runtime, memory, sessions)
 .gemini/
