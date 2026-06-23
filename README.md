@@ -39,19 +39,15 @@ MeetMind Assistant is built around a single principle: **your conversations neve
 
 ## 📸 Screenshots
 
-> _Screenshots coming soon. The app icon below; feature screenshots will be added here._
+| Sessions overview | Recording modes | Live transcription |
+|:---:|:---:|:---:|
+| ![Sessions overview](docs/images/home-sessions.png) | ![Recording modes](docs/images/recording-modes.png) | ![Live transcription](docs/images/live-transcription.png) |
+| Your sessions, fully on-device — note the **"kept private"** storage stat | Six recording modes, incl. Live Translation & coaching | Real-time streaming transcription as you speak |
 
-<p align="center">
-  <img src="docs/images/app-icon.png" alt="MeetMind Assistant" width="100">
-</p>
-
-<!--
-To add feature screenshots, drop the image files into docs/images/ and replace the block above, e.g.:
-
-| Recording | AI Insights | Global Search |
-|---|---|---|
-| ![Recording](docs/images/recording.png) | ![Insights](docs/images/insights.png) | ![Search](docs/images/search.png) |
--->
+| AI Insights | Extracted tasks |
+|:---:|:---:|
+| ![AI Insights](docs/images/ai-insights.png) | ![Tasks](docs/images/tasks.png) |
+| On-device LLM generates meeting summaries & analysis | Action items automatically extracted from the conversation |
 
 ---
 
@@ -78,10 +74,12 @@ To add feature screenshots, drop the image files into docs/images/ and replace t
 
 | Mode | Description | AI Behaviour |
 |---|---|---|
-| **Simple Listening** | Lightweight transcription | Final summary only |
-| **Short Meeting** | Brief focused meetings | Summary + tasks + suggestions, high frequency |
-| **Long Meeting** | Extended conferences, many speakers | Summary + tasks + suggestions, low frequency |
-| **Real-Time Translation** | Translate speech as you speak | Raw segment translation, no analysis wrapper |
+| **Simple Listening** | Lightweight transcription | Periodic summaries (~every 60s) |
+| **Short Meeting** | Brief focused meetings | Summary + tasks + suggestions, high frequency (~every 60s) |
+| **Long Meeting** | Extended conferences, many speakers | In-depth analysis, low frequency (~every 5min) |
+| **Live Translation** | Translate speech as you speak | Real-time segment translation (~every 30s), no analysis wrapper |
+| **Interview Coach** | Live answer suggestions for interviews | Real-time answer suggestions (~every 30s) |
+| **English Coach** | Real-time grammar and phrasing coach | Real-time grammar & phrasing feedback (~every 5s) |
 
 ---
 
