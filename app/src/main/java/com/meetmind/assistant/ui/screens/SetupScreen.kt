@@ -15,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetmind.assistant.ui.ui.theme.*
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import com.meetmind.assistant.domain.model.DownloadState
 
 /**
@@ -49,6 +50,7 @@ fun SetupScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            ResponsiveContent {
             // App logo/title
             Text(
                 text = stringResource(R.string.app_name),
@@ -91,6 +93,7 @@ fun SetupScreen(
 
             // Model info
             ModelInfoCard()
+            }
         }
     }
 }
