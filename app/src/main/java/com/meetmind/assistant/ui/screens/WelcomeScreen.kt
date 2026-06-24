@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.components.GradientButton
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import com.meetmind.assistant.ui.icons.AppIcons
 import com.meetmind.assistant.ui.ui.theme.*
 
@@ -53,6 +54,7 @@ fun WelcomeScreen(
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            ResponsiveContent {
             Spacer(modifier = Modifier.height(48.dp))
 
             // ── Logo + name ──────────────────────────────────────────────
@@ -124,6 +126,7 @@ fun WelcomeScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
+            }
         }
     }
 }
