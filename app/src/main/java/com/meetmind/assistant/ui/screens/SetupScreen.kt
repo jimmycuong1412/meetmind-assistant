@@ -1,6 +1,8 @@
 package com.meetmind.assistant.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.icons.AppIcons
 import androidx.compose.material3.*
@@ -42,6 +44,7 @@ fun SetupScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
