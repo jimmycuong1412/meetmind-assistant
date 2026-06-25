@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License"></a>
-  <img src="https://img.shields.io/badge/Min%20SDK-API%2030-green.svg" alt="Min SDK">
+  <img src="https://img.shields.io/badge/Min%20SDK-API%2035-green.svg" alt="Min SDK">
   <img src="https://img.shields.io/badge/Price-100%25%20Free-brightgreen.svg" alt="Free">
   <img src="https://img.shields.io/badge/AI-100%25%20On--device-orange.svg" alt="On-device AI">
 </p>
@@ -275,7 +275,7 @@ Token budget flows from `SyncSttLlmUseCase` → `LlmRepository` → `LlamaAndroi
 |------|---------|
 | Android Studio | Iguana (2023.2.1) or later |
 | JDK | 17 |
-| Android SDK | compile / target **35**, min **30** |
+| Android SDK | compile / target **35**, min **35** |
 | Android NDK | **r27** (`27.2.12479018`) |
 | CMake | 3.31+ (installed via SDK Manager) |
 | Git LFS | any recent version |
