@@ -24,6 +24,7 @@ import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.ui.components.DownloadOnboardingCarousel
 import com.meetmind.assistant.ui.components.GradientButton
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import com.meetmind.assistant.domain.model.DownloadState
 
 /** CC BY 4.0 license URL for the Parakeet TDT model. */
@@ -304,80 +305,82 @@ private fun SttIdleLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            ResponsiveContent {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
                 ) {
-                    Text(
-                        stringResource(R.string.onboarding_stt_model_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        stringResource(R.string.onboarding_stt_model_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        SttModelInfoRow(
-                            stringResource(R.string.onboarding_model_label),
-                            stringResource(R.string.onboarding_stt_model_name)
+                        Text(
+                            stringResource(R.string.onboarding_stt_model_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
                         )
-                        SttModelInfoRow(
-                            stringResource(R.string.onboarding_language_label),
-                            languageName
+                        Text(
+                            stringResource(R.string.onboarding_stt_model_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
-                        SttModelInfoRow(
-                            stringResource(R.string.onboarding_runs_label),
-                            stringResource(R.string.onboarding_on_device)
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            SttModelInfoRow(
+                                stringResource(R.string.onboarding_model_label),
+                                stringResource(R.string.onboarding_stt_model_name)
+                            )
+                            SttModelInfoRow(
+                                stringResource(R.string.onboarding_language_label),
+                                languageName
+                            )
+                            SttModelInfoRow(
+                                stringResource(R.string.onboarding_runs_label),
+                                stringResource(R.string.onboarding_on_device)
+                            )
+                            SttModelInfoRow(
+                                stringResource(R.string.onboarding_source_label),
+                                stringResource(R.string.onboarding_huggingface)
+                            )
+                            SttLicenseLinkRow()
+                        }
+                        GradientButton(
+                            text = stringResource(R.string.onboarding_stt_download_button),
+                            onClick = onStartDownload,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                        SttModelInfoRow(
-                            stringResource(R.string.onboarding_source_label),
-                            stringResource(R.string.onboarding_huggingface)
-                        )
-                        SttLicenseLinkRow()
                     }
-                    GradientButton(
-                        text = stringResource(R.string.onboarding_stt_download_button),
-                        onClick = onStartDownload,
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
-            }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Icon(
-                        AppIcons.Info, null,
-                        tint = BrandPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        stringResource(R.string.onboarding_stt_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            AppIcons.Info, null,
+                            tint = BrandPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            stringResource(R.string.onboarding_stt_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

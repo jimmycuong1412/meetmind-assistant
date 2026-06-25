@@ -24,6 +24,7 @@ import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.ui.components.DownloadOnboardingCarousel
 import com.meetmind.assistant.ui.components.GradientButton
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import com.meetmind.assistant.domain.model.DownloadState
 
 /** Gemma Terms of Use URL shown in the LLM download screen. */
@@ -328,104 +329,106 @@ private fun LlmIdleLayout(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+            ResponsiveContent {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
                 ) {
-                    Text(
-                        text = stringResource(R.string.onboarding_llm_optional),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = stringResource(R.string.onboarding_llm_desc),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        LlmBenefitRow(AppIcons.Lightbulb, stringResource(R.string.onboarding_llm_benefit_1))
-                        LlmBenefitRow(AppIcons.AutoAwesome, stringResource(R.string.onboarding_llm_benefit_2))
-                        LlmBenefitRow(AppIcons.Lock, stringResource(R.string.onboarding_llm_benefit_3))
-                    }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        LlmModelInfoRow(
-                            stringResource(R.string.onboarding_model_label),
-                            stringResource(R.string.onboarding_llm_model_name)
+                        Text(
+                            text = stringResource(R.string.onboarding_llm_optional),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
                         )
-                        LlmModelInfoRow(
-                            stringResource(R.string.onboarding_runs_label),
-                            stringResource(R.string.onboarding_on_device)
+                        Text(
+                            text = stringResource(R.string.onboarding_llm_desc),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
-                        LlmModelInfoRow(
-                            stringResource(R.string.onboarding_source_label),
-                            stringResource(R.string.onboarding_huggingface)
-                        )
-                        LlmLicenseLinkRow()
-                    }
-                    if (isStandalone) {
-                        GradientButton(
-                            text = stringResource(R.string.onboarding_llm_download_button),
-                            onClick = onStartDownload,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                stringResource(R.string.onboarding_llm_skip),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            LlmBenefitRow(AppIcons.Lightbulb, stringResource(R.string.onboarding_llm_benefit_1))
+                            LlmBenefitRow(AppIcons.AutoAwesome, stringResource(R.string.onboarding_llm_benefit_2))
+                            LlmBenefitRow(AppIcons.Lock, stringResource(R.string.onboarding_llm_benefit_3))
                         }
-                    } else {
-                        GradientButton(
-                            text = stringResource(R.string.onboarding_llm_skip),
-                            onClick = onSkip,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        TextButton(onClick = onStartDownload, modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                stringResource(R.string.onboarding_llm_download_button),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            LlmModelInfoRow(
+                                stringResource(R.string.onboarding_model_label),
+                                stringResource(R.string.onboarding_llm_model_name)
                             )
+                            LlmModelInfoRow(
+                                stringResource(R.string.onboarding_runs_label),
+                                stringResource(R.string.onboarding_on_device)
+                            )
+                            LlmModelInfoRow(
+                                stringResource(R.string.onboarding_source_label),
+                                stringResource(R.string.onboarding_huggingface)
+                            )
+                            LlmLicenseLinkRow()
+                        }
+                        if (isStandalone) {
+                            GradientButton(
+                                text = stringResource(R.string.onboarding_llm_download_button),
+                                onClick = onStartDownload,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    stringResource(R.string.onboarding_llm_skip),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            GradientButton(
+                                text = stringResource(R.string.onboarding_llm_skip),
+                                onClick = onSkip,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(onClick = onStartDownload, modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    stringResource(R.string.onboarding_llm_download_button),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
-                    Icon(
-                        AppIcons.Info, null,
-                        tint = BrandPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        stringResource(R.string.onboarding_llm_skip_note),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            AppIcons.Info, null,
+                            tint = BrandPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            stringResource(R.string.onboarding_llm_skip_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
