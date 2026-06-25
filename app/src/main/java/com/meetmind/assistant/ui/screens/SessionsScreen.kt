@@ -2,6 +2,7 @@ package com.meetmind.assistant.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -140,7 +141,8 @@ fun SessionsScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentAlignment = Alignment.TopCenter
         ) {
             when {
                 uiState.isLoading -> {
@@ -258,7 +260,9 @@ private fun SessionsList(
 ) {
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 600.dp),
         contentPadding = PaddingValues(bottom = 88.dp + navBarPadding),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {

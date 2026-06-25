@@ -23,6 +23,7 @@ import com.meetmind.assistant.presentation.licenses.LicensesViewModel
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.icons.AppIcons
 import com.meetmind.assistant.ui.ui.theme.BrandPrimary
+import com.meetmind.assistant.ui.components.ResponsiveContent
 
 /**
  * Screen listing all open-source licenses and AI model attributions.
@@ -71,23 +72,24 @@ fun LicensesScreen(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = stringResource(R.string.licenses_intro),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            uiState.licenses.forEach { entry ->
-                LicenseCard(
-                    entry = entry,
-                    isExpanded = entry.id in uiState.expandedIds,
-                    onToggleExpand = { viewModel.toggleExpanded(entry.id) }
+            ResponsiveContent(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.licenses_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                uiState.licenses.forEach { entry ->
+                    LicenseCard(
+                        entry = entry,
+                        isExpanded = entry.id in uiState.expandedIds,
+                        onToggleExpand = { viewModel.toggleExpanded(entry.id) }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }

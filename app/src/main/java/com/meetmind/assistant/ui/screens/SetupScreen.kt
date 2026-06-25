@@ -1,6 +1,8 @@
 package com.meetmind.assistant.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.icons.AppIcons
 import androidx.compose.material3.*
@@ -13,6 +15,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meetmind.assistant.ui.ui.theme.*
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import com.meetmind.assistant.domain.model.DownloadState
 
 /**
@@ -42,10 +45,12 @@ fun SetupScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            ResponsiveContent {
             // App logo/title
             Text(
                 text = stringResource(R.string.app_name),
@@ -88,6 +93,7 @@ fun SetupScreen(
 
             // Model info
             ModelInfoCard()
+            }
         }
     }
 }

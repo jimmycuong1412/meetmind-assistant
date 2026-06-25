@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.meetmind.assistant.ui.icons.AppIcons
+import com.meetmind.assistant.ui.components.ResponsiveContent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -99,8 +100,8 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            ResponsiveContent(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // AI Model Section
             SettingsSection(title = stringResource(R.string.settings_section_llm)) {
                 LlmModelVariantSetting(
@@ -199,6 +200,7 @@ fun SettingsScreen(
                     url = PRIVACY_POLICY_URL
                 )
                 LicensesNavigationSetting(onClick = onNavigateToLicenses)
+            }
             }
         }
     }
