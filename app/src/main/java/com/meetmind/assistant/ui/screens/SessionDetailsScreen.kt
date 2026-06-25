@@ -1663,7 +1663,7 @@ private fun SpeakerChip(speaker: String, onClick: () -> Unit) {
         onClick = onClick,
         color = speakerColor(speaker).copy(alpha = 0.15f),
         shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.height(20.dp)
+        modifier = Modifier.heightIn(min = 20.dp)
     ) {
         Text(
             text = speaker,
