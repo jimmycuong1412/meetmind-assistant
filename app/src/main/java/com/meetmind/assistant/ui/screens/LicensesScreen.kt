@@ -72,9 +72,8 @@ fun LicensesScreen(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ResponsiveContent {
+            ResponsiveContent(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
                     text = stringResource(R.string.licenses_intro),
                     style = MaterialTheme.typography.bodyMedium,

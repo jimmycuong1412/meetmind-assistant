@@ -38,6 +38,7 @@ enum class ContentWidth(val max: Dp) {
 fun ResponsiveContent(
     modifier: Modifier = Modifier,
     width: ContentWidth = ContentWidth.Reading,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -49,6 +50,7 @@ fun ResponsiveContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .widthIn(max = width.max),
+            verticalArrangement = verticalArrangement,
         ) {
             content()
         }

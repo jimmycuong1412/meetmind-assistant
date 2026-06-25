@@ -100,9 +100,8 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ResponsiveContent {
+            ResponsiveContent(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // AI Model Section
             SettingsSection(title = stringResource(R.string.settings_section_llm)) {
                 LlmModelVariantSetting(

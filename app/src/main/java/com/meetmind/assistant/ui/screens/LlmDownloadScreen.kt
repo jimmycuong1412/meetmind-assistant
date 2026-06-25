@@ -327,9 +327,8 @@ private fun LlmIdleLayout(
                 .verticalScroll(rememberScrollState())
                 .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 80.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            ResponsiveContent {
+            ResponsiveContent(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
