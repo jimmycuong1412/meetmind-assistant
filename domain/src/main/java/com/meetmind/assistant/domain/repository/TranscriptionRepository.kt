@@ -5,6 +5,7 @@ import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.SearchResult
+import com.meetmind.assistant.domain.model.SessionPhoto
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import com.meetmind.assistant.domain.model.TranscriptionSession
@@ -277,4 +278,15 @@ interface TranscriptionRepository {
      * @return Flow emitting a list of [SearchResult] ordered by [SearchResult.createdAt] DESC.
      */
     fun searchTranscriptions(query: String): Flow<List<SearchResult>>
+
+    // ========== Session Photos ==========
+
+    /** Persist a photo captured during a recording session (description may be null initially). */
+    suspend fun insertSessionPhoto(photo: SessionPhoto)
+
+    /** Attach the vision-generated description to a previously inserted photo. */
+    suspend fun updateSessionPhotoDescription(photoId: String, description: String)
+
+    /** Observe all photos of a session, oldest first. */
+    fun getPhotosForSession(sessionId: String): Flow<List<SessionPhoto>>
 }

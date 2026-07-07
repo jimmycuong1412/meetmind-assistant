@@ -6,6 +6,7 @@ import com.meetmind.assistant.data.database.AppDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.repository.ActionItemRepositoryImpl
@@ -52,7 +53,8 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_5_6,
                 AppDatabase.MIGRATION_6_7,
                 AppDatabase.MIGRATION_7_8,
-                AppDatabase.MIGRATION_8_9
+                AppDatabase.MIGRATION_8_9,
+                AppDatabase.MIGRATION_9_10
             )
             .build()
     }
@@ -101,6 +103,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideSessionPhotoDao(database: AppDatabase): SessionPhotoDao {
+        return database.sessionPhotoDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideActionItemRepository(dao: ActionItemDao): ActionItemRepository {
         return ActionItemRepositoryImpl(dao)
     }
@@ -113,6 +121,7 @@ object DatabaseModule {
         insightDao: LlmInsightDao,
         searchDao: SearchDao,
         actionItemDao: ActionItemDao,
+        sessionPhotoDao: SessionPhotoDao,
         audioStorage: com.meetmind.assistant.domain.audio.AudioStorage
     ): TranscriptionRepository {
         return TranscriptionRepositoryImpl(
@@ -121,6 +130,7 @@ object DatabaseModule {
             insightDao = insightDao,
             searchDao = searchDao,
             actionItemDao = actionItemDao,
+            sessionPhotoDao = sessionPhotoDao,
             audioStorage = audioStorage
         )
     }
