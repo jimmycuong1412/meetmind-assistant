@@ -18,7 +18,12 @@ interface LlmDataSource {
      *   Pass a lower value (e.g. 2) for long sessions on RAM-constrained devices.
      * @return Result indicating success or failure
      */
-    suspend fun loadModel(modelPath: String, systemPrompt: String? = null, nThreadsHint: Int = -1): Result<Unit>
+    suspend fun loadModel(
+        modelPath: String,
+        systemPrompt: String? = null,
+        nThreadsHint: Int = -1,
+        mmprojPath: String? = null
+    ): Result<Unit>
 
     /**
      * Send a prompt to the LLM and stream the response.
@@ -28,7 +33,7 @@ interface LlmDataSource {
      *   pass a mode-appropriate value (e.g. 256 for translation, 512+ for analysis).
      * @return Flow of generated tokens
      */
-    fun sendPrompt(prompt: String, maxTokens: Int): Flow<String>
+    fun sendPrompt(prompt: String, maxTokens: Int, imagePath: String? = null): Flow<String>
 
     /**
      * Update the system prompt without reloading the model.

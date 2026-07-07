@@ -22,7 +22,8 @@ interface LlmRepository {
     suspend fun initialize(
         modelPath: String,
         systemPrompt: String? = null,
-        loadImmediately: Boolean = true
+        loadImmediately: Boolean = true,
+        mmprojPath: String? = null
     ): Result<Unit>
 
     /**
@@ -42,14 +43,20 @@ interface LlmRepository {
     fun isMemoryConstrained(): Boolean
 
     /**
-     * Generate insight/response based on input text.
+     * Generate insight/response based on input text, optionally grounded in an image.
      *
      * @param text Input text (transcription) to analyze
      * @param systemPrompt System prompt instructions to include in this request (ensures small models remember instructions)
      * @param maxTokens Maximum number of tokens to generate; caller supplies a mode-appropriate budget
-     * @return Flow of generated tokens. Collect to build complete response.
+     * @param imagePath Optional absolute path to a photo; when non-null the model
+     *   receives the image plus [text] as the instruction (vision-capable models only).
      */
-    fun generateInsight(text: String, systemPrompt: String? = null, maxTokens: Int = 512): Flow<String>
+    fun generateInsight(
+        text: String,
+        systemPrompt: String? = null,
+        maxTokens: Int = 512,
+        imagePath: String? = null
+    ): Flow<String>
 
     /**
      * Update the system prompt without reloading the model.

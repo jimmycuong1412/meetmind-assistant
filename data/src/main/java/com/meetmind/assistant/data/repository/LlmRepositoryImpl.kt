@@ -120,14 +120,17 @@ class LlmRepositoryImpl @Inject constructor(
     private var isModelLoaded = false
     private var lastModelPath: String? = null
     private var lastSystemPrompt: String? = null
+    private var lastMmprojPath: String? = null
 
     override suspend fun initialize(
         modelPath: String,
         systemPrompt: String?,
-        loadImmediately: Boolean
+        loadImmediately: Boolean,
+        mmprojPath: String?
     ): Result<Unit> = withContext(singleThreadDispatcher) {
         lastModelPath = modelPath
         lastSystemPrompt = systemPrompt
+        lastMmprojPath = mmprojPath
         if (!loadImmediately) {
             // Defer loading — model will be loaded lazily before the first LONG_MEETING inference
             Log.i(TAG, "Model initialization deferred (lazy load mode)")
@@ -141,7 +144,7 @@ class LlmRepositoryImpl @Inject constructor(
         }
         val threadsDesc = if (nThreadsHint > 0) "$nThreadsHint (conservative)" else "auto (hint=$nThreadsHint)"
         Log.i(TAG, "Model load: threads=$threadsDesc cachedConstrained=$cachedMemoryConstrained charThreshold=$cachedCharThreshold")
-        llmDataSource.loadModel(modelPath, systemPrompt, nThreadsHint).also { result ->
+        llmDataSource.loadModel(modelPath, systemPrompt, nThreadsHint, mmprojPath).also { result ->
             if (result.isSuccess) {
                 isModelLoaded = true
                 Log.i(TAG, "Model initialized")
@@ -209,7 +212,7 @@ class LlmRepositoryImpl @Inject constructor(
         )
         val threadsDesc = if (nThreadsHint > 0) "$nThreadsHint (conservative)" else "auto (hint=$nThreadsHint)"
         Log.i(TAG, "Model reload: threads=$threadsDesc cachedConstrained=$cachedMemoryConstrained charThreshold=$cachedCharThreshold")
-        llmDataSource.loadModel(path, lastSystemPrompt, nThreadsHint).also { result ->
+        llmDataSource.loadModel(path, lastSystemPrompt, nThreadsHint, lastMmprojPath).also { result ->
             if (result.isSuccess) {
                 isModelLoaded = true
                 Log.i(TAG, "Model reloaded")
@@ -235,7 +238,12 @@ class LlmRepositoryImpl @Inject constructor(
 
     override fun endInference() { isGenerating = false }
 
-    override fun generateInsight(text: String, systemPrompt: String?, maxTokens: Int): Flow<String> = flow {
+    override fun generateInsight(
+        text: String,
+        systemPrompt: String?,
+        maxTokens: Int,
+        imagePath: String?
+    ): Flow<String> = flow {
         // Stateless inference: reset context before each call so the system
         // prompt is always the dominant signal. The KV-cache clear + system
         // prompt re-encoding (~200 tokens) costs ~50-100ms — negligible vs
@@ -251,7 +259,7 @@ class LlmRepositoryImpl @Inject constructor(
         }
         llmDataSource.updateSystemPrompt(lastSystemPrompt ?: "")
 
-        val prompt = buildPrompt(text)
+        val prompt = if (imagePath != null) text else buildPrompt(text)
         val estimatedTokens = text.length / 4
         val threadsDesc = if (nThreadsHint > 0) "$nThreadsHint (conservative)" else "auto"
         Log.d(TAG, "=== LLM INFERENCE === threads=$threadsDesc inputChars=${text.length}")
@@ -264,7 +272,7 @@ class LlmRepositoryImpl @Inject constructor(
         val inferenceStartMs = System.currentTimeMillis()
         var tokenCount = 0
 
-        llmDataSource.sendPrompt(prompt, maxTokens)
+        llmDataSource.sendPrompt(prompt, maxTokens, imagePath)
             .collect { token ->
                 tokenCount++
                 emit(token)

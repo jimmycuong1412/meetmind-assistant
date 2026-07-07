@@ -33,6 +33,8 @@ class MockInferenceEngine : InferenceEngine {
         _state.value = InferenceEngine.State.ModelReady
     }
 
+    override suspend fun loadMmproj(pathToMmproj: String) { /* no-op in mock */ }
+
     override suspend fun setSamplerConfig(
         temperature: Float, topK: Int, topP: Float, minP: Float, repeatPenalty: Float
     ) { /* no-op in mock */ }
@@ -43,7 +45,7 @@ class MockInferenceEngine : InferenceEngine {
         _state.value = InferenceEngine.State.ModelReady
     }
 
-    override fun sendUserPrompt(message: String, predictLength: Int): Flow<String> = flow {
+    override fun sendUserPrompt(message: String, predictLength: Int, imagePath: String?): Flow<String> = flow {
         _state.value = InferenceEngine.State.Generating
 
         // Extract topic from message (simplified)

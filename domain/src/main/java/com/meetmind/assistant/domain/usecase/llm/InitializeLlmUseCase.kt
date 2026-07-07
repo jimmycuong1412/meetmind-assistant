@@ -23,11 +23,14 @@ class InitializeLlmUseCase(
      */
     suspend operator fun invoke(
         modelPath: String,
-        loadImmediately: Boolean = true
+        loadImmediately: Boolean = true,
+        mmprojPath: String? = null
     ): Result<Unit> {
         val settings = settingsRepository.getSettings().first()
         // Initialize with default Simple Listening prompt.
         // The specific prompt will be set by SyncSttLlmUseCase when recording starts.
-        return llmRepository.initialize(modelPath, settings.simpleListeningSystemPrompt, loadImmediately)
+        return llmRepository.initialize(
+            modelPath, settings.simpleListeningSystemPrompt, loadImmediately, mmprojPath
+        )
     }
 }
