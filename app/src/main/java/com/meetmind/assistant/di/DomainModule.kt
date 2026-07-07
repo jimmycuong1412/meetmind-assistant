@@ -5,6 +5,7 @@ import com.meetmind.assistant.domain.repository.LlmRepository
 import com.meetmind.assistant.domain.repository.SettingsRepository
 import com.meetmind.assistant.domain.repository.SttRepository
 import com.meetmind.assistant.domain.service.RecordingServiceController
+import com.meetmind.assistant.domain.usecase.llm.AnalyzePhotoUseCase
 import com.meetmind.assistant.domain.usecase.llm.InitializeLlmUseCase
 import com.meetmind.assistant.domain.usecase.stt.StartSttStreamingUseCase
 import com.meetmind.assistant.domain.usecase.stt.StopSttStreamingUseCase
@@ -53,6 +54,13 @@ object DomainModule {
         settingsRepository: SettingsRepository
     ): InitializeLlmUseCase {
         return InitializeLlmUseCase(llmRepository, settingsRepository)
+    }
+
+    @Provides
+    fun provideAnalyzePhotoUseCase(
+        llmRepository: LlmRepository
+    ): AnalyzePhotoUseCase {
+        return AnalyzePhotoUseCase(llmRepository)
     }
 
     @Provides
