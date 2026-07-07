@@ -269,7 +269,7 @@ class AndroidDownloadManager @Inject constructor(
      * temp file left by the Android DownloadManager in previous app versions,
      * renaming it to .partial before calling DM.remove() so it is not deleted.
      *
-     * ModelDownloadManager.downloadLlmModel() detects the .partial automatically,
+     * ModelDownloadManager.downloadLlmFiles() detects the .partial automatically,
      * so starting the download here is sufficient for all retry scenarios.
      *
      * @param variant The model variant to resume; defaults to Q8_0 for backward compatibility.

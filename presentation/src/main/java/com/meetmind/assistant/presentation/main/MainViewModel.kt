@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import kotlinx.coroutines.runBlocking
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import javax.inject.Inject
@@ -465,7 +466,12 @@ class MainViewModel @Inject constructor(
      * @param failureMessage Localized error banner text for analysis failure
      */
     fun onPhotoCaptured(photoPath: String, analysisPrompt: String, failureMessage: String) {
-        if (_uiState.value.isAnalyzingPhoto) return
+        if (_uiState.value.isAnalyzingPhoto) {
+            // Guard against rapid double-capture: the button is disabled while analyzing,
+            // but a race is possible. Remove the just-written file so it cannot orphan.
+            File(photoPath).delete()
+            return
+        }
         _uiState.update { it.copy(isAnalyzingPhoto = true) }
         viewModelScope.launch {
             val photo = SessionPhoto(
