@@ -8,8 +8,10 @@ package com.meetmind.assistant.domain.model
  */
 enum class LlmModelVariant {
     /**
-     * 8-bit quantization — higher accuracy, ~1 GB on disk.
-     * Suited to flagship devices with ≥ 10 GB RAM and a modern CPU (Cortex-A78 / Oryon or newer).
+     * Default vision-capable variant — Gemma 3 4B Q4_K_M (~2.5 GB) plus a SigLIP
+     * mmproj vision adapter (~850 MB). The only variant that supports photo analysis.
+     * The constant name Q8_0 is historical (formerly Gemma 3 1B Q8_0) and is kept
+     * because the selected variant is persisted by name in AppSettings.
      */
     Q8_0,
 
@@ -42,5 +44,9 @@ enum class LlmModelVariant {
      * Phi-4-mini Q4_K_M — ~2.5 GB, Microsoft's efficiency-focused 4B model.
      * Exceptional instruction-following with low inference latency for real-time insights.
      */
-    PHI4_MINI_Q4
+    PHI4_MINI_Q4;
+
+    /** True when this variant's ModelConfig ships an mmproj vision adapter. */
+    val supportsVision: Boolean
+        get() = this == Q8_0
 }
