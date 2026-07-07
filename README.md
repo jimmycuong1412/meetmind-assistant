@@ -284,7 +284,8 @@ Token budget flows from `SyncSttLlmUseCase` → `LlmRepository` → `LlamaAndroi
 | Git LFS | any recent version |
 
 > **Physical device strongly recommended** — emulator audio capture is unreliable.
-> ~1.7 GB of free device storage is required for both AI models.
+> ~4 GB of free device storage is required for both AI models with the default vision-capable
+> LLM (~1.3 GB with the lightweight IQ4\_NL variant).
 
 ### Steps
 
@@ -318,8 +319,9 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 
 1. Complete the onboarding flow
 2. Download the STT model (~670 MB) — required to record
-3. Optionally download the LLM model — the app recommends Q8\_0 (~1 GB) or IQ4\_NL (~650 MB)
-   based on your device; both variants can be downloaded from Settings at any time
+3. Optionally download the LLM model — the app recommends Q8\_0 (Gemma 3 4B + vision adapter,
+   ~2.5 GB + ~850 MB ≈ 3.4 GB combined) or IQ4\_NL (~650 MB) based on your device; all variants
+   can be downloaded from Settings at any time
 4. Grant `RECORD_AUDIO` permission when prompted
 5. Tap **+** to create a session, select a recording mode, and press the FAB to start
 
