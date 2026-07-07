@@ -55,6 +55,7 @@ MeetMind Assistant is built around a single principle: **your conversations neve
 
 - **Real-time transcription** — streaming STT via Sherpa-ONNX (NeMo Parakeet TDT 0.6B Int8)
 - **On-device AI insights** — contextual analysis via local LLM, fully on-device
+- **On-device photo analysis** — capture a photo with the system camera during a recording (vision-capable default model only); the on-device description is merged into the next AI insight
 - **100% offline** — privacy-first; no network calls during recording
 - **Four recording modes** — Simple Listening, Short Meeting, Long Meeting, Real-Time Translation
 - **25 UI languages** — full i18n including localized LLM system prompts
@@ -129,20 +130,22 @@ MeetMind Assistant/
 | Role | Model | Size |
 |---|---|---|
 | **STT** | NeMo Parakeet TDT 0.6B Int8 (Sherpa-ONNX) | ~670 MB (3 ONNX files + tokens.txt) |
-| **LLM — Q8\_0** | Gemma 3 1B Q8\_0 (llama.cpp GGUF) | ~1 GB |
+| **LLM — Q8\_0 (default)** | Gemma 3 4B Q4\_K\_M + mmproj vision adapter (llama.cpp GGUF) | ~2.5 GB + ~850 MB |
 | **LLM — IQ4\_NL** | Gemma 3 1B IQ4\_NL (llama.cpp GGUF) | ~650 MB |
 
-Both LLM variants use the same model; Q8\_0 offers higher output quality while IQ4\_NL is more
-efficient on mid-range devices. The app automatically recommends the best variant based on device
-RAM and Android version:
+> The `Q8_0` enum/settings name is historical (the default variant was originally Gemma 3 1B
+> Q8\_0); it now identifies the vision-capable Gemma 3 4B + mmproj pair, the only variant that
+> supports on-device photo analysis. Several other text-only variants are also available from
+> Settings (Qwen 3.5 0.8B, Qwen 3 4B, Phi-4-mini) — see `LlmModelVariant` for the full list.
+> The app automatically recommends a variant based on device RAM and Android version:
 
 | Device condition | Recommended variant |
 |---|---|
-| RAM > 8 GB **and** Android 14+ (API 34+) | Q8\_0 |
-| Otherwise | IQ4\_NL |
+| RAM > 8 GB **and** Android 14+ (API 34+) | Q8\_0 (Gemma 3 4B + vision) |
+| Otherwise | IQ4\_NL (Gemma 3 1B, text-only) |
 
-The recommended variant is downloaded automatically during onboarding. Both variants can be kept
-on disk simultaneously and switched instantly from Settings without re-downloading.
+The recommended variant is downloaded automatically during onboarding. Multiple variants can be
+kept on disk simultaneously and switched instantly from Settings without re-downloading.
 
 Models are stored in app-specific storage (`getExternalFilesDir()`).
 Downloads resume automatically from partial files on retry.
@@ -366,7 +369,7 @@ If you find MeetMind Assistant useful, please consider starring the original
 - **STT engine** — [Sherpa-ONNX](https://github.com/k2-fsa/sherpa-onnx) by k2-fsa
 - **LLM engine** — [llama.cpp](https://github.com/ggerganov/llama.cpp) by ggerganov
 - **STT model** — NeMo Parakeet TDT 0.6B by NVIDIA
-- **LLM model** — Gemma 3 1B by Google DeepMind
+- **LLM model** — Gemma 3 (4B default, 1B lightweight variant) by Google DeepMind
 
 ---
 
