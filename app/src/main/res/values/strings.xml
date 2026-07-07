@@ -291,6 +291,7 @@
     <string name="history_insight_copy_suffix_format">(AI Analysis at %s)</string>
     <string name="segments_count">segments</string>
     <string name="insights_count">insights</string>
+    <string name="session_photos_title">Photos</string>
     <string name="back">Back</string>
     <string name="export">Export</string>
     <string name="export_transcription">Export transcription</string>
@@ -545,6 +546,12 @@
     <string name="settings_llm_model_variant_phi4_mini_desc">Fast inference · Microsoft · Low latency insights</string>
     <string name="screen_wake_disable">Allow screen to turn off</string>
     <string name="screen_wake_enable">Keep screen on</string>
+
+    <!-- Camera photo capture during recording (vision insight) -->
+    <string name="camera_take_photo">Take a photo to include in the AI insight</string>
+    <string name="photo_analyzing">Analyzing photo…</string>
+    <string name="photo_analysis_failed">Photo analysis failed. The photo was kept with the session.</string>
+    <string name="prompt_photo_analysis">Describe this image concisely for meeting notes. Focus on any visible text, diagrams, charts and key information.</string>
 
     <!-- Session Details - Tasks tab -->
     <string name="tab_tasks">Tasks</string>

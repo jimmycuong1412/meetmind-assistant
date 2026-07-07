@@ -2,7 +2,7 @@
 
 > **Purpose:** Get a fresh AI agent productive on this codebase fast, without re-deriving
 > facts from scratch. Read this first, then `README.md` only for the deep architecture
-> sections you actually need. Last updated: **2026-06-25**.
+> sections you actually need. Last updated: **2026-07-07**.
 
 ---
 
@@ -87,7 +87,7 @@ you change minSdk, update the README badge + Build table in the same change.
 # → app/build/outputs/apk/debug/app-debug.apk
 
 # Unit tests (see §5 — most live in :domain)
-./gradlew.bat :domain:testDebugUnitTest
+./gradlew.bat :domain:test
 ```
 
 > First clean build is slow because `:lib-llama-android` compiles llama.cpp from C++ via
@@ -109,14 +109,18 @@ storage needed for both models). State this limitation plainly — never claim a
 - **Real unit tests live in `:domain`** — LLM output parsers:
   `domain/src/test/java/com/meetmind/assistant/domain/usecase/llm/` (`InsightOutputParserTest`,
   `InterviewOutputParserTest`, etc.). These are the meaningful tests; run them when you touch
-  parsing/use-case logic.
+  parsing/use-case logic. The camera vision feature added two more:
+  `PhotoContextQueueTest` and `AnalyzePhotoUseCaseTest` (same directory tree, `usecase/sync`
+  and `usecase/llm` respectively).
 - `app/src/test` and `app/src/androidTest` contain only **placeholder `Example*Test.kt`** —
   there is no broad UI test coverage. Do **not** assume a green app test run means UI is
   verified.
 - `domain/bin/test/...` is stale build output, **not** source — ignore it; edit
   `domain/src/test/...`.
 - **Practical gate for UI work:** `:app:compileDebugKotlin` (or `:app:assembleDebug`) +
-  Compose `@Preview` + human on-device check. For domain/logic work: the `:domain` unit tests.
+  Compose `@Preview` + human on-device check. For domain/logic work: the `:domain` unit tests —
+  run with `./gradlew.bat :domain:test` (not `:domain:testDebugUnitTest`; `:domain` is a plain
+  Kotlin module, not an Android module, so it uses the standard `test` task name).
 
 ---
 
@@ -169,7 +173,57 @@ Design + plan: `docs/superpowers/specs/2026-06-25-responsive-foundation-design.m
 
 ---
 
-## 8. Gotchas that waste tokens if unknown
+## 8. Camera vision insight (2026-07-07)
+
+A camera button in the recording top bar (next to the screen-lock button; visible only while
+recording **and** the active LLM variant is vision-capable) captures a photo via the system
+camera app and merges an on-device description into the next AI insight. Key facts:
+
+- **Native (mtmd) build** — `lib-llama-android/src/main/cpp/CMakeLists.txt` adds a static
+  `mtmd` library built from the vendored llama.cpp tree's `tools/mtmd/*.cpp` (multimodal/vision
+  support), linked into the existing native target. `ai_chat.cpp` gained two JNI entry points:
+  `loadMmprojNative` (loads the mmproj vision adapter alongside the base GGUF) and
+  `processImagePrompt` (runs a vision inference call). Do **not** edit the vendored
+  `F:\Git\llama.cpp-master` tree — it lives outside this repo; suppress any mtmd compiler
+  warnings via CMake flags in our own `CMakeLists.txt` instead.
+- **`imagePath`/`mmprojPath` threading pattern** — optional, default-`null` parameters added to
+  `InferenceEngine` → `LlmDataSource` → `LlmRepository`. Callers that don't pass a photo see no
+  behavior change; this is how vision stayed backward-compatible with the five text-only
+  variants.
+- **`DefaultModelConfig` = Gemma 3 4B + mmproj** — the default (`LlmModelVariant.Q8_0`, name
+  kept for historical settings persistence — it used to mean "Gemma 3 1B Q8_0") now downloads
+  Gemma 3 4B Q4_K_M (~2.5 GB) plus `gemma-3-4b-mmproj-f16.gguf` (~850 MB) as a pair. The other
+  five variants (`IQ4_NL`, `QWEN3_5_Q8_0`, `GEMMA3_4B_Q4`, `QWEN3_4B_Q4`, `PHI4_MINI_Q4`) remain
+  text-only. `LlmModelVariant.supportsVision` (true only for `Q8_0`) gates the camera button's
+  visibility — check it before assuming a device/variant combination can take photos.
+- **`PhotoContextQueue`** (domain, `usecase/sync/PhotoContextQueue.kt`) is a small thread-safe
+  FIFO buffer (bounded at 10) of photo descriptions. `SyncSttLlmUseCase.queuePhotoDescription()`
+  is the producer API (called by `MainViewModel` after vision analysis completes); the queue is
+  drained once per insight tick and folded into the next analysis-mode prompt. A dropped queue
+  entry (buffer overflow) never loses data — the description is still persisted per-photo below.
+- **`session_photos` table (Room DB v10)** — `MIGRATION_9_10` in `AppDatabase.kt` adds
+  `session_photos` (`id`, `session_id` FK → `transcription_sessions` with cascade delete,
+  `file_path`, nullable `description`, `timestamp`) plus an index on `session_id`. New DAO:
+  `SessionPhotoDao`.
+- **Display placement (known deviation from the original plan)** — the design/plan docs said
+  photos would show "after insights / before transcript" in Session Details, but that screen is
+  tab-based, not a single scroll. Photos actually render via `SessionPhotosSection` as the first
+  item inside the **Transcript tab's** `LazyColumn` (`SessionDetailsScreen.kt`), not as a
+  separate section between tabs.
+- **Gotcha — no `CAMERA` permission is declared, by design.** The feature launches the system
+  camera app via `ActivityResultContracts.TakePicture()` (see `MainScreen.kt`), which handles
+  its own permission; MeetMind never touches `android.hardware.camera` or `Manifest.CAMERA`.
+  Don't add the permission "for completeness" — it isn't needed and would be a needless
+  manifest addition.
+- **New domain tests:** `PhotoContextQueueTest` (`usecase/sync/`) and `AnalyzePhotoUseCaseTest`
+  (`usecase/llm/`) — run via `./gradlew.bat :domain:test` (see §5).
+
+Design + plan: `docs/superpowers/specs/2026-07-07-camera-vision-insight-design.md`,
+`docs/superpowers/plans/2026-07-07-camera-vision-insight.md`.
+
+---
+
+## 9. Gotchas that waste tokens if unknown
 
 - **`gradlew.bat`** on Windows, not `./gradlew`. Bash tool runs Git Bash (POSIX), but the
   Gradle wrapper invoked is the `.bat`.
@@ -187,7 +241,7 @@ Design + plan: `docs/superpowers/specs/2026-06-25-responsive-foundation-design.m
 
 ---
 
-## 9. Where to look first, by task type
+## 10. Where to look first, by task type
 
 | Task | Start here |
 |---|---|
@@ -199,10 +253,11 @@ Design + plan: `docs/superpowers/specs/2026-06-25-responsive-foundation-design.m
 | STT/audio tuning | `:feature-stt`, README §STT Pipeline (VAD tables) |
 | Model download/storage | `:data` `ModelDownloadManager`, `ModelConfig`/`DefaultModelConfig` |
 | Native llama.cpp flags | `lib-llama-android/.../ai_chat.cpp`, README §llama.cpp Optimizations |
+| Camera/vision photo analysis | §8 above; `PhotoContextQueue`, `AnalyzePhotoUseCase`, `SessionPhotoDao` |
 
 ---
 
-## 10. Maintaining this doc
+## 11. Maintaining this doc
 
 When you finish a non-trivial feature: update §7 (or add a sibling section) with the new
 single-sources-of-truth and any new gotchas, bump the "Last updated" date, and reconcile any

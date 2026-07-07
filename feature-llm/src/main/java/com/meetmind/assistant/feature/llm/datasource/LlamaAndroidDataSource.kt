@@ -23,7 +23,12 @@ class LlamaAndroidDataSource(
         private const val TAG = "LlamaAndroidDataSource"
     }
 
-    override suspend fun loadModel(modelPath: String, systemPrompt: String?, nThreadsHint: Int): Result<Unit> = runCatching {
+    override suspend fun loadModel(
+        modelPath: String,
+        systemPrompt: String?,
+        nThreadsHint: Int,
+        mmprojPath: String?
+    ): Result<Unit> = runCatching {
         // If the engine crashed to Error state (e.g. OOM during a previous inference),
         // attempt a cleanup to restore a loadable state before proceeding.
         // Without this, calling loadModel() in Error state throws immediately.
@@ -56,6 +61,11 @@ class LlamaAndroidDataSource(
         when (val currentState = inferenceEngine.state.value) {
             is InferenceEngine.State.Error -> throw currentState.exception
             is InferenceEngine.State.ModelReady -> {
+                // Load the vision adapter first (if this variant ships one) —
+                // must happen in ModelReady state, before the system prompt is processed.
+                if (mmprojPath != null) {
+                    inferenceEngine.loadMmproj(mmprojPath)
+                }
                 // Set system prompt (use provided or default)
                 val promptToUse = systemPrompt ?: """
                     You are an AI assistant analyzing real-time speech transcriptions.
@@ -69,12 +79,13 @@ class LlamaAndroidDataSource(
         }
     }
 
-    override fun sendPrompt(prompt: String, maxTokens: Int): Flow<String> {
+    override fun sendPrompt(prompt: String, maxTokens: Int, imagePath: String?): Flow<String> {
         // inferenceEngine.sendUserPrompt returns Flow<String> (token stream).
         // maxTokens is supplied by the caller (SyncSttLlmUseCase) based on recording mode.
         return inferenceEngine.sendUserPrompt(
             message = prompt,
-            predictLength = maxTokens
+            predictLength = maxTokens,
+            imagePath = imagePath
         )
     }
 

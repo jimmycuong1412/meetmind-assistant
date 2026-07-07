@@ -50,6 +50,15 @@ class SyncSttLlmUseCase(
     private val settingsRepository: SettingsRepository,
     private val resourceProvider: ResourceProvider
 ) {
+    // Pending photo descriptions to merge into the next insight prompt.
+    // Producer: MainViewModel via queuePhotoDescription(). Consumer: the tick below.
+    private val photoContextQueue = PhotoContextQueue()
+
+    /** Queue a vision-generated photo description for inclusion in the next insight. */
+    fun queuePhotoDescription(description: String) {
+        photoContextQueue.add(description)
+    }
+
     companion object {
         // Max tokens the LLM is allowed to generate per inference call, by mode.
         // Translation needs fewer tokens (just the translated text).
@@ -230,9 +239,9 @@ class SyncSttLlmUseCase(
                     intervalMs
 
                 if (timeSinceLastInference >= effectiveIntervalMs) {
-                    // Skip if a previous LLM call is still running — prevents queuing
-                    // inference requests on slow devices and wastes battery.
-                    if (isLlmBusy.get()) return@collect
+                    // Skip if a previous LLM call is still running (periodic insight OR an
+                    // in-flight photo analysis, which also sets isGenerating).
+                    if (isLlmBusy.get() || llmRepository.isGenerating) return@collect
 
                     val deltaSegments = mutableListOf<String>()
                     deltaSegments.addAll(newSegmentsSinceLastLlm)
@@ -269,7 +278,13 @@ class SyncSttLlmUseCase(
                         val finalPrompt = if (mode == RecordingMode.INTERVIEW && interviewRole != null) {
                             InterviewPromptBuilder.build(interviewRole, newContent)
                         } else {
-                            buildUserPrompt(mode, contextBuffer, newContent)
+                            // Photos are merged only into analysis-mode prompts. Translation
+                            // sends raw text (no wrapper) and Interview prompts are
+                            // self-contained; their descriptions remain in session_photos.
+                            val photoDescriptions =
+                                if (mode == RecordingMode.REAL_TIME_TRANSLATION) emptyList()
+                                else photoContextQueue.drain()
+                            buildUserPrompt(mode, contextBuffer, newContent, photoDescriptions)
                         }
 
                         // Proactively switch to conservative threads if this context size has
@@ -477,7 +492,8 @@ class SyncSttLlmUseCase(
     private fun buildUserPrompt(
         mode: RecordingMode,
         contextBuffer: List<String>,
-        newContent: String
+        newContent: String,
+        photoDescriptions: List<String> = emptyList()
     ): String {
         if (mode == RecordingMode.REAL_TIME_TRANSLATION) {
             // Translation: deliver raw text only; the system prompt already specifies the language.
@@ -498,12 +514,14 @@ class SyncSttLlmUseCase(
             println("[SyncSttLlm] First visible: \"${cappedContent.take(80)}\"")
         }
         println("[SyncSttLlm] Last visible:  \"${cappedContent.takeLast(80)}\"")
+        val photoBlock = PhotoContextQueue.formatBlock(photoDescriptions)
         val contextText = contextBuffer.joinToString(" ")
-        return if (contextText.isNotBlank()) {
+        val prompt = if (contextText.isNotBlank()) {
             "Context: $contextText\n\nAnalyze: $cappedContent"
         } else {
             cappedContent
         }
+        return if (photoBlock.isNotEmpty()) "$photoBlock\n\n$prompt" else prompt
     }
 
     // ─── Output parsing ──────────────────────────────────────────────────────────

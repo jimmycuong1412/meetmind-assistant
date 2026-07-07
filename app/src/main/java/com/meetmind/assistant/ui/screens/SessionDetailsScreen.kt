@@ -6,6 +6,7 @@ import androidx.core.content.FileProvider
 import java.io.File
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -40,6 +41,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -67,6 +70,8 @@ import com.meetmind.assistant.ui.components.ShimmerInsightCard
 import com.meetmind.assistant.ui.components.ShimmerSessionDetails
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Session details screen — shows complete session information.
@@ -376,6 +381,7 @@ fun SessionDetailsScreen(
                         intermediateHistoryInsights = uiState.intermediateHistoryInsights,
                         finalHistoryInsight = uiState.finalHistoryInsight,
                         actionItems = uiState.actionItems,
+                        photos = uiState.photos,
                         onCancelGeneration = { viewModel.cancelHistoryInsight() },
                         onEditSegment = { viewModel.showEditSegmentDialog(it) },
                         onAssignSpeaker = { viewModel.showSpeakerAssignment(it.id) },
@@ -502,6 +508,7 @@ private fun SessionDetailsContent(
     intermediateHistoryInsights: List<LlmInsight>,
     finalHistoryInsight: LlmInsight?,
     actionItems: List<ActionItem>,
+    photos: List<com.meetmind.assistant.domain.model.SessionPhoto>,
     onCancelGeneration: () -> Unit,
     onEditSegment: (TranscriptionSegment) -> Unit,
     onAssignSpeaker: (TranscriptionSegment) -> Unit,
@@ -579,6 +586,7 @@ private fun SessionDetailsContent(
         when (selectedTab) {
             0 -> TranscriptTab(
                 segments = details.segments,
+                photos = photos,
                 highlightId = highlightId,
                 onEditSegment = onEditSegment,
                 onAssignSpeaker = onAssignSpeaker
@@ -759,6 +767,7 @@ private fun SessionStatChip(
 @Composable
 private fun TranscriptTab(
     segments: List<TranscriptionSegment>,
+    photos: List<com.meetmind.assistant.domain.model.SessionPhoto>,
     highlightId: String?,
     onEditSegment: (TranscriptionSegment) -> Unit,
     onAssignSpeaker: (TranscriptionSegment) -> Unit
@@ -773,7 +782,7 @@ private fun TranscriptTab(
         }
     }
 
-    if (sortedSegments.isEmpty()) {
+    if (sortedSegments.isEmpty() && photos.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -800,6 +809,11 @@ private fun TranscriptTab(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (photos.isNotEmpty()) {
+                item(key = "session_photos_section") {
+                    SessionPhotosSection(photos)
+                }
+            }
             items(sortedSegments, key = { it.id }) { segment ->
                 TranscriptionSegmentCard(
                     segment = segment,
@@ -2272,5 +2286,65 @@ private fun parseTasks(tasksJson: String): List<String> {
         }.filter { it.isNotBlank() }
     } catch (e: Exception) {
         emptyList()
+    }
+}
+
+/**
+ * Photos captured during the session: thumbnail + vision description per row.
+ * Bitmaps are decoded off the main thread with inSampleSize to bound memory.
+ */
+@Composable
+private fun SessionPhotosSection(photos: List<com.meetmind.assistant.domain.model.SessionPhoto>) {
+    if (photos.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.session_photos_title),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        photos.forEach { photo ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                var bitmap by remember(photo.filePath) {
+                    mutableStateOf<android.graphics.Bitmap?>(null)
+                }
+                LaunchedEffect(photo.filePath) {
+                    bitmap = withContext(Dispatchers.IO) {
+                        try {
+                            val bounds = android.graphics.BitmapFactory.Options().apply {
+                                inJustDecodeBounds = true
+                            }
+                            android.graphics.BitmapFactory.decodeFile(photo.filePath, bounds)
+                            val sample = maxOf(1, minOf(bounds.outWidth, bounds.outHeight) / 256)
+                            android.graphics.BitmapFactory.decodeFile(
+                                photo.filePath,
+                                android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+                            )
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                }
+                bitmap?.let {
+                    Image(
+                        bitmap = it.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Text(
+                    text = photo.description ?: "—",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }

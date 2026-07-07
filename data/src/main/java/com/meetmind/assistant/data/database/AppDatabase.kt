@@ -7,10 +7,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
 import com.meetmind.assistant.data.database.entity.LlmInsightEntity
+import com.meetmind.assistant.data.database.entity.SessionPhotoEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSegmentEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
 
@@ -49,9 +51,10 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         TranscriptionSessionEntity::class,
         TranscriptionSegmentEntity::class,
         LlmInsightEntity::class,
-        ActionItemEntity::class
+        ActionItemEntity::class,
+        SessionPhotoEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -61,6 +64,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun llmInsightDao(): LlmInsightDao
     abstract fun searchDao(): SearchDao
     abstract fun actionItemDao(): ActionItemDao
+    abstract fun sessionPhotoDao(): SessionPhotoDao
 
     companion object {
         const val DATABASE_NAME = "libellula_transcription.db"
@@ -179,6 +183,31 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN speaker_cluster INTEGER")
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN start_offset_ms INTEGER")
                 database.execSQL("ALTER TABLE transcription_segments ADD COLUMN end_offset_ms INTEGER")
+            }
+        }
+
+        /**
+         * Database version 10:
+         * - Added session_photos table for camera captures during recording
+         *   (vision-analyzed photos merged into AI insights).
+         */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS session_photos (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        session_id TEXT NOT NULL,
+                        file_path TEXT NOT NULL,
+                        description TEXT,
+                        timestamp INTEGER NOT NULL,
+                        FOREIGN KEY (session_id) REFERENCES transcription_sessions(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_session_photos_session_id ON session_photos(session_id)"
+                )
             }
         }
     }

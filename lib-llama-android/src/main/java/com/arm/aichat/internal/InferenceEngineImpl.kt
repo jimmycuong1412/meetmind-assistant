@@ -101,6 +101,10 @@ internal class InferenceEngineImpl private constructor(
 
     private external fun processUserPrompt(userPrompt: String, predictLength: Int): Int
 
+    private external fun loadMmprojNative(mmprojPath: String): Int
+
+    private external fun processImagePrompt(imagePath: String, userPrompt: String, predictLength: Int): Int
+
     private external fun generateNextToken(): String?
 
     private external fun unload()
@@ -188,6 +192,22 @@ internal class InferenceEngineImpl private constructor(
             }
         }
 
+    override suspend fun loadMmproj(pathToMmproj: String): Unit =
+        withContext(llamaDispatcher) {
+            check(_state.value is InferenceEngine.State.ModelReady) {
+                "Cannot load mmproj in ${_state.value.javaClass.simpleName}!"
+            }
+            File(pathToMmproj).let {
+                require(it.exists()) { "mmproj file not found" }
+                require(it.canRead()) { "Cannot read mmproj file" }
+            }
+            Log.i(TAG, "Loading mmproj... \n$pathToMmproj")
+            loadMmprojNative(pathToMmproj).let {
+                if (it != 0) throw IOException("Failed to load mmproj (code $it)")
+            }
+            Log.i(TAG, "mmproj loaded — vision enabled")
+        }
+
     /**
      * Process the plain text system prompt
      *
@@ -243,6 +263,7 @@ internal class InferenceEngineImpl private constructor(
     override fun sendUserPrompt(
         message: String,
         predictLength: Int,
+        imagePath: String?,
     ): Flow<String> = flow {
         require(message.isNotEmpty()) { "User prompt discarded due to being empty!" }
         check(_state.value is InferenceEngine.State.ModelReady) {
@@ -254,9 +275,14 @@ internal class InferenceEngineImpl private constructor(
             _readyForSystemPrompt = false
             _state.value = InferenceEngine.State.ProcessingUserPrompt
 
-            processUserPrompt(message, predictLength).let { result ->
+            val prefillResult = if (imagePath != null) {
+                processImagePrompt(imagePath, message, predictLength)
+            } else {
+                processUserPrompt(message, predictLength)
+            }
+            prefillResult.let { result ->
                 if (result != 0) {
-                    Log.e(TAG, "Failed to process user prompt: $result")
+                    Log.e(TAG, "Failed to process user prompt (image=${imagePath != null}): $result")
                     return@flow
                 }
             }

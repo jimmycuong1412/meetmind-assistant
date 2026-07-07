@@ -68,144 +68,104 @@ class ModelDownloadManager(
     }
 
     /**
-     * Download LLM model with progress updates and resume capability.
+     * Download multiple LLM-related files (base GGUF + optional mmproj) sequentially
+     * with per-file Range-header resume and combined progress. Mirrors the STT
+     * multi-file strategy: completed files are skipped on retry, the interrupted
+     * file resumes from its .partial.
+     *
+     * @param files Ordered list of (url, filename) pairs.
      */
-    fun downloadLlmModel(
-        url: String = modelConfig.llmUrl,
-        filename: String = modelConfig.llmFilename
-    ): Flow<DownloadProgress> = flow {
-        val outputFile = File(modelsDir, filename)
-        val partialFile = File(modelsDir, "$filename.partial")
-
-        // If already exists and is valid, don't re-download
-        if (outputFile.exists() && outputFile.length() > 100_000_000) { // At least 100MB
-            Log.i(TAG, "Model already exists: ${outputFile.absolutePath}")
-            emit(DownloadProgress(outputFile.length(), outputFile.length(), 100))
-            return@flow
+    fun downloadLlmFiles(files: List<Pair<String, String>>): Flow<DownloadProgress> = flow {
+        // Best-effort HEAD for real sizes; fall back to on-disk partial size (never 0-div).
+        val actualSizes = files.associate { (url, filename) ->
+            filename to (headSize(url)
+                ?: File(modelsDir, "$filename.partial").takeIf { it.exists() }?.length()
+                ?: 0L)
         }
+        val totalBytes = actualSizes.values.sum()
 
-        // First, get the actual file size via HEAD request
-        Log.i(TAG, "Fetching actual file size...")
-        var totalBytes = 0L
-        var headConnection: HttpURLConnection? = null
-        try {
-            headConnection = URL(url).openConnection() as HttpURLConnection
-            headConnection.requestMethod = "HEAD"
-            headConnection.connectTimeout = 15000
-            headConnection.instanceFollowRedirects = true
-            headConnection.connect()
-
-            totalBytes = headConnection.contentLengthLong
-            if (totalBytes <= 0) {
-                Log.w(TAG, "Could not get file size from HEAD request, will try during download")
-            } else {
-                Log.i(TAG, "LLM model size: ${totalBytes / 1_000_000}MB")
+        // Seed with completed + partial bytes so the first emission reflects resume state.
+        var totalBytesDownloaded = files.sumOf { (_, filename) ->
+            val out = File(modelsDir, filename)
+            val partial = File(modelsDir, "$filename.partial")
+            when {
+                out.exists() && out.length() > 0 -> out.length()
+                partial.exists() && partial.length() > 0 -> partial.length()
+                else -> 0L
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "HEAD request failed, will get size during download", e)
-        } finally {
-            headConnection?.disconnect()
         }
+        Log.i(TAG, "LLM files total: ${totalBytes / 1_000_000}MB, on disk: ${totalBytesDownloaded / 1_000_000}MB")
 
-        // Check for partial download
-        val startByte = if (partialFile.exists()) {
-            val existingSize = partialFile.length()
-            Log.i(TAG, "Found partial download: ${existingSize / 1_000_000}MB, resuming...")
-            existingSize
-        } else {
-            0L
-        }
+        files.forEachIndexed { index, (url, filename) ->
+            val outputFile = File(modelsDir, filename)
+            val partialFile = File(modelsDir, "$filename.partial")
 
-        var connection: HttpURLConnection? = null
-        try {
-            Log.i(TAG, "Starting download from: $url (from byte $startByte)")
-            connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = 15000
-            connection.readTimeout = 15000
-
-            // Follow redirects (important for HuggingFace)
-            connection.instanceFollowRedirects = true
-
-            // Request range if resuming
-            if (startByte > 0) {
-                connection.setRequestProperty("Range", "bytes=$startByte-")
+            if (outputFile.exists() && outputFile.length() > 0) {
+                Log.i(TAG, "LLM file $filename already complete, skipping")
+                return@forEachIndexed
             }
 
-            connection.connect()
+            val startByte = partialFile.takeIf { it.exists() }?.length() ?: 0L
+            Log.i(TAG, "Downloading LLM file ${index + 1}/${files.size}: $filename" +
+                if (startByte > 0) " (resuming from ${startByte / 1_000_000}MB)" else "")
+            // NOTE: totalBytesDownloaded already includes startByte from the seed scan.
 
-            val responseCode = connection.responseCode
+            var connection: HttpURLConnection? = null
+            try {
+                connection = URL(url).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                connection.instanceFollowRedirects = true
+                if (startByte > 0) connection.setRequestProperty("Range", "bytes=$startByte-")
+                connection.connect()
 
-            // If we didn't get totalBytes from HEAD, get it from download response
-            if (totalBytes <= 0) {
-                totalBytes = if (responseCode == HttpURLConnection.HTTP_PARTIAL || responseCode == HttpURLConnection.HTTP_OK) {
-                    if (startByte > 0 && responseCode == HttpURLConnection.HTTP_OK) {
-                        // Server doesn't support resume, start from beginning
-                        Log.w(TAG, "Server doesn't support resume, restarting download")
-                        partialFile.delete()
-                        connection.contentLengthLong
-                    } else if (responseCode == HttpURLConnection.HTTP_PARTIAL) {
-                        // Resume supported, get total from Content-Range header
-                        val contentRange = connection.getHeaderField("Content-Range")
-                        if (contentRange != null && contentRange.contains("/")) {
-                            contentRange.substringAfterLast("/").toLongOrNull() ?: (startByte + connection.contentLengthLong)
-                        } else {
-                            startByte + connection.contentLengthLong
-                        }
-                    } else {
-                        connection.contentLengthLong
-                    }
-                } else {
-                    throw Exception("Server returned error code: $responseCode")
+                val responseCode = connection.responseCode
+                if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_PARTIAL) {
+                    throw Exception("HTTP $responseCode for $filename")
                 }
-            }
+                val isResuming = startByte > 0 && responseCode == HttpURLConnection.HTTP_PARTIAL
+                if (startByte > 0 && !isResuming) {
+                    Log.w(TAG, "Server did not honour Range for $filename, restarting this file")
+                    totalBytesDownloaded -= startByte
+                }
 
-            Log.i(TAG, "Total size: ${totalBytes / 1_000_000}MB, starting from: ${startByte / 1_000_000}MB")
-
-            val isResuming = startByte > 0 && responseCode == HttpURLConnection.HTTP_PARTIAL
-
-            connection.inputStream.use { input ->
-                FileOutputStream(partialFile, isResuming).use { output ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var totalBytesRead = startByte
-
-                    while (input.read(buffer).also { bytesRead = it } != -1) {
-                        output.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
-
-                        val percentage = if (totalBytes > 0) {
-                            ((totalBytesRead * 100) / totalBytes).toInt()
-                        } else {
-                            0
+                connection.inputStream.use { input ->
+                    FileOutputStream(partialFile, isResuming).use { output ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalBytesDownloaded += bytesRead
+                            val pct = if (totalBytes > 0)
+                                ((totalBytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 99)
+                            else 0
+                            if (pct % 2 == 0) {
+                                emit(DownloadProgress(totalBytesDownloaded, totalBytes, pct))
+                            }
                         }
-
-                        // Emit progress every 5%
-                        if (percentage % 5 == 0) {
-                            emit(DownloadProgress(totalBytesRead, totalBytes, percentage))
-                        }
-                    }
-
-                    // Final progress
-                    emit(DownloadProgress(totalBytesRead, totalBytes, 100))
-
-                    // Move partial file to final location
-                    if (partialFile.renameTo(outputFile)) {
-                        Log.i(TAG, "Download completed: ${outputFile.absolutePath}")
-                    } else {
-                        // If rename fails, copy and delete
-                        partialFile.copyTo(outputFile, overwrite = true)
-                        partialFile.delete()
-                        Log.i(TAG, "Download completed (via copy): ${outputFile.absolutePath}")
                     }
                 }
+
+                // Promote .partial → final file
+                if (!partialFile.renameTo(outputFile)) {
+                    partialFile.copyTo(outputFile, overwrite = true)
+                    partialFile.delete()
+                }
+            } catch (e: Exception) {
+                connection?.disconnect()
+                // Keep completed files and the .partial so retry resumes precisely.
+                throw Exception("LLM download failed at $filename: ${e.message}")
+            } finally {
+                connection?.disconnect()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Download failed - partial file kept for resume", e)
-            // Don't delete partial file - keep it for resume
-            throw Exception("Download failed. You can retry to resume from ${startByte / 1_000_000}MB")
-        } finally {
-            connection?.disconnect()
         }
+
+        val missing = files.map { it.second }.filter { !File(modelsDir, it).exists() }
+        if (missing.isNotEmpty()) {
+            throw Exception("Download incomplete: missing $missing")
+        }
+        emit(DownloadProgress(totalBytes, totalBytes, 100))
+        Log.i(TAG, "LLM files download completed")
     }.flowOn(Dispatchers.IO)
 
     /**

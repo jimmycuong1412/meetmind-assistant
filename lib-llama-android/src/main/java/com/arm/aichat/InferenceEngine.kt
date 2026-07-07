@@ -24,6 +24,14 @@ interface InferenceEngine {
     suspend fun loadModel(pathToModel: String, nThreadsHint: Int = -1)
 
     /**
+     * Load a multimodal projector (mmproj GGUF) enabling image input.
+     * Must be called after [loadModel]. No-op requirement for text-only models: simply never call it.
+     *
+     * @throws java.io.IOException if the mmproj fails to load or lacks vision support
+     */
+    suspend fun loadMmproj(pathToMmproj: String)
+
+    /**
      * Sends a system prompt to the loaded model
      */
     suspend fun setSystemPrompt(systemPrompt: String)
@@ -48,8 +56,15 @@ interface InferenceEngine {
 
     /**
      * Sends a user prompt to the loaded model and returns a Flow of generated tokens.
+     *
+     * @param imagePath Optional absolute path to an image file (jpg/png). When non-null,
+     *   the prompt is processed multimodally — requires a prior [loadMmproj] call.
      */
-    fun sendUserPrompt(message: String, predictLength: Int = DEFAULT_PREDICT_LENGTH): Flow<String>
+    fun sendUserPrompt(
+        message: String,
+        predictLength: Int = DEFAULT_PREDICT_LENGTH,
+        imagePath: String? = null
+    ): Flow<String>
 
     /**
      * Runs a benchmark with the specified parameters.

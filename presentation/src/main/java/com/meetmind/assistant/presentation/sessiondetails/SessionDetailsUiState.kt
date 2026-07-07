@@ -5,6 +5,7 @@ import com.meetmind.assistant.domain.model.BatchInsightProgress
 import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.LlmInsight
+import com.meetmind.assistant.domain.model.SessionPhoto
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 
@@ -87,7 +88,9 @@ data class SessionDetailsUiState(
      * the real HEAD-resolved value once the network call returns. Drives the
      * "Download (~XX MB)" button label.
      */
-    val diarizationDownloadEstimatedBytes: Long = 0L
+    val diarizationDownloadEstimatedBytes: Long = 0L,
+    /** Photos captured during this session, oldest first (empty for pre-feature sessions). */
+    val photos: List<SessionPhoto> = emptyList()
 ) {
     /**
      * Whether the "Identify speakers" toolbar button should be shown.

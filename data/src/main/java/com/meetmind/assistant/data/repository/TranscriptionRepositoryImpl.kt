@@ -3,9 +3,11 @@ package com.meetmind.assistant.data.repository
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
+import com.meetmind.assistant.data.database.entity.SessionPhotoEntity
 import com.meetmind.assistant.data.database.mapper.toDomain
 import com.meetmind.assistant.data.database.mapper.toEntity
 import com.meetmind.assistant.domain.audio.AudioStorage
@@ -15,6 +17,7 @@ import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.SearchMatchSource
 import com.meetmind.assistant.domain.model.SearchResult
+import com.meetmind.assistant.domain.model.SessionPhoto
 import com.meetmind.assistant.domain.model.SessionWithDetails
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import com.meetmind.assistant.domain.model.TranscriptionSession
@@ -45,6 +48,7 @@ class TranscriptionRepositoryImpl @Inject constructor(
     private val insightDao: LlmInsightDao,
     private val searchDao: SearchDao,
     private val actionItemDao: ActionItemDao,
+    private val sessionPhotoDao: SessionPhotoDao,
     private val audioStorage: AudioStorage
 ) : TranscriptionRepository {
 
@@ -442,6 +446,38 @@ class TranscriptionRepositoryImpl @Inject constructor(
         // Trim to word boundaries
         val trimmed = if (start > 0) raw.dropWhile { it != ' ' }.trimStart() else raw
         return if (end < text.length) trimmed.dropLastWhile { it != ' ' }.trimEnd() else trimmed
+    }
+
+    // ========== Session Photos ==========
+
+    override suspend fun insertSessionPhoto(photo: SessionPhoto) {
+        sessionPhotoDao.insert(
+            SessionPhotoEntity(
+                id = photo.id,
+                sessionId = photo.sessionId,
+                filePath = photo.filePath,
+                description = photo.description,
+                timestamp = photo.timestamp
+            )
+        )
+    }
+
+    override suspend fun updateSessionPhotoDescription(photoId: String, description: String) {
+        sessionPhotoDao.updateDescription(photoId, description)
+    }
+
+    override fun getPhotosForSession(sessionId: String): Flow<List<SessionPhoto>> {
+        return sessionPhotoDao.getPhotosForSession(sessionId).map { entities ->
+            entities.map { e ->
+                SessionPhoto(
+                    id = e.id,
+                    sessionId = e.sessionId,
+                    filePath = e.filePath,
+                    description = e.description,
+                    timestamp = e.timestamp
+                )
+            }
+        }
     }
 
     // ========== Helper Functions ==========

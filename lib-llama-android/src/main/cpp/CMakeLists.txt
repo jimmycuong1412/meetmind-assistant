@@ -33,6 +33,27 @@ endif()
 set(LLAMA_SRC ${CMAKE_CURRENT_LIST_DIR}/../../../../../llama.cpp-master)
 add_subdirectory(${LLAMA_SRC} build-llama)
 
+# --------------------------------------------------------------------------
+# mtmd — llama.cpp multimodal (vision) support, compiled from the vendored
+# tree. Built here directly (not via add_subdirectory) because upstream's
+# tools/mtmd/CMakeLists.txt also defines CLI executables and install rules
+# that do not apply to an Android library build.
+# --------------------------------------------------------------------------
+file(GLOB MTMD_MODEL_SOURCES ${LLAMA_SRC}/tools/mtmd/models/*.cpp)
+add_library(mtmd STATIC
+        ${LLAMA_SRC}/tools/mtmd/mtmd.cpp
+        ${LLAMA_SRC}/tools/mtmd/mtmd-audio.cpp
+        ${LLAMA_SRC}/tools/mtmd/mtmd-image.cpp
+        ${LLAMA_SRC}/tools/mtmd/mtmd-helper.cpp
+        ${LLAMA_SRC}/tools/mtmd/clip.cpp
+        ${MTMD_MODEL_SOURCES})
+target_include_directories(mtmd PUBLIC ${LLAMA_SRC}/tools/mtmd)
+target_include_directories(mtmd PRIVATE ${LLAMA_SRC} ${LLAMA_SRC}/vendor)
+target_link_libraries(mtmd PUBLIC ggml llama)
+target_compile_features(mtmd PRIVATE cxx_std_17)
+# stb_image.h needs -Wno-cast-qual; miniaudio.h needs -Wno-missing-prototypes (upstream does the same)
+target_compile_options(mtmd PRIVATE -Wno-cast-qual -Wno-missing-prototypes)
+
 add_library(${CMAKE_PROJECT_NAME} SHARED
         ai_chat.cpp)
 
@@ -53,5 +74,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_link_libraries(${CMAKE_PROJECT_NAME}
         llama
         llama-common
+        mtmd
         android
         log)

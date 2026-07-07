@@ -11,6 +11,8 @@
 #include "chat.h"
 #include "common.h"
 #include "llama.h"
+#include "mtmd.h"
+#include "mtmd-helper.h"
 
 template<class T>
 static std::string join(const std::vector<T> &values, const std::string &delim) {
@@ -48,6 +50,9 @@ static common_sampler                   * g_sampler;
 // True for hybrid SSM+attention models (e.g. Qwen3.5) that use M-RoPE and
 // cannot rewind the recurrent memory state to an earlier position.
 static bool                               g_model_has_mrope = false;
+
+// Multimodal (vision) context — non-null only after loadMmprojNative() succeeds.
+static mtmd_context                     * g_mtmd_ctx = nullptr;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -176,6 +181,44 @@ Java_com_arm_aichat_internal_InferenceEngineImpl_prepare(JNIEnv * /*env*/, jobje
     g_model_has_mrope = (rope_type == LLAMA_ROPE_TYPE_MROPE || rope_type == LLAMA_ROPE_TYPE_IMROPE);
     LOGi("prepare: rope_type=%d has_mrope=%s", (int) rope_type, g_model_has_mrope ? "true" : "false");
 
+    return 0;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_arm_aichat_internal_InferenceEngineImpl_loadMmprojNative(
+        JNIEnv *env, jobject /*unused*/, jstring jmmproj_path) {
+    if (!g_model) {
+        LOGe("%s: base model must be loaded before the mmproj", __func__);
+        return 1;
+    }
+    if (g_mtmd_ctx) {
+        mtmd_free(g_mtmd_ctx);
+        g_mtmd_ctx = nullptr;
+    }
+
+    mtmd_context_params params = mtmd_context_params_default();
+    params.use_gpu       = false;         // CPU-only, consistent with the text pipeline
+    params.print_timings = false;
+    params.n_threads     = N_THREADS_MAX; // image encode is a one-shot burst; cap like text decode
+    params.warmup        = false;         // skip warmup pass to keep model-load latency low
+
+    const auto *mmproj_path = env->GetStringUTFChars(jmmproj_path, nullptr);
+    LOGi("%s: loading mmproj from %s", __func__, mmproj_path);
+    g_mtmd_ctx = mtmd_init_from_file(mmproj_path, g_model, params);
+    env->ReleaseStringUTFChars(jmmproj_path, mmproj_path);
+
+    if (!g_mtmd_ctx) {
+        LOGe("%s: mtmd_init_from_file failed", __func__);
+        return 2;
+    }
+    if (!mtmd_support_vision(g_mtmd_ctx)) {
+        LOGe("%s: mmproj loaded but does not support vision", __func__);
+        mtmd_free(g_mtmd_ctx);
+        g_mtmd_ctx = nullptr;
+        return 3;
+    }
+    LOGi("%s: mmproj loaded, vision ready", __func__);
     return 0;
 }
 
@@ -597,6 +640,89 @@ Java_com_arm_aichat_internal_InferenceEngineImpl_processUserPrompt(
     return 0;
 }
 
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_arm_aichat_internal_InferenceEngineImpl_processImagePrompt(
+        JNIEnv *env,
+        jobject /*unused*/,
+        jstring jimage_path,
+        jstring juser_prompt,
+        jint n_predict
+) {
+    if (!g_mtmd_ctx) {
+        LOGe("%s: mmproj not loaded — vision unavailable", __func__);
+        return 1;
+    }
+
+    reset_short_term_states();
+
+    // Decode the image file (jpg/png/etc. via stb_image inside the helper).
+    const auto *image_path = env->GetStringUTFChars(jimage_path, nullptr);
+    LOGd("%s: loading image %s", __func__, image_path);
+    mtmd_bitmap *bitmap = mtmd_helper_bitmap_init_from_file(g_mtmd_ctx, image_path);
+    env->ReleaseStringUTFChars(jimage_path, image_path);
+    if (!bitmap) {
+        LOGe("%s: failed to load/decode image file", __func__);
+        return 2;
+    }
+
+    // Build the user content: media marker (replaced by image tokens) + instruction text.
+    const auto *user_prompt = env->GetStringUTFChars(juser_prompt, nullptr);
+    std::string content = std::string(mtmd_default_marker()) + "\n" + user_prompt;
+    env->ReleaseStringUTFChars(juser_prompt, user_prompt);
+
+    const bool has_chat_template = common_chat_templates_was_explicit(g_chat_templates.get());
+    std::string formatted = has_chat_template
+        ? chat_add_and_format(ROLE_USER, content)
+        : content;
+
+    // Tokenize into text + image chunks. parse_special must be true so the marker
+    // and any template control tokens are parsed; add_special mirrors the text path.
+    mtmd_input_text input_text {
+        formatted.c_str(),
+        /* add_special   */ has_chat_template,
+        /* parse_special */ true
+    };
+    mtmd_input_chunks *chunks = mtmd_input_chunks_init();
+    const mtmd_bitmap *bitmaps[] = { bitmap };
+    const int32_t tok_result = mtmd_tokenize(g_mtmd_ctx, chunks, &input_text, bitmaps, 1);
+    mtmd_bitmap_free(bitmap);
+    if (tok_result != 0) {
+        LOGe("%s: mtmd_tokenize failed w/ %d", __func__, tok_result);
+        mtmd_input_chunks_free(chunks);
+        return 3;
+    }
+
+    // Guard against context overflow: image (~256 tok for Gemma 3) + text must fit.
+    const llama_pos chunk_pos = mtmd_helper_get_n_pos(chunks);
+    if (current_position + chunk_pos >= DEFAULT_CONTEXT_SIZE - OVERFLOW_HEADROOM) {
+        LOGe("%s: image+text (%d pos) won't fit at position %d", __func__,
+             (int) chunk_pos, current_position);
+        mtmd_input_chunks_free(chunks);
+        return 4;
+    }
+
+    // Prefill: text chunks via llama_decode, image chunk via mtmd encode + embd decode.
+    llama_pos new_n_past = current_position;
+    const int32_t eval_result = mtmd_helper_eval_chunks(
+            g_mtmd_ctx, g_context, chunks,
+            /* n_past      */ current_position,
+            /* seq_id      */ 0,
+            /* n_batch     */ BATCH_SIZE,
+            /* logits_last */ true,
+            &new_n_past);
+    mtmd_input_chunks_free(chunks);
+    if (eval_result != 0) {
+        LOGe("%s: mtmd_helper_eval_chunks failed w/ %d", __func__, eval_result);
+        return 5;
+    }
+
+    current_position = new_n_past;
+    stop_generation_position = current_position + n_predict;
+    LOGi("%s: image prefill done, position=%d", __func__, current_position);
+    return 0;
+}
+
 static bool is_valid_utf8(const char *string) {
     if (!string) { return true; }
 
@@ -699,6 +825,10 @@ Java_com_arm_aichat_internal_InferenceEngineImpl_unload(JNIEnv * /*unused*/, job
     reset_short_term_states();
 
     // Free up resources
+    if (g_mtmd_ctx) {
+        mtmd_free(g_mtmd_ctx);
+        g_mtmd_ctx = nullptr;
+    }
     common_sampler_free(g_sampler);
     g_chat_templates.reset();
     llama_batch_free(g_batch);

@@ -5,4 +5,9 @@
         Used when sharing a PDF export of a session via ACTION_SEND.
     -->
     <files-path name="exports" path="exports/" />
+    <!--
+        Exposes files written to Context.filesDir/photos/ via FileProvider.
+        Used as the output target for ACTION_IMAGE_CAPTURE (camera during recording).
+    -->
+    <files-path name="photos" path="photos/" />
 </paths>
