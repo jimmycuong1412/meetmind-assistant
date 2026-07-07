@@ -30,6 +30,7 @@ import com.meetmind.assistant.domain.repository.DiarizationRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import com.meetmind.assistant.domain.model.DiarizationStatus
 import com.meetmind.assistant.domain.model.DownloadState
+import com.meetmind.assistant.domain.model.SessionPhoto
 import com.meetmind.assistant.data.service.AndroidDownloadManager
 import com.meetmind.assistant.data.service.DownloadStateManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,6 +116,7 @@ class SessionDetailsViewModel @Inject constructor(
     init {
         loadSessionDetails()
         loadActionItems()
+        loadPhotos()
         checkHistoryInsightCoachmark()
         maybeAutoTriggerHistoryInsight()
         observeDiarizationDownload()
@@ -200,6 +202,16 @@ class SessionDetailsViewModel @Inject constructor(
                 .catch { /* non-fatal */ }
                 .collect { items ->
                     _uiState.update { it.copy(actionItems = items) }
+                }
+        }
+    }
+
+    private fun loadPhotos() {
+        viewModelScope.launch {
+            transcriptionRepository.getPhotosForSession(sessionId)
+                .catch { /* non-fatal */ }
+                .collect { photos ->
+                    _uiState.update { it.copy(photos = photos) }
                 }
         }
     }

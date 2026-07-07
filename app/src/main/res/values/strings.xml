@@ -291,6 +291,7 @@
     <string name="history_insight_copy_suffix_format">(AI Analysis at %s)</string>
     <string name="segments_count">segments</string>
     <string name="insights_count">insights</string>
+    <string name="session_photos_title">Photos</string>
     <string name="back">Back</string>
     <string name="export">Export</string>
     <string name="export_transcription">Export transcription</string>
