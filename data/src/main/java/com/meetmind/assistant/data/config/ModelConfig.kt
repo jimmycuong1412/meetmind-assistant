@@ -14,7 +14,10 @@ data class ModelConfig(
     val llmFilename: String,
     val sttBaseUrl: String,
     val sttFiles: List<String>,
-    val sttModelType: Int = 40 // Default to English Parakeet
+    val sttModelType: Int = 40, // Default to English Parakeet
+    /** Optional multimodal projector (vision adapter) downloaded alongside the LLM GGUF. */
+    val mmprojUrl: String? = null,
+    val mmprojFilename: String? = null
 )
 
 // STT config is shared across all LLM variants.
@@ -38,24 +41,31 @@ private val STT_VI_FILES = listOf(
 )
 
 /**
- * Q8_0 model configuration — higher accuracy, ~1 GB.
- * Recommended for flagship devices (≥ 10 GB RAM, Cortex-A78 / Oryon CPU or newer).
+ * Default vision-capable configuration — Gemma 3 4B Q4_K_M (~2.5 GB) plus the
+ * official SigLIP mmproj vision adapter (~850 MB). Recommended for flagship devices.
+ * The only config with photo-analysis (camera) support.
  *
- * LLM  : Gemma 3 1B Q8_0 (ggml-org, HuggingFace)
- * STT  : Sherpa-ONNX Nemo Parakeet TDT 0.6B Int8 (csukuangfj, HuggingFace)
+ * LLM    : Gemma 3 4B IT Q4_K_M (ggml-org, HuggingFace)
+ * mmproj : mmproj-model-f16.gguf from the same ggml-org release
+ * STT    : Sherpa-ONNX Nemo Parakeet TDT 0.6B Int8 (csukuangfj, HuggingFace)
  */
 object DefaultModelConfig {
 
     private const val LLM_URL =
-        "https://huggingface.co/ggml-org/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q8_0.gguf?download=true"
-    private const val LLM_FILENAME = "gemma-3-1b-it-Q8_0.gguf"
+        "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/gemma-3-4b-it-Q4_K_M.gguf?download=true"
+    private const val LLM_FILENAME = "gemma-3-4b-it-Q4_K_M.gguf"
+    private const val MMPROJ_URL =
+        "https://huggingface.co/ggml-org/gemma-3-4b-it-GGUF/resolve/main/mmproj-model-f16.gguf?download=true"
+    private const val MMPROJ_FILENAME = "gemma-3-4b-mmproj-f16.gguf"
 
     val INSTANCE = ModelConfig(
         llmUrl = LLM_URL,
         llmFilename = LLM_FILENAME,
         sttBaseUrl = STT_BASE_URL,
         sttFiles = STT_FILES,
-        sttModelType = 40
+        sttModelType = 40,
+        mmprojUrl = MMPROJ_URL,
+        mmprojFilename = MMPROJ_FILENAME
     )
 }
 

@@ -209,6 +209,15 @@ class AndroidDownloadManager @Inject constructor(
 
     // ── LLM ─────────────────────────────────────────────────────────────────
 
+    /** Files for a variant's LLM download: base GGUF plus mmproj when the config has one. */
+    private fun llmFilesFor(config: com.meetmind.assistant.data.config.ModelConfig): List<Pair<String, String>> =
+        buildList {
+            add(config.llmUrl to config.llmFilename)
+            val mmUrl = config.mmprojUrl
+            val mmFile = config.mmprojFilename
+            if (mmUrl != null && mmFile != null) add(mmUrl to mmFile)
+        }
+
     /**
      * Start LLM model download for the given [variant] via ModelDownloadManager
      * (HttpURLConnection + Range headers).
@@ -233,10 +242,7 @@ class AndroidDownloadManager @Inject constructor(
 
         llmProgressJob = scope.launch {
             try {
-                modelDownloadManager.downloadLlmModel(
-                    url = config.llmUrl,
-                    filename = config.llmFilename
-                ).collect { p ->
+                modelDownloadManager.downloadLlmFiles(llmFilesFor(config)).collect { p ->
                     downloadStateManager.updateLlmState(
                         DownloadState.Downloading(
                             DownloadProgress(p.bytesDownloaded, p.totalBytes, p.percentage)
@@ -310,10 +316,7 @@ class AndroidDownloadManager @Inject constructor(
 
         llmProgressJob = scope.launch {
             try {
-                modelDownloadManager.downloadLlmModel(
-                    url = config.llmUrl,
-                    filename = config.llmFilename
-                ).collect { p ->
+                modelDownloadManager.downloadLlmFiles(llmFilesFor(config)).collect { p ->
                     downloadStateManager.updateLlmState(
                         DownloadState.Downloading(
                             DownloadProgress(p.bytesDownloaded, p.totalBytes, p.percentage)

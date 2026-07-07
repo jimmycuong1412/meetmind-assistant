@@ -209,6 +209,107 @@ class ModelDownloadManager(
     }.flowOn(Dispatchers.IO)
 
     /**
+     * Download multiple LLM-related files (base GGUF + optional mmproj) sequentially
+     * with per-file Range-header resume and combined progress. Mirrors the STT
+     * multi-file strategy: completed files are skipped on retry, the interrupted
+     * file resumes from its .partial.
+     *
+     * @param files Ordered list of (url, filename) pairs.
+     */
+    fun downloadLlmFiles(files: List<Pair<String, String>>): Flow<DownloadProgress> = flow {
+        // Best-effort HEAD for real sizes; fall back to on-disk partial size (never 0-div).
+        val actualSizes = files.associate { (url, filename) ->
+            filename to (headSize(url)
+                ?: File(modelsDir, "$filename.partial").takeIf { it.exists() }?.length()
+                ?: 0L)
+        }
+        val totalBytes = actualSizes.values.sum()
+
+        // Seed with completed + partial bytes so the first emission reflects resume state.
+        var totalBytesDownloaded = files.sumOf { (_, filename) ->
+            val out = File(modelsDir, filename)
+            val partial = File(modelsDir, "$filename.partial")
+            when {
+                out.exists() && out.length() > 0 -> out.length()
+                partial.exists() && partial.length() > 0 -> partial.length()
+                else -> 0L
+            }
+        }
+        Log.i(TAG, "LLM files total: ${totalBytes / 1_000_000}MB, on disk: ${totalBytesDownloaded / 1_000_000}MB")
+
+        files.forEachIndexed { index, (url, filename) ->
+            val outputFile = File(modelsDir, filename)
+            val partialFile = File(modelsDir, "$filename.partial")
+
+            if (outputFile.exists() && outputFile.length() > 0) {
+                Log.i(TAG, "LLM file $filename already complete, skipping")
+                return@forEachIndexed
+            }
+
+            val startByte = partialFile.takeIf { it.exists() }?.length() ?: 0L
+            Log.i(TAG, "Downloading LLM file ${index + 1}/${files.size}: $filename" +
+                if (startByte > 0) " (resuming from ${startByte / 1_000_000}MB)" else "")
+            // NOTE: totalBytesDownloaded already includes startByte from the seed scan.
+
+            var connection: HttpURLConnection? = null
+            try {
+                connection = URL(url).openConnection() as HttpURLConnection
+                connection.connectTimeout = 15000
+                connection.readTimeout = 15000
+                connection.instanceFollowRedirects = true
+                if (startByte > 0) connection.setRequestProperty("Range", "bytes=$startByte-")
+                connection.connect()
+
+                val responseCode = connection.responseCode
+                if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_PARTIAL) {
+                    throw Exception("HTTP $responseCode for $filename")
+                }
+                val isResuming = startByte > 0 && responseCode == HttpURLConnection.HTTP_PARTIAL
+                if (startByte > 0 && !isResuming) {
+                    Log.w(TAG, "Server did not honour Range for $filename, restarting this file")
+                    totalBytesDownloaded -= startByte
+                }
+
+                connection.inputStream.use { input ->
+                    FileOutputStream(partialFile, isResuming).use { output ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalBytesDownloaded += bytesRead
+                            val pct = if (totalBytes > 0)
+                                ((totalBytesDownloaded * 100) / totalBytes).toInt().coerceIn(0, 99)
+                            else 0
+                            if (pct % 2 == 0) {
+                                emit(DownloadProgress(totalBytesDownloaded, totalBytes, pct))
+                            }
+                        }
+                    }
+                }
+
+                // Promote .partial → final file
+                if (!partialFile.renameTo(outputFile)) {
+                    partialFile.copyTo(outputFile, overwrite = true)
+                    partialFile.delete()
+                }
+            } catch (e: Exception) {
+                connection?.disconnect()
+                // Keep completed files and the .partial so retry resumes precisely.
+                throw Exception("LLM download failed at $filename: ${e.message}")
+            } finally {
+                connection?.disconnect()
+            }
+        }
+
+        val missing = files.map { it.second }.filter { !File(modelsDir, it).exists() }
+        if (missing.isNotEmpty()) {
+            throw Exception("Download incomplete: missing $missing")
+        }
+        emit(DownloadProgress(totalBytes, totalBytes, 100))
+        Log.i(TAG, "LLM files download completed")
+    }.flowOn(Dispatchers.IO)
+
+    /**
      * Check if STT model is already downloaded for a specific language.
      */
     fun isSttModelDownloaded(languageCode: String = "en"): Boolean {
