@@ -60,7 +60,17 @@ data class MainUiState(
      * the user has not yet seen the whitelist prompt. The dialog explains the
      * issue and offers a button that deep-links to the OEM's autostart settings.
      */
-    val batteryWhitelistPromptVisible: Boolean = false
+    val batteryWhitelistPromptVisible: Boolean = false,
+    /**
+     * True when the active LLM variant supports vision AND both its base model and
+     * mmproj adapter are on disk. Gates the camera button in the recording top bar.
+     */
+    val isVisionCapable: Boolean = false,
+    /**
+     * True while a captured photo is being analyzed by the vision model.
+     * The camera button is disabled and an "Analyzing photo…" banner is shown.
+     */
+    val isAnalyzingPhoto: Boolean = false
 ) {
     /**
      * Returns all segments for display: completed + current partial (if exists).

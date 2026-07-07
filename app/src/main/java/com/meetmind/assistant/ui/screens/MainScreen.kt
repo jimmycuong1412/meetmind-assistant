@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meetmind.assistant.ui.R
@@ -39,6 +40,7 @@ import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.presentation.main.MainViewModel
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 /**
@@ -104,6 +106,25 @@ fun MainScreen(
     // Re-enable screen-on whenever a new recording starts so the dim toggle resets.
     LaunchedEffect(uiState.isRecording) {
         if (uiState.isRecording) userDimmedScreen = false
+    }
+
+    // Camera capture: the system camera app writes to a FileProvider URI in
+    // filesDir/photos/. No CAMERA permission is needed because the app does not
+    // declare it in the manifest (ACTION_IMAGE_CAPTURE delegates to the camera app).
+    var pendingPhotoFile by remember { mutableStateOf<File?>(null) }
+    val photoAnalysisPrompt = stringResource(R.string.prompt_photo_analysis)
+    val photoFailureMessage = stringResource(R.string.photo_analysis_failed)
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        val file = pendingPhotoFile
+        pendingPhotoFile = null
+        if (success && file != null && file.exists()) {
+            viewModel.onPhotoCaptured(file.absolutePath, photoAnalysisPrompt, photoFailureMessage)
+        } else {
+            // Cancelled or failed capture — remove the empty placeholder file.
+            file?.delete()
+        }
     }
 
     // Intercept hardware back button while recording is active.
@@ -281,6 +302,28 @@ fun MainScreen(
                         }
                     },
                     actions = {
+                        // Camera capture — vision-capable model only, while recording.
+                        // Disabled while a previous photo is still being analyzed.
+                        if (uiState.isRecording && uiState.isVisionCapable) {
+                            IconButton(
+                                onClick = {
+                                    val photosDir = File(context.filesDir, "photos").apply { mkdirs() }
+                                    val photoFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
+                                    val uri = FileProvider.getUriForFile(
+                                        context, "${context.packageName}.fileprovider", photoFile
+                                    )
+                                    pendingPhotoFile = photoFile
+                                    takePictureLauncher.launch(uri)
+                                },
+                                enabled = !uiState.isAnalyzingPhoto
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.Camera,
+                                    contentDescription = stringResource(R.string.camera_take_photo),
+                                    tint = Color.White.copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
+                                )
+                            }
+                        }
                         // Screen-off toggle — only shown while recording so the user
                         // can let the screen turn off without stopping the session.
                         // Tapping again re-enables the wake lock instantly.
@@ -523,6 +566,31 @@ fun MainScreen(
                         IconButton(onClick = { viewModel.dismissThermalDowngradeBanner() }) {
                             Icon(AppIcons.Close, stringResource(R.string.dismiss), tint = MaterialTheme.colorScheme.onTertiaryContainer)
                         }
+                    }
+                }
+            }
+
+            // Photo-analysis banner: shown while the vision model describes a captured photo.
+            if (uiState.isAnalyzingPhoto) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = stringResource(R.string.photo_analyzing),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     }
                 }
             }

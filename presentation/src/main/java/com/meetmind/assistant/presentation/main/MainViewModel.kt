@@ -13,12 +13,14 @@ import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmModelVariant
 import com.meetmind.assistant.domain.model.RecordingMode
+import com.meetmind.assistant.domain.model.SessionPhoto
 import com.meetmind.assistant.domain.repository.LlmRepository
 import com.meetmind.assistant.domain.repository.SettingsRepository
 import com.meetmind.assistant.domain.repository.SttRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import com.meetmind.assistant.domain.service.LlmProcessingServiceController
 import com.meetmind.assistant.domain.service.RecordingServiceController
+import com.meetmind.assistant.domain.usecase.llm.AnalyzePhotoUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateBatchInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateFinalInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.InitializeLlmUseCase
@@ -35,6 +37,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharedFlow
@@ -80,6 +83,7 @@ class MainViewModel @Inject constructor(
     private val startSttStreamingUseCase: StartSttStreamingUseCase,
     private val stopSttStreamingUseCase: StopSttStreamingUseCase,
     private val initializeLlmUseCase: InitializeLlmUseCase,
+    private val analyzePhotoUseCase: AnalyzePhotoUseCase,
     private val saveSegmentUseCase: SaveSegmentUseCase,
     private val saveInsightUseCase: SaveInsightUseCase,
     private val updateInsightContentUseCase: UpdateInsightContentUseCase,
@@ -297,12 +301,23 @@ class MainViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLlmModelAvailable = false,
-                            llmStatus = "Model not downloaded"
+                            llmStatus = "Model not downloaded",
+                            isVisionCapable = false
                         )
                     }
                 } else {
                     // Model already downloaded — initialize, but only load into RAM if needed now.
                     _uiState.update { it.copy(isLlmModelAvailable = true, llmStatus = "Initializing...") }
+                    // Vision capability: active variant must ship an mmproj, the mmproj must be
+                    // on disk, and the resolved model must actually be the vision variant's file
+                    // (not a text-only fallback picked because the preferred file was missing).
+                    val activeConfig = modelConfigForVariant(settings.llmModelVariant)
+                    val mmprojPath = if (settings.llmModelVariant.supportsVision) {
+                        activeConfig.mmprojFilename?.let { modelDownloadManager.getLlmModelPath(it) }
+                    } else null
+                    val visionReady = mmprojPath != null &&
+                        llmModelPath == modelDownloadManager.getLlmModelPath(activeConfig.llmFilename)
+                    _uiState.update { it.copy(isVisionCapable = visionReady) }
                     // Read session fields directly to avoid a race with the init-block coroutine
                     // that sets currentRecordingMode / currentInsightStrategy: initialize() can be
                     // called from the UI before those coroutines have completed.
@@ -323,7 +338,7 @@ class MainViewModel @Inject constructor(
                         Log.d(TAG, "LLM init: applying conservative threads (memoryConstrainedDetected=true from DataStore)")
                         llmRepository.useConservativeThreads()
                     }
-                    initializeLlmUseCase(llmModelPath, loadImmediately)
+                    initializeLlmUseCase(llmModelPath, loadImmediately, if (visionReady) mmprojPath else null)
                         .onFailure { e ->
                             Log.e(TAG, "LLM initialization failed", e)
                             _uiState.update { it.copy(llmStatus = "LLM unavailable: ${e.message}") }
@@ -438,6 +453,44 @@ class MainViewModel @Inject constructor(
         val variant = _uiState.value.settings.llmModelVariant
         Log.i(TAG, "User requested LLM model download (variant=$variant)")
         androidDownloadManager.startLlmDownload(variant)
+    }
+
+    /**
+     * Called after the system camera app wrote a photo to [photoPath].
+     * Persists the photo row immediately, then runs vision analysis; on success the
+     * description is attached to the row and queued for the next insight tick.
+     *
+     * @param analysisPrompt Localized instruction from string resources (passed from UI,
+     *   same pattern as regenerateInsight's error message)
+     * @param failureMessage Localized error banner text for analysis failure
+     */
+    fun onPhotoCaptured(photoPath: String, analysisPrompt: String, failureMessage: String) {
+        if (_uiState.value.isAnalyzingPhoto) return
+        _uiState.update { it.copy(isAnalyzingPhoto = true) }
+        viewModelScope.launch {
+            val photo = SessionPhoto(
+                id = UUID.randomUUID().toString(),
+                sessionId = sessionId,
+                filePath = photoPath,
+                description = null,
+                timestamp = System.currentTimeMillis()
+            )
+            try {
+                transcriptionRepository.insertSessionPhoto(photo)
+                analyzePhotoUseCase(photoPath, analysisPrompt)
+                    .onSuccess { description ->
+                        transcriptionRepository.updateSessionPhotoDescription(photo.id, description)
+                        syncSttLlmUseCase.queuePhotoDescription(description)
+                        Log.i(TAG, "Photo analyzed (${description.length} chars), queued for next insight")
+                    }
+                    .onFailure { e ->
+                        Log.e(TAG, "Photo analysis failed", e)
+                        _uiState.update { it.copy(error = failureMessage) }
+                    }
+            } finally {
+                _uiState.update { it.copy(isAnalyzingPhoto = false) }
+            }
+        }
     }
 
     /**

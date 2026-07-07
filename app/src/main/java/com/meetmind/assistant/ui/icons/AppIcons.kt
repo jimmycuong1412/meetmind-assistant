@@ -96,4 +96,7 @@ object AppIcons {
     // Speaker labeling
     val Person: ImageVector get() = Icons.Outlined.Person
     val Bookmark: ImageVector get() = Icons.Outlined.Bookmark
+
+    // Camera capture (vision insight)
+    val Camera: ImageVector get() = Icons.Outlined.PhotoCamera
 }
