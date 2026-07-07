@@ -23,6 +23,8 @@ class AnalyzePhotoUseCaseTest {
         var beginCalled = false
         var endCalled = false
         var reloadCalled = false
+        // Records the sequence of LLM calls so tests can assert ordering, not just presence.
+        val callOrder = mutableListOf<String>()
 
         override suspend fun initialize(
             modelPath: String, systemPrompt: String?, loadImmediately: Boolean, mmprojPath: String?
@@ -30,6 +32,7 @@ class AnalyzePhotoUseCaseTest {
 
         override suspend fun reloadModel(): Result<Unit> {
             reloadCalled = true
+            callOrder.add("reload")
             return Result.success(Unit)
         }
 
@@ -41,6 +44,9 @@ class AnalyzePhotoUseCaseTest {
             receivedText = text
             receivedImagePath = imagePath
             return flow {
+                // Recorded inside the cold flow builder so the order reflects when
+                // generation actually runs (at collection), not Flow construction.
+                callOrder.add("generate")
                 if (throwOnGenerate) throw RuntimeException("native OOM")
                 tokens.forEach { emit(it) }
             }
@@ -52,8 +58,8 @@ class AnalyzePhotoUseCaseTest {
         override suspend fun recordConstrainedInference(inputChars: Int) {}
         override fun isLargeContext(inputChars: Int) = false
         override val isGenerating: Boolean get() = false
-        override fun beginInference() { beginCalled = true }
-        override fun endInference() { endCalled = true }
+        override fun beginInference() { beginCalled = true; callOrder.add("begin") }
+        override fun endInference() { endCalled = true; callOrder.add("end") }
         override suspend fun cleanup() {}
         override suspend fun updateSamplerConfig(config: LlmSamplerConfig) = Result.success(Unit)
         override val thermalThrottleFlow: Flow<ThermalThrottle> = emptyFlow()
@@ -72,6 +78,9 @@ class AnalyzePhotoUseCaseTest {
         assertTrue(repo.reloadCalled)
         assertTrue(repo.beginCalled)
         assertTrue(repo.endCalled)
+        // Order matters: isGenerating must cover the model reload, and endInference
+        // must release the busy flag only after generation finishes.
+        assertEquals(listOf("begin", "reload", "generate", "end"), repo.callOrder)
     }
 
     @Test
@@ -83,6 +92,8 @@ class AnalyzePhotoUseCaseTest {
 
         assertTrue(result.isFailure)
         assertTrue(repo.endCalled)
+        // Even on failure, endInference must be the LAST call (finally block).
+        assertEquals("end", repo.callOrder.last())
     }
 
     @Test
