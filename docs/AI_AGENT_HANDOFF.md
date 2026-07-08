@@ -2,7 +2,7 @@
 
 > **Purpose:** Get a fresh AI agent productive on this codebase fast, without re-deriving
 > facts from scratch. Read this first, then `README.md` only for the deep architecture
-> sections you actually need. Last updated: **2026-07-07**.
+> sections you actually need. Last updated: **2026-07-08**.
 
 ---
 
@@ -201,6 +201,15 @@ camera app and merges an on-device description into the next AI insight. Key fac
   is the producer API (called by `MainViewModel` after vision analysis completes); the queue is
   drained once per insight tick and folded into the next analysis-mode prompt. A dropped queue
   entry (buffer overflow) never loses data — the description is still persisted per-photo below.
+- **`PhotoAnalysisQueue`** (domain, `usecase/llm/PhotoAnalysisQueue.kt`, added 2026-07-08) —
+  FIFO serial worker for the analyses themselves: capture is **never blocked** while a photo is
+  analyzing; each capture is persisted immediately and its analysis job queues behind earlier
+  ones (llama.cpp can't parallelize). `MainViewModel` launches `process()` in `viewModelScope`
+  and mirrors `pending` into `MainUiState.pendingPhotoAnalysisCount` (`isAnalyzingPhoto` is now
+  a derived val, count > 0), which drives the "Analyzing photo… N more in queue" banner
+  (`photo_analyzing_queued`). Don't reintroduce a capture guard on `isAnalyzingPhoto`. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-07-08-concurrent-photo-capture*`. Tests:
+  `PhotoAnalysisQueueTest`.
 - **`session_photos` table (Room DB v10)** — `MIGRATION_9_10` in `AppDatabase.kt` adds
   `session_photos` (`id`, `session_id` FK → `transcription_sessions` with cascade delete,
   `file_path`, nullable `description`, `timestamp`) plus an index on `session_id`. New DAO:
