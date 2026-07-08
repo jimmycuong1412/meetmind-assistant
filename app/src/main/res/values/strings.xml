@@ -550,6 +550,7 @@
     <!-- Camera photo capture during recording (vision insight) -->
     <string name="camera_take_photo">Take a photo to include in the AI insight</string>
     <string name="photo_analyzing">Analyzing photo…</string>
+    <string name="photo_analyzing_queued">Analyzing photo… %1$d more in queue</string>
     <string name="photo_analysis_failed">Photo analysis failed. The photo was kept with the session.</string>
     <string name="prompt_photo_analysis">Describe this image concisely for meeting notes. Focus on any visible text, diagrams, charts and key information.</string>
 
