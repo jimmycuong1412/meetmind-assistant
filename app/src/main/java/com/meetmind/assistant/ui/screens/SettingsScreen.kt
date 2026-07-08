@@ -31,6 +31,7 @@ import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmModelVariant
 import com.meetmind.assistant.domain.model.LlmSamplerConfig
+import com.meetmind.assistant.domain.model.LlmVariantDownloadStatus
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.ThemeMode
 import com.meetmind.assistant.presentation.settings.SettingsViewModel
@@ -59,7 +60,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val isLlmDownloaded by viewModel.isLlmDownloaded.collectAsStateWithLifecycle()
+    val llmDownloadStatus by viewModel.llmDownloadStatus.collectAsStateWithLifecycle()
     val llmDownloadState by viewModel.llmDownloadState.collectAsStateWithLifecycle()
     val sttDownloadState by viewModel.sttDownloadState.collectAsStateWithLifecycle()
     val diarizationDownloadState by viewModel.diarizationDownloadState.collectAsStateWithLifecycle()
@@ -107,18 +108,13 @@ fun SettingsScreen(
                 LlmModelVariantSetting(
                     currentVariant = settings.llmModelVariant,
                     recommendedVariant = recommendedVariant,
-                    isQ8Downloaded = viewModel.isVariantDownloaded(LlmModelVariant.Q8_0),
-                    isIq4Downloaded = viewModel.isVariantDownloaded(LlmModelVariant.IQ4_NL),
-                    isQwen35Downloaded = viewModel.isVariantDownloaded(LlmModelVariant.QWEN3_5_Q8_0),
-                    isGemma3_4bDownloaded = viewModel.isVariantDownloaded(LlmModelVariant.GEMMA3_4B_Q4),
-                    isQwen3_4bDownloaded = viewModel.isVariantDownloaded(LlmModelVariant.QWEN3_4B_Q4),
-                    isPhi4MiniDownloaded = viewModel.isVariantDownloaded(LlmModelVariant.PHI4_MINI_Q4),
+                    variantStatus = { viewModel.variantDownloadStatus(it) },
                     activeDownloadVariant = activeDownloadVariant,
                     onVariantChange = { viewModel.updateLlmModelVariant(it) },
                     onDownloadVariant = { viewModel.downloadVariant(it) }
                 )
                 LlmModelDownloadSetting(
-                    isDownloaded = isLlmDownloaded,
+                    status = llmDownloadStatus,
                     downloadState = llmDownloadState,
                     onStartDownload = { viewModel.startLlmDownload() },
                     onRetryDownload = { viewModel.retryLlmDownload() }
@@ -442,27 +438,22 @@ private fun ModeAccordionCard(
 }
 
 /**
- * Card showing two selectable model variant options (Q8_0 and IQ4_NL) with:
+ * Card showing the selectable model variant options with:
  *  - Name and description for each option.
  *  - A "Recommended for your device" badge on the detected optimal variant.
- *  - A "Downloaded" chip when the variant's model file is present on disk.
+ *  - A "Downloaded" chip when all of the variant's model files are present on disk,
+ *    or a "Vision adapter missing" chip when only the mmproj file is absent.
  *
  * @param currentVariant The currently persisted variant selection.
  * @param recommendedVariant The variant recommended by [DeviceTierDetector] for this device.
- * @param isQ8Downloaded True if the Q8_0 model file exists on disk.
- * @param isIq4Downloaded True if the IQ4_NL model file exists on disk.
+ * @param variantStatus Returns the download completeness of a variant's files on disk.
  * @param onVariantChange Callback when the user selects a different variant.
  */
 @Composable
 private fun LlmModelVariantSetting(
     currentVariant: LlmModelVariant,
     recommendedVariant: LlmModelVariant,
-    isQ8Downloaded: Boolean,
-    isIq4Downloaded: Boolean,
-    isQwen35Downloaded: Boolean,
-    isGemma3_4bDownloaded: Boolean,
-    isQwen3_4bDownloaded: Boolean,
-    isPhi4MiniDownloaded: Boolean,
+    variantStatus: (LlmModelVariant) -> LlmVariantDownloadStatus,
     activeDownloadVariant: LlmModelVariant?,
     onVariantChange: (LlmModelVariant) -> Unit,
     onDownloadVariant: (LlmModelVariant) -> Unit
@@ -489,7 +480,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.Q8_0,
             isRecommended = recommendedVariant == LlmModelVariant.Q8_0,
-            isDownloaded = isQ8Downloaded,
+            downloadStatus = variantStatus(LlmModelVariant.Q8_0),
             isDownloading = activeDownloadVariant == LlmModelVariant.Q8_0,
             isBeta = false,
             name = stringResource(R.string.settings_llm_model_variant_q8_name),
@@ -502,7 +493,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.IQ4_NL,
             isRecommended = recommendedVariant == LlmModelVariant.IQ4_NL,
-            isDownloaded = isIq4Downloaded,
+            downloadStatus = variantStatus(LlmModelVariant.IQ4_NL),
             isDownloading = activeDownloadVariant == LlmModelVariant.IQ4_NL,
             isBeta = false,
             name = stringResource(R.string.settings_llm_model_variant_iq4_name),
@@ -531,7 +522,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.QWEN3_5_Q8_0,
             isRecommended = false,
-            isDownloaded = isQwen35Downloaded,
+            downloadStatus = variantStatus(LlmModelVariant.QWEN3_5_Q8_0),
             isDownloading = activeDownloadVariant == LlmModelVariant.QWEN3_5_Q8_0,
             isBeta = true,
             name = stringResource(R.string.settings_llm_model_variant_qwen35_name),
@@ -544,7 +535,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.GEMMA3_4B_Q4,
             isRecommended = false,
-            isDownloaded = isGemma3_4bDownloaded,
+            downloadStatus = variantStatus(LlmModelVariant.GEMMA3_4B_Q4),
             isDownloading = activeDownloadVariant == LlmModelVariant.GEMMA3_4B_Q4,
             isBeta = true,
             name = stringResource(R.string.settings_llm_model_variant_gemma3_4b_name),
@@ -557,7 +548,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.QWEN3_4B_Q4,
             isRecommended = false,
-            isDownloaded = isQwen3_4bDownloaded,
+            downloadStatus = variantStatus(LlmModelVariant.QWEN3_4B_Q4),
             isDownloading = activeDownloadVariant == LlmModelVariant.QWEN3_4B_Q4,
             isBeta = true,
             name = stringResource(R.string.settings_llm_model_variant_qwen3_4b_name),
@@ -570,7 +561,7 @@ private fun LlmModelVariantSetting(
         ModelVariantOption(
             isSelected = currentVariant == LlmModelVariant.PHI4_MINI_Q4,
             isRecommended = false,
-            isDownloaded = isPhi4MiniDownloaded,
+            downloadStatus = variantStatus(LlmModelVariant.PHI4_MINI_Q4),
             isDownloading = activeDownloadVariant == LlmModelVariant.PHI4_MINI_Q4,
             isBeta = true,
             name = stringResource(R.string.settings_llm_model_variant_phi4_mini_name),
@@ -584,14 +575,16 @@ private fun LlmModelVariantSetting(
 /**
  * A single selectable card for one [LlmModelVariant].
  *
- * When the model is not yet downloaded, shows a Download icon button on the trailing edge.
+ * When the variant's files are incomplete (not downloaded at all, or downloaded before
+ * the camera-vision feature and missing the mmproj adapter), shows a Download icon button
+ * on the trailing edge — the download fetches only the missing file(s).
  * While any download is in progress, the button is replaced by a small progress spinner.
  */
 @Composable
 private fun ModelVariantOption(
     isSelected: Boolean,
     isRecommended: Boolean,
-    isDownloaded: Boolean,
+    downloadStatus: LlmVariantDownloadStatus,
     isDownloading: Boolean,
     isBeta: Boolean,
     name: String,
@@ -641,7 +634,7 @@ private fun ModelVariantOption(
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (isDownloaded) {
+                    if (downloadStatus == LlmVariantDownloadStatus.DOWNLOADED) {
                         Surface(
                             color = MaterialTheme.colorScheme.secondaryContainer,
                             shape = MaterialTheme.shapes.extraSmall
@@ -650,6 +643,19 @@ private fun ModelVariantOption(
                                 text = stringResource(R.string.settings_llm_model_variant_downloaded),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (downloadStatus == LlmVariantDownloadStatus.VISION_ADAPTER_MISSING) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                text = stringResource(R.string.settings_llm_model_variant_vision_adapter_missing),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -689,8 +695,8 @@ private fun ModelVariantOption(
                     }
                 }
             }
-            // Download button / progress spinner on the trailing edge when not yet downloaded
-            if (!isDownloaded) {
+            // Download button / progress spinner on the trailing edge while any file is missing
+            if (downloadStatus != LlmVariantDownloadStatus.DOWNLOADED) {
                 if (isDownloading) {
                     CircularProgressIndicator(
                         modifier = Modifier
@@ -1548,16 +1554,21 @@ private fun ThemeModeSetting(
 /**
  * LLM model file status card.
  *
- * Shows whether the currently selected model variant has been downloaded.
+ * Shows whether the currently selected model variant has been fully downloaded.
  * When not downloaded, displays a "Download Now" button that starts the download inline.
+ * When only the mmproj vision adapter is missing (base model downloaded before the
+ * camera-vision feature landed), shows a dedicated "Download vision adapter" action —
+ * the download skips the already-complete base file and fetches only the adapter.
  */
 @Composable
 private fun LlmModelDownloadSetting(
-    isDownloaded: Boolean,
+    status: LlmVariantDownloadStatus,
     downloadState: DownloadState,
     onStartDownload: () -> Unit,
     onRetryDownload: () -> Unit
 ) {
+    val isDownloaded = status == LlmVariantDownloadStatus.DOWNLOADED
+    val isAdapterMissing = status == LlmVariantDownloadStatus.VISION_ADAPTER_MISSING
     val isDownloading = downloadState is DownloadState.Downloading
     val isError = downloadState is DownloadState.Error
     val progress = (downloadState as? DownloadState.Downloading)?.progress?.percentage ?: 0
@@ -1591,21 +1602,30 @@ private fun LlmModelDownloadSetting(
                     )
                 }
                 // Show badge only when the state adds information not conveyed by the button
-                if (isDownloaded || isDownloading) {
+                if (isDownloaded || isDownloading || isAdapterMissing) {
                     Spacer(modifier = Modifier.width(12.dp))
                     Surface(
-                        color = if (isDownloaded) AccentSuccess.copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        color = when {
+                            isDownloaded -> AccentSuccess.copy(alpha = 0.15f)
+                            isDownloading -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                            else -> MaterialTheme.colorScheme.errorContainer
+                        },
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
-                            text = if (isDownloaded) stringResource(R.string.settings_llm_model_ready)
-                            else stringResource(R.string.settings_llm_model_downloading, progress),
+                            text = when {
+                                isDownloaded -> stringResource(R.string.settings_llm_model_ready)
+                                isDownloading -> stringResource(R.string.settings_llm_model_downloading, progress)
+                                else -> stringResource(R.string.settings_llm_model_variant_vision_adapter_missing)
+                            },
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isDownloaded) AccentSuccess
-                            else MaterialTheme.colorScheme.primary
+                            color = when {
+                                isDownloaded -> AccentSuccess
+                                isDownloading -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.onErrorContainer
+                            }
                         )
                     }
                 }
@@ -1638,8 +1658,11 @@ private fun LlmModelDownloadSetting(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (isError) stringResource(R.string.settings_llm_model_retry)
-                        else stringResource(R.string.settings_llm_model_download)
+                        text = when {
+                            isError -> stringResource(R.string.settings_llm_model_retry)
+                            isAdapterMissing -> stringResource(R.string.settings_llm_model_download_vision_adapter)
+                            else -> stringResource(R.string.settings_llm_model_download)
+                        }
                     )
                 }
             }

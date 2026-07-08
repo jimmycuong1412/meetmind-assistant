@@ -2,7 +2,7 @@
 
 > **Purpose:** Get a fresh AI agent productive on this codebase fast, without re-deriving
 > facts from scratch. Read this first, then `README.md` only for the deep architecture
-> sections you actually need. Last updated: **2026-07-07**.
+> sections you actually need. Last updated: **2026-07-08**.
 
 ---
 
@@ -220,6 +220,17 @@ camera app and merges an on-device description into the next AI insight. Key fac
   tab-based, not a single scroll. Photos actually render via `SessionPhotosSection` as the first
   item inside the **Transcript tab's** `LazyColumn` (`SessionDetailsScreen.kt`), not as a
   separate section between tabs.
+- **`LlmVariantDownloadStatus` (domain) is the download-completeness source of truth** —
+  `NOT_DOWNLOADED` / `VISION_ADAPTER_MISSING` / `DOWNLOADED`, resolved via
+  `LlmVariantDownloadStatus.resolve(...)`. A vision-capable variant is only `DOWNLOADED` when
+  both the base GGUF **and** the mmproj file exist; devices that fetched the base model before
+  camera-vision landed get `VISION_ADAPTER_MISSING`, and Settings shows a "Vision adapter
+  missing" badge + a "Download vision adapter (~850 MB)" action (the download skips complete
+  files, so only the mmproj is fetched). Don't check `llmFilename` alone to decide whether a
+  variant is downloaded — use `SettingsViewModel.variantDownloadStatus()` / the enum. Note the
+  base GGUF is shared between `Q8_0` and `GEMMA3_4B_Q4`, so a text-only 4B download makes the
+  vision variant's base file present without its adapter. Tests:
+  `domain/src/test/.../model/LlmVariantDownloadStatusTest.kt`.
 - **Gotcha — no `CAMERA` permission is declared, by design.** The feature launches the system
   camera app via `ActivityResultContracts.TakePicture()` (see `MainScreen.kt`), which handles
   its own permission; MeetMind never touches `android.hardware.camera` or `Manifest.CAMERA`.
