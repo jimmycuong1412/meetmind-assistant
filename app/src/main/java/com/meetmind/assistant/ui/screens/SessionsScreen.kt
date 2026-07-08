@@ -1,6 +1,7 @@
 package com.meetmind.assistant.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,6 +65,7 @@ fun SessionsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var sessionIdToDelete by remember { mutableStateOf<String?>(null) }
+    var groupIdToDelete by remember { mutableStateOf<String?>(null) }
 
     // Quick-start: auto-open New Session dialog (pre-filled with first template if available)
     LaunchedEffect(quickStart, uiState.templates) {
@@ -167,22 +169,21 @@ fun SessionsScreen(
                     SessionsList(
                         sessions = uiState.filteredSessions,
                         allSessions = uiState.allSessions,
+                        groups = uiState.groups,
+                        collapsedGroupIds = uiState.collapsedGroupIds,
                         totalDataSizeBytes = uiState.totalDataSizeBytes,
                         selectedDateFilter = uiState.selectedDateFilter,
                         selectedModeFilter = uiState.selectedModeFilter,
                         onDateFilterChange = { viewModel.setDateFilter(it) },
                         onModeFilterChange = { viewModel.setModeFilter(it) },
                         onSessionClick = onNavigateToSessionDetails,
-                        onDeleteClick = { sessionId ->
-                            sessionIdToDelete = sessionId
-                        },
+                        onDeleteClick = { sessionId -> sessionIdToDelete = sessionId },
                         onAnalyzeClick = { sessionId ->
-                            // Navigate straight to session details with autoAnalyze=true so the
-                            // working confirm dialog there opens immediately (pre-populated with
-                            // the session's saved output language). Avoids duplicating the
-                            // generation pipeline orchestration here.
                             onNavigateToSessionDetailsForAnalyze(sessionId)
-                        }
+                        },
+                        onMoveToGroupClick = { sessionId -> viewModel.showGroupPicker(sessionId) },
+                        onToggleGroupCollapsed = { viewModel.toggleGroupCollapsed(it) },
+                        onDeleteGroupClick = { gId -> groupIdToDelete = gId }
                     )
                 }
             }
@@ -222,6 +223,47 @@ fun SessionsScreen(
             )
         }
 
+        // Delete Group Confirmation Dialog
+        groupIdToDelete?.let { gId ->
+            val group = uiState.groups.find { it.id == gId }
+            AlertDialog(
+                onDismissRequest = { groupIdToDelete = null },
+                title = { Text(stringResource(R.string.group_delete_title)) },
+                text = {
+                    Text(
+                        if (group != null) stringResource(R.string.group_delete_message, group.name)
+                        else stringResource(R.string.group_delete_title)
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteGroup(gId)
+                            groupIdToDelete = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) { Text(stringResource(R.string.delete)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { groupIdToDelete = null }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
+        // Assign Group Bottom Sheet
+        uiState.sessionIdForGroupPicker?.let { sessionId ->
+            val session = uiState.allSessions.find { it.id == sessionId }
+            com.meetmind.assistant.ui.components.AssignGroupSheet(
+                groups = uiState.groups,
+                currentGroupId = session?.groupId,
+                onAssign = { groupId -> viewModel.moveSessionToGroup(sessionId, groupId) },
+                onCreateGroup = { name -> viewModel.createGroup(name, assignSessionId = sessionId) },
+                onDismiss = { viewModel.dismissGroupPicker() }
+            )
+        }
+
         // New Session Dialog
         if (uiState.showNewSessionDialog) {
             NewSessionDialog(
@@ -243,12 +285,15 @@ fun SessionsScreen(
 }
 
 /**
- * List of transcription sessions with a date/stats header and filter chips.
+ * List of transcription sessions with a date/stats header, filter chips,
+ * and collapsible group sections.
  */
 @Composable
 private fun SessionsList(
     sessions: List<TranscriptionSession>,
     allSessions: List<TranscriptionSession>,
+    groups: List<com.meetmind.assistant.domain.model.SessionGroup>,
+    collapsedGroupIds: Set<String>,
     totalDataSizeBytes: Long,
     selectedDateFilter: com.meetmind.assistant.presentation.sessions.DateFilter,
     selectedModeFilter: RecordingMode?,
@@ -256,9 +301,20 @@ private fun SessionsList(
     onModeFilterChange: (RecordingMode?) -> Unit,
     onSessionClick: (String) -> Unit,
     onDeleteClick: (String) -> Unit,
-    onAnalyzeClick: (String) -> Unit
+    onAnalyzeClick: (String) -> Unit,
+    onMoveToGroupClick: (String) -> Unit,
+    onToggleGroupCollapsed: (String) -> Unit,
+    onDeleteGroupClick: (String) -> Unit
 ) {
     val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    // Partition filtered sessions into per-group buckets + ungrouped
+    val sessionsByGroup = remember(sessions, groups) {
+        groups.map { group -> group to sessions.filter { it.groupId == group.id } }
+    }
+    val ungroupedSessions = remember(sessions) { sessions.filter { it.groupId == null } }
+    val hasAnyGroups = groups.isNotEmpty()
+
     LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
@@ -266,12 +322,10 @@ private fun SessionsList(
         contentPadding = PaddingValues(bottom = 88.dp + navBarPadding),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // Stats header (operates on all sessions regardless of filter)
         item {
             SessionsHeader(sessions = allSessions, totalDataSizeBytes = totalDataSizeBytes)
         }
 
-        // Filter chips
         item {
             FilterChipsRow(
                 selectedDateFilter = selectedDateFilter,
@@ -297,18 +351,74 @@ private fun SessionsList(
                     )
                 }
             }
-        } else {
+        } else if (!hasAnyGroups) {
+            // No groups at all — flat list (original behaviour)
             items(sessions, key = { it.id }) { session ->
                 SessionCard(
                     session = session,
                     onClick = { onSessionClick(session.id) },
                     onDelete = { onDeleteClick(session.id) },
                     onAnalyze = { onAnalyzeClick(session.id) },
+                    onMoveToGroup = { onMoveToGroupClick(session.id) },
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        } else {
+            // Grouped layout
+            sessionsByGroup.forEach { (group, groupSessions) ->
+                val isCollapsed = group.id in collapsedGroupIds
+                item(key = "header_${group.id}") {
+                    GroupSectionHeader(
+                        group = group,
+                        count = groupSessions.size,
+                        isCollapsed = isCollapsed,
+                        onToggle = { onToggleGroupCollapsed(group.id) },
+                        onDelete = { onDeleteGroupClick(group.id) }
+                    )
+                }
+                if (!isCollapsed) {
+                    items(groupSessions, key = { it.id }) { session ->
+                        SessionCard(
+                            session = session,
+                            onClick = { onSessionClick(session.id) },
+                            onDelete = { onDeleteClick(session.id) },
+                            onAnalyze = { onAnalyzeClick(session.id) },
+                            onMoveToGroup = { onMoveToGroupClick(session.id) },
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+
+            // Ungrouped sessions
+            if (ungroupedSessions.isNotEmpty()) {
+                item(key = "header_other") {
+                    Text(
+                        text = stringResource(R.string.group_section_other),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                    )
+                }
+                items(ungroupedSessions, key = { it.id }) { session ->
+                    SessionCard(
+                        session = session,
+                        onClick = { onSessionClick(session.id) },
+                        onDelete = { onDeleteClick(session.id) },
+                        onAnalyze = { onAnalyzeClick(session.id) },
+                        onMoveToGroup = { onMoveToGroupClick(session.id) },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -359,6 +469,7 @@ private fun FilterChipsRow(
                     RecordingMode.LONG_MEETING -> stringResource(R.string.mode_long_meeting)
                     RecordingMode.REAL_TIME_TRANSLATION -> stringResource(R.string.mode_translation_live)
                     RecordingMode.INTERVIEW -> stringResource(R.string.mode_interview)
+                    RecordingMode.ENGLISH_COACH -> stringResource(R.string.mode_english_coach)
                 }
                 FilterChip(
                     selected = selectedModeFilter == mode,
@@ -478,6 +589,81 @@ private fun SessionsHeader(sessions: List<TranscriptionSession>, totalDataSizeBy
  * Design: borderless surface card with a 4 dp left accent bar tinted
  * with the mode colour. Delete is accessible only inside the session detail screen.
  */
+@Composable
+private fun GroupSectionHeader(
+    group: com.meetmind.assistant.domain.model.SessionGroup,
+    count: Int,
+    isCollapsed: Boolean,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Icon(
+            imageVector = com.meetmind.assistant.ui.icons.AppIcons.Folder,
+            contentDescription = null,
+            tint = BrandPurple,
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = group.name,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "($count)",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Icon(
+            imageVector = if (isCollapsed) AppIcons.ChevronRight else AppIcons.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+        IconButton(
+            onClick = { showDeleteConfirm = true },
+            modifier = Modifier.size(32.dp)
+        ) {
+            Icon(
+                imageVector = AppIcons.Delete,
+                contentDescription = stringResource(R.string.delete),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.group_delete_title)) },
+            text = { Text(stringResource(R.string.group_delete_message, group.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = { showDeleteConfirm = false; onDelete() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionCard(
@@ -485,6 +671,7 @@ private fun SessionCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onAnalyze: () -> Unit,
+    onMoveToGroup: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -576,10 +763,18 @@ private fun SessionCard(
                 modifier = Modifier.padding(end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Move to group button
+                IconButton(onClick = onMoveToGroup) {
+                    Icon(
+                        imageVector = AppIcons.FolderOpen,
+                        contentDescription = stringResource(R.string.group_move_to_group),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
                 // Generate AI Insight button
-                IconButton(
-                    onClick = onAnalyze
-                ) {
+                IconButton(onClick = onAnalyze) {
                     Icon(
                         imageVector = AppIcons.AutoAwesome,
                         contentDescription = stringResource(R.string.generate_history_insight),
@@ -589,9 +784,7 @@ private fun SessionCard(
                 }
 
                 // Delete button
-                IconButton(
-                    onClick = onDelete
-                ) {
+                IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = AppIcons.Delete,
                         contentDescription = stringResource(R.string.delete),
@@ -920,6 +1113,7 @@ private fun recordingModeLabel(mode: RecordingMode): Int = when (mode) {
     RecordingMode.LONG_MEETING          -> R.string.mode_long_meeting
     RecordingMode.REAL_TIME_TRANSLATION -> R.string.mode_translation_live
     RecordingMode.INTERVIEW             -> R.string.mode_interview
+    RecordingMode.ENGLISH_COACH         -> R.string.mode_english_coach
 }
 
 /**
@@ -931,6 +1125,7 @@ private fun recordingModeGradient(mode: RecordingMode): Brush = when (mode) {
     RecordingMode.LONG_MEETING          -> ModeLongMeetingGradient
     RecordingMode.REAL_TIME_TRANSLATION -> ModeTranslationGradient
     RecordingMode.INTERVIEW             -> ModeInterviewGradient
+    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachGradient
 }
 
 /**
@@ -942,6 +1137,7 @@ private fun recordingModeTint(mode: RecordingMode): Color = when (mode) {
     RecordingMode.LONG_MEETING          -> ModeAmberTint
     RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
     RecordingMode.INTERVIEW             -> ModeInterviewTint
+    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
 }
 
 /**

@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.domain.model.DownloadState
+import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.presentation.main.MainViewModel
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
 import java.io.File
@@ -125,6 +126,14 @@ fun MainScreen(
             // Cancelled or failed capture — remove the empty placeholder file.
             file?.delete()
         }
+    }
+
+    val isTranslationSplitActive =
+        uiState.recordingMode == RecordingMode.REAL_TIME_TRANSLATION &&
+        (uiState.isRecording || uiState.isFinalizingSession)
+
+    LaunchedEffect(isTranslationSplitActive) {
+        if (isTranslationSplitActive) selectedTab = 0
     }
 
     // Intercept hardware back button while recording is active.
@@ -595,7 +604,16 @@ fun MainScreen(
                 }
             }
 
-            // Tab Row
+            // Tab Row / Split View
+            if (isTranslationSplitActive) {
+                TranslationSplitView(
+                    uiState = uiState,
+                    onNavigateToLlmDownload = onNavigateToLlmDownload,
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.background)
+                )
+            } else {
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = BrandPrimary,
@@ -702,6 +720,7 @@ fun MainScreen(
                     }
                 }
             }
+            } // end else (standard tab layout)
 
             // Processing banner: shown after stop while the final LLM insight is being generated.
             // Placed below the content so it does not displace the transcription/insights view.
@@ -732,3 +751,88 @@ fun MainScreen(
     }
 }
 
+@Composable
+private fun TranslationSplitView(
+    uiState: com.meetmind.assistant.presentation.main.MainUiState,
+    onNavigateToLlmDownload: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        // "Original" panel header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = AppIcons.Mic,
+                contentDescription = null,
+                tint = ModeEmeraldTint,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(R.string.translation_panel_original),
+                style = MaterialTheme.typography.labelMedium,
+                color = ModeEmeraldTint,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp
+            )
+        }
+
+        TranscriptionSection(
+            segments = uiState.allSegments,
+            isRecording = uiState.isRecording,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        )
+
+        HorizontalDivider(thickness = 1.dp, color = ModeEmeraldTint.copy(alpha = 0.25f))
+
+        // "Translation" panel header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = AppIcons.ModeTranslation,
+                contentDescription = null,
+                tint = ModeEmeraldTint,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = stringResource(R.string.translation_panel_translation),
+                style = MaterialTheme.typography.labelMedium,
+                color = ModeEmeraldTint,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.8.sp
+            )
+        }
+
+        InsightsSection(
+            insights = uiState.sortedInsights,
+            segments = uiState.completedSegments,
+            llmStatus = uiState.llmStatus,
+            isLlmEnabled = uiState.settings.llmEnabled,
+            isLlmAvailable = uiState.isLlmModelAvailable,
+            isFinalizingSession = uiState.isFinalizingSession,
+            isRecording = uiState.isRecording,
+            insightStrategy = uiState.insightStrategy,
+            batchProgress = uiState.batchProgress,
+            recordingMode = uiState.recordingMode,
+            onDownloadLlm = onNavigateToLlmDownload,
+            onRegenerate = null,
+            regeneratingInsightId = uiState.regeneratingInsightId,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        )
+    }
+}

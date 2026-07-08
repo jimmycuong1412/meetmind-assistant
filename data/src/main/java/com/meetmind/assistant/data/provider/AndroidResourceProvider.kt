@@ -41,6 +41,10 @@ class AndroidResourceProvider @Inject constructor(
         return getStringResource("prompt_interview")
     }
 
+    override fun getEnglishCoachPrompt(): String {
+        return getStringResource("prompt_english_coach")
+    }
+
     override fun getJsonFieldTitle(): String = getStringResource("json_field_title")
     override fun getJsonFieldSummary(): String = getStringResource("json_field_summary")
     override fun getJsonFieldActionItems(): String = getStringResource("json_field_action_items")
@@ -73,6 +77,7 @@ class AndroidResourceProvider @Inject constructor(
             RecordingMode.LONG_MEETING          -> "prompt_long_meeting"
             RecordingMode.REAL_TIME_TRANSLATION -> "prompt_translation"
             RecordingMode.INTERVIEW             -> "prompt_interview"
+            RecordingMode.ENGLISH_COACH         -> "prompt_english_coach"
         }
         return getStringResourceForLocale(resourceName, localeCode)
     }

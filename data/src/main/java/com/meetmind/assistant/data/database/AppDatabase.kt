@@ -7,11 +7,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
+import com.meetmind.assistant.data.database.dao.SessionGroupDao
 import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
 import com.meetmind.assistant.data.database.entity.LlmInsightEntity
+import com.meetmind.assistant.data.database.entity.SessionGroupEntity
 import com.meetmind.assistant.data.database.entity.SessionPhotoEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSegmentEntity
 import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
@@ -52,9 +54,10 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         TranscriptionSegmentEntity::class,
         LlmInsightEntity::class,
         ActionItemEntity::class,
-        SessionPhotoEntity::class
+        SessionPhotoEntity::class,
+        SessionGroupEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -65,6 +68,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchDao(): SearchDao
     abstract fun actionItemDao(): ActionItemDao
     abstract fun sessionPhotoDao(): SessionPhotoDao
+    abstract fun sessionGroupDao(): SessionGroupDao
 
     companion object {
         const val DATABASE_NAME = "libellula_transcription.db"
@@ -193,22 +197,90 @@ abstract class AppDatabase : RoomDatabase() {
          */
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
+                createSessionPhotosTable(database)
+            }
+        }
+
+        /**
+         * Database version 11:
+         * - Added question_type column (nullable TEXT) to llm_insights.
+         *   INTERVIEW mode: detected question type ("behavioral" | "technical" | …).
+         *   ENGLISH_COACH mode: conversation context ("daily" | "professional").
+         *   All other modes: NULL.
+         * Existing rows default to NULL (no question type).
+         *
+         * Guarded: the pre-merge english-coach branch shipped this change as its
+         * own version 10, so devices coming from that lineage already have the
+         * column when this migration runs.
+         */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                if (!hasColumn(database, "llm_insights", "question_type")) {
+                    database.execSQL("ALTER TABLE llm_insights ADD COLUMN question_type TEXT")
+                }
+            }
+        }
+
+        /**
+         * Database version 12:
+         * - Added session_groups table for user-defined session organisation.
+         * - Added nullable group_id column to transcription_sessions.
+         *   NULL = session is not assigned to any group ("Other").
+         *
+         * Guarded: the pre-merge english-coach branch shipped these changes as
+         * its own version 11, so devices coming from that lineage already have
+         * them. Those devices also never ran MIGRATION_9_10 (their version 10
+         * was question_type instead of session_photos), so this migration also
+         * creates session_photos if it is missing.
+         */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     """
-                    CREATE TABLE IF NOT EXISTS session_photos (
+                    CREATE TABLE IF NOT EXISTS session_groups (
                         id TEXT NOT NULL PRIMARY KEY,
-                        session_id TEXT NOT NULL,
-                        file_path TEXT NOT NULL,
-                        description TEXT,
-                        timestamp INTEGER NOT NULL,
-                        FOREIGN KEY (session_id) REFERENCES transcription_sessions(id) ON DELETE CASCADE
+                        name TEXT NOT NULL,
+                        created_at INTEGER NOT NULL
                     )
                     """.trimIndent()
                 )
-                database.execSQL(
-                    "CREATE INDEX IF NOT EXISTS index_session_photos_session_id ON session_photos(session_id)"
-                )
+                if (!hasColumn(database, "transcription_sessions", "group_id")) {
+                    database.execSQL("ALTER TABLE transcription_sessions ADD COLUMN group_id TEXT")
+                }
+                createSessionPhotosTable(database)
             }
+        }
+
+        private fun createSessionPhotosTable(database: SupportSQLiteDatabase) {
+            database.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS session_photos (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    file_path TEXT NOT NULL,
+                    description TEXT,
+                    timestamp INTEGER NOT NULL,
+                    FOREIGN KEY (session_id) REFERENCES transcription_sessions(id) ON DELETE CASCADE
+                )
+                """.trimIndent()
+            )
+            database.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_session_photos_session_id ON session_photos(session_id)"
+            )
+        }
+
+        private fun hasColumn(
+            database: SupportSQLiteDatabase,
+            table: String,
+            column: String
+        ): Boolean {
+            database.query("PRAGMA table_info(`$table`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndexOrThrow("name")
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(nameIndex) == column) return true
+                }
+            }
+            return false
         }
     }
 }

@@ -344,6 +344,10 @@ class GenerateBatchInsightUseCase(
                                else storedPrompt
                 template.replace("{role}", role)
             }
+            RecordingMode.ENGLISH_COACH -> {
+                val context = if (!topic.isNullOrBlank()) topic else "daily conversation"
+                settings.englishCoachSystemPrompt.replace("{context}", context)
+            }
             else -> {
                 val storedPrompt = when (mode) {
                     RecordingMode.SIMPLE_LISTENING -> settings.simpleListeningSystemPrompt
@@ -360,8 +364,8 @@ class GenerateBatchInsightUseCase(
                 }
             }
         }
-        // For INTERVIEW the role is baked into the prompt; skip the generic topic prefix.
-        if (mode == RecordingMode.INTERVIEW) return base
+        // For INTERVIEW/ENGLISH_COACH context is baked into the prompt; skip the generic topic prefix.
+        if (mode == RecordingMode.INTERVIEW || mode == RecordingMode.ENGLISH_COACH) return base
         return prependTopic(base, topic, outputLanguage)
     }
 

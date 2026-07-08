@@ -81,6 +81,7 @@ object AppIcons {
     val ModeLongMeeting: ImageVector get() = Icons.Outlined.Article
     val ModeTranslation: ImageVector get() = Icons.Outlined.Translate
     val ModeInterview: ImageVector get() = Icons.Outlined.Psychology
+    val ModeEnglishCoach: ImageVector get() = Icons.Outlined.School
 
     // Insight strategy
     val Summarize: ImageVector get() = Icons.Outlined.Summarize
@@ -99,4 +100,8 @@ object AppIcons {
 
     // Camera capture (vision insight)
     val Camera: ImageVector get() = Icons.Outlined.PhotoCamera
+
+    // Groups / folders
+    val FolderOpen: ImageVector get() = Icons.Outlined.FolderOpen
+    val Folder: ImageVector get() = Icons.Outlined.Folder
 }

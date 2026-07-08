@@ -3,6 +3,7 @@ package com.meetmind.assistant.domain.usecase.sync
 import com.meetmind.assistant.domain.model.AppSettings
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
+import com.meetmind.assistant.domain.usecase.llm.EnglishCoachOutputParser
 import com.meetmind.assistant.domain.usecase.llm.InsightOutputParser
 import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
 import com.meetmind.assistant.domain.usecase.llm.InterviewPromptBuilder
@@ -70,6 +71,8 @@ class SyncSttLlmUseCase(
         // Interview Mode uses a richer dual-output schema (question + answer + coaching_tips)
         // so it gets the same budget as LONG_MEETING to avoid truncation mid-answer.
         private const val MAX_TOKENS_INTERVIEW        = 768
+        // English Coach output is compact (original/corrected/polish/tip) so 512 is sufficient.
+        private const val MAX_TOKENS_ENGLISH_COACH    = 512
 
         // Number of completed segments kept in the rolling context buffer.
         private const val MAX_CONTEXT_SEGMENTS = 3
@@ -228,6 +231,60 @@ class SyncSttLlmUseCase(
                     }
                 }
 
+                // English Coach: fire immediately on each completed segment ≥ 5 words.
+                // Unlike Interview mode (debounced, waits for a question), every utterance
+                // is independent and deserves its own correction card — no debounce needed.
+                if (segment.isComplete &&
+                    mode == RecordingMode.ENGLISH_COACH &&
+                    segment.text.isNotBlank() &&
+                    !isLlmBusy.get()
+                ) {
+                    val wordCount = segment.text.trim().split(Regex("\\s+")).count { it.isNotEmpty() }
+                    if (wordCount >= MIN_NEW_WORDS_FOR_INFERENCE) {
+                        val coachContext = topic?.takeIf { it.isNotBlank() } ?: "daily conversation"
+                        val sourceIds = listOf(segment.id)
+                        val insightTimestamp = System.currentTimeMillis()
+                        lastInferenceTime = insightTimestamp
+                        newSegmentsSinceLastLlm.clear()
+                        completeSegmentIds.clear()
+
+                        isLlmBusy.set(true)
+                        launch {
+                            try {
+                                llmRepository.beginInference()
+                                llmRepository.reloadModel()
+                                llmRepository.checkAndCacheMemoryConstraint()
+
+                                val insightBuilder = StringBuilder()
+                                llmRepository.generateInsight(segment.text.trim(), currentSystemPrompt, maxTokens)
+                                    .collect { token -> insightBuilder.append(token) }
+
+                                val rawOutput = insightBuilder.toString().trim()
+                                if (rawOutput.isNotBlank()) {
+                                    val coachInsight = EnglishCoachOutputParser.parse(rawOutput, coachContext)
+                                    val llmInsight = EnglishCoachOutputParser.toLlmInsight(
+                                        insight = coachInsight,
+                                        sessionId = sessionId,
+                                        timestamp = insightTimestamp,
+                                        sourceSegmentIds = sourceIds
+                                    )
+                                    send(llmInsight)
+                                }
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                println("EnglishCoach LLM error: ${e.message}")
+                            } finally {
+                                withContext(NonCancellable) {
+                                    llmRepository.endInference()
+                                    llmRepository.recordConstrainedInference(segment.text.length)
+                                    isLlmBusy.set(false)
+                                }
+                            }
+                        }
+                        return@collect
+                    }
+                }
+
                 val now = System.currentTimeMillis()
                 val timeSinceLastInference = now - lastInferenceTime
 
@@ -315,31 +372,43 @@ class SyncSttLlmUseCase(
                                 val rawOutput = insightBuilder.toString().trim()
 
                                 if (rawOutput.isNotBlank()) {
-                                    val insight = if (mode == RecordingMode.INTERVIEW &&
-                                                      interviewRole != null) {
-                                        // Dual-output path: parse into InterviewInsight then
-                                        // map to LlmInsight for uniform persistence and UI.
-                                        val interviewInsight = InterviewOutputParser.parse(
-                                            rawOutput = rawOutput,
-                                            role = interviewRole
-                                        )
-                                        InterviewOutputParser.toLlmInsight(
-                                            interviewInsight = interviewInsight,
-                                            sessionId = sessionId,
-                                            timestamp = insightTimestamp,
-                                            sourceSegmentIds = sourceIds
-                                        )
-                                    } else {
-                                        val parsed = parseInsightOutput(rawOutput, mode, parseSettings)
-                                        LlmInsight(
-                                            id = UUID.randomUUID().toString(),
-                                            sessionId = sessionId,
-                                            title = parsed.title,
-                                            content = parsed.content,
-                                            tasks = parsed.tasks,
-                                            timestamp = insightTimestamp,
-                                            sourceSegmentIds = sourceIds
-                                        )
+                                    val insight = when {
+                                        mode == RecordingMode.INTERVIEW && interviewRole != null -> {
+                                            // Dual-output path: parse into InterviewInsight then
+                                            // map to LlmInsight for uniform persistence and UI.
+                                            val interviewInsight = InterviewOutputParser.parse(
+                                                rawOutput = rawOutput,
+                                                role = interviewRole
+                                            )
+                                            InterviewOutputParser.toLlmInsight(
+                                                interviewInsight = interviewInsight,
+                                                sessionId = sessionId,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
+                                        mode == RecordingMode.ENGLISH_COACH -> {
+                                            val coachContext = topic?.takeIf { it.isNotBlank() } ?: "daily conversation"
+                                            val coachInsight = EnglishCoachOutputParser.parse(rawOutput, coachContext)
+                                            EnglishCoachOutputParser.toLlmInsight(
+                                                insight = coachInsight,
+                                                sessionId = sessionId,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
+                                        else -> {
+                                            val parsed = parseInsightOutput(rawOutput, mode, parseSettings)
+                                            LlmInsight(
+                                                id = UUID.randomUUID().toString(),
+                                                sessionId = sessionId,
+                                                title = parsed.title,
+                                                content = parsed.content,
+                                                tasks = parsed.tasks,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        }
                                     }
                                     send(insight)
                                 }
@@ -389,6 +458,7 @@ class SyncSttLlmUseCase(
             RecordingMode.LONG_MEETING          -> settings.longMeetingIntervalMinutes * 60 * 1000L
             RecordingMode.REAL_TIME_TRANSLATION -> settings.translationIntervalSeconds * 1000L
             RecordingMode.INTERVIEW             -> settings.interviewIntervalSeconds * 1000L
+            RecordingMode.ENGLISH_COACH         -> settings.englishCoachIntervalSeconds * 1000L
         }
     }
 
@@ -400,6 +470,7 @@ class SyncSttLlmUseCase(
         RecordingMode.LONG_MEETING          -> MAX_TOKENS_LONG_MEETING
         RecordingMode.REAL_TIME_TRANSLATION -> MAX_TOKENS_TRANSLATION
         RecordingMode.INTERVIEW             -> MAX_TOKENS_INTERVIEW
+        RecordingMode.ENGLISH_COACH         -> MAX_TOKENS_ENGLISH_COACH
     }
 
     // ─── System prompt ───────────────────────────────────────────────────────────
@@ -439,6 +510,12 @@ class SyncSttLlmUseCase(
                                else storedPrompt
                 template.replace("{role}", role)
             }
+            RecordingMode.ENGLISH_COACH -> {
+                // Context is stored in the topic field ("daily" | "professional").
+                // Substitute it into the prompt template's {context} placeholder.
+                val context = if (!topic.isNullOrBlank()) topic else "daily conversation"
+                settings.englishCoachSystemPrompt.replace("{context}", context)
+            }
             else -> {
                 val storedPrompt = when (mode) {
                     RecordingMode.SIMPLE_LISTENING -> settings.simpleListeningSystemPrompt
@@ -461,9 +538,9 @@ class SyncSttLlmUseCase(
                 }
             }
         }
-        // For INTERVIEW mode the role is already baked into the prompt via {role} substitution
-        // above; do NOT prepend the generic topic prefix so the prompt stays focused.
-        if (mode == RecordingMode.INTERVIEW) return basePrompt
+        // For INTERVIEW and ENGLISH_COACH the context is already baked into the prompt via
+        // placeholder substitution above; do NOT prepend the generic topic prefix.
+        if (mode == RecordingMode.INTERVIEW || mode == RecordingMode.ENGLISH_COACH) return basePrompt
 
         // Prepend topic context if provided so the model focuses on the stated subject.
         // Topic is passed verbatim — never translated — since the user typed it themselves.

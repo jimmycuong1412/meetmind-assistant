@@ -40,5 +40,13 @@ enum class RecordingMode {
      * with suggested talking points and follow-up advice.
      * Role is conveyed via the topic field (e.g. "Developer", "Product Manager").
      */
-    INTERVIEW
+    INTERVIEW,
+
+    /**
+     * Real-time English language coaching.
+     * AI: Corrects grammar, suggests natural native-speaker rephrasing, and provides
+     * targeted coaching tips tuned to the selected context (daily / professional).
+     * Context is conveyed via the topic field ("daily" | "professional").
+     */
+    ENGLISH_COACH
 }

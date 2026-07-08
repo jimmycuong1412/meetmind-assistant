@@ -292,6 +292,7 @@ class SettingsViewModel @Inject constructor(
                 com.meetmind.assistant.domain.model.RecordingMode.LONG_MEETING -> currentSettings.copy(longMeetingSystemPrompt = prompt)
                 com.meetmind.assistant.domain.model.RecordingMode.REAL_TIME_TRANSLATION -> currentSettings.copy(translationSystemPrompt = prompt)
                 com.meetmind.assistant.domain.model.RecordingMode.INTERVIEW -> currentSettings.copy(interviewSystemPrompt = prompt)
+                com.meetmind.assistant.domain.model.RecordingMode.ENGLISH_COACH -> currentSettings.copy(englishCoachSystemPrompt = prompt)
             }
             settingsRepository.updateSettings(updatedSettings)
         }
@@ -309,6 +310,7 @@ class SettingsViewModel @Inject constructor(
                 com.meetmind.assistant.domain.model.RecordingMode.LONG_MEETING -> currentSettings.copy(longMeetingIntervalMinutes = interval) // Minutes for long meeting
                 com.meetmind.assistant.domain.model.RecordingMode.REAL_TIME_TRANSLATION -> currentSettings.copy(translationIntervalSeconds = interval)
                 com.meetmind.assistant.domain.model.RecordingMode.INTERVIEW -> currentSettings.copy(interviewIntervalSeconds = interval)
+                com.meetmind.assistant.domain.model.RecordingMode.ENGLISH_COACH -> currentSettings.copy(englishCoachIntervalSeconds = interval)
             }
             settingsRepository.updateSettings(updatedSettings)
         }
@@ -342,6 +344,8 @@ class SettingsViewModel @Inject constructor(
                     _settings.value.copy(translationSystemPrompt = defaultPrompt)
                 com.meetmind.assistant.domain.model.RecordingMode.INTERVIEW ->
                     _settings.value.copy(interviewSystemPrompt = defaultPrompt)
+                com.meetmind.assistant.domain.model.RecordingMode.ENGLISH_COACH ->
+                    _settings.value.copy(englishCoachSystemPrompt = defaultPrompt)
             }
             settingsRepository.updateSettings(updatedSettings)
         }
@@ -424,6 +428,7 @@ class SettingsViewModel @Inject constructor(
                 RecordingMode.LONG_MEETING -> _settings.value.copy(longMeetingDefaultStrategy = strategy)
                 RecordingMode.REAL_TIME_TRANSLATION -> _settings.value.copy(translationDefaultStrategy = strategy)
                 RecordingMode.INTERVIEW -> _settings.value.copy(interviewDefaultStrategy = strategy)
+                RecordingMode.ENGLISH_COACH -> _settings.value.copy(englishCoachDefaultStrategy = strategy)
             }
             settingsRepository.updateSettings(updatedSettings)
         }

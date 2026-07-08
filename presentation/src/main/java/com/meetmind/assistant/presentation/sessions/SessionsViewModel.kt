@@ -8,6 +8,7 @@ import com.meetmind.assistant.domain.model.SessionTemplate
 import com.meetmind.assistant.domain.model.TranscriptionSession
 import java.util.Calendar
 import java.util.UUID
+import com.meetmind.assistant.domain.repository.GroupRepository
 import com.meetmind.assistant.domain.repository.SettingsRepository
 import com.meetmind.assistant.domain.usecase.transcription.CreateSessionUseCase
 import com.meetmind.assistant.domain.usecase.transcription.DeleteSessionUseCase
@@ -37,7 +38,8 @@ class SessionsViewModel @Inject constructor(
     private val createSessionUseCase: CreateSessionUseCase,
     private val deleteSessionUseCase: DeleteSessionUseCase,
     private val settingsRepository: SettingsRepository,
-    private val getTotalDataSizeUseCase: GetTotalDataSizeUseCase
+    private val getTotalDataSizeUseCase: GetTotalDataSizeUseCase,
+    private val groupRepository: GroupRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SessionsUiState())
@@ -58,6 +60,11 @@ class SessionsViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.getTemplates().collect { templates ->
                 _uiState.update { it.copy(templates = templates) }
+            }
+        }
+        viewModelScope.launch {
+            groupRepository.getAllGroups().collect { groups ->
+                _uiState.update { it.copy(groups = groups) }
             }
         }
     }
@@ -242,6 +249,53 @@ class SessionsViewModel @Inject constructor(
     fun deleteTemplate(templateId: String) {
         viewModelScope.launch {
             settingsRepository.deleteTemplate(templateId)
+        }
+    }
+
+    // ── Group management ──────────────────────────────────────────────────────
+
+    fun toggleGroupCollapsed(groupId: String) {
+        _uiState.update { state ->
+            val current = state.collapsedGroupIds
+            state.copy(
+                collapsedGroupIds = if (groupId in current) current - groupId else current + groupId
+            )
+        }
+    }
+
+    fun showGroupPicker(sessionId: String) {
+        _uiState.update { it.copy(sessionIdForGroupPicker = sessionId) }
+    }
+
+    fun dismissGroupPicker() {
+        _uiState.update { it.copy(sessionIdForGroupPicker = null) }
+    }
+
+    fun moveSessionToGroup(sessionId: String, groupId: String?) {
+        viewModelScope.launch {
+            groupRepository.moveSessionToGroup(sessionId, groupId)
+                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+            _uiState.update { it.copy(sessionIdForGroupPicker = null) }
+        }
+    }
+
+    fun createGroup(name: String, assignSessionId: String? = null) {
+        viewModelScope.launch {
+            groupRepository.createGroup(name)
+                .onSuccess { group ->
+                    if (assignSessionId != null) {
+                        groupRepository.moveSessionToGroup(assignSessionId, group.id)
+                    }
+                    _uiState.update { it.copy(sessionIdForGroupPicker = null) }
+                }
+                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
+        }
+    }
+
+    fun deleteGroup(groupId: String) {
+        viewModelScope.launch {
+            groupRepository.deleteGroup(groupId)
+                .onFailure { e -> _uiState.update { it.copy(error = e.message) } }
         }
     }
 

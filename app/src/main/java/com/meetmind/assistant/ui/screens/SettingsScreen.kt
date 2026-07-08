@@ -344,6 +344,29 @@ private fun RecordingModesAccordion(
                 onStrategyChange = { viewModel.updateModeDefaultStrategy(RecordingMode.INTERVIEW, it) }
             )
         }
+
+        // English Coach — per-segment reactive (5 s fallback interval); context selector is
+        // in the session dialog (daily / professional) and stored as the topic field.
+        ModeAccordionCard(
+            title = stringResource(R.string.mode_english_coach),
+            icon = AppIcons.ModeEnglishCoach,
+            isExpanded = RecordingMode.ENGLISH_COACH in expandedModes,
+            onToggle = { toggle(RecordingMode.ENGLISH_COACH) }
+        ) {
+            LlmIntervalSetting(
+                currentInterval = settings.englishCoachIntervalSeconds,
+                onIntervalChange = { viewModel.updateModeInterval(RecordingMode.ENGLISH_COACH, it) }
+            )
+            LlmSystemPromptSetting(
+                currentPrompt = settings.englishCoachSystemPrompt,
+                onPromptChange = { viewModel.updateModeSystemPrompt(RecordingMode.ENGLISH_COACH, it) },
+                onReset = { viewModel.resetModeSystemPrompt(RecordingMode.ENGLISH_COACH) }
+            )
+            DefaultStrategySetting(
+                currentStrategy = settings.englishCoachDefaultStrategy,
+                onStrategyChange = { viewModel.updateModeDefaultStrategy(RecordingMode.ENGLISH_COACH, it) }
+            )
+        }
     }
 }
 

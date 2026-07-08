@@ -10,6 +10,7 @@ import com.meetmind.assistant.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.first
 import java.util.UUID
 
+
 /**
  * Generates a single final LLM insight from accumulated unprocessed transcription content.
  *
@@ -34,12 +35,13 @@ class GenerateFinalInsightUseCase(
         private const val MIN_WORDS_FOR_FINAL_INSIGHT = 20
 
         // Max tokens allocated for the final insight call (same as periodic calls per mode).
-        private const val MAX_TOKENS_SIMPLE    = 512
-        private const val MAX_TOKENS_SHORT     = 600
-        private const val MAX_TOKENS_LONG      = 768
-        private const val MAX_TOKENS_TRANSLATE = 256
+        private const val MAX_TOKENS_SIMPLE       = 512
+        private const val MAX_TOKENS_SHORT        = 600
+        private const val MAX_TOKENS_LONG         = 768
+        private const val MAX_TOKENS_TRANSLATE    = 256
         // Interview uses the richer dual-output schema; match LONG_MEETING budget.
-        private const val MAX_TOKENS_INTERVIEW = 768
+        private const val MAX_TOKENS_INTERVIEW    = 768
+        private const val MAX_TOKENS_ENGLISH_COACH = 512
 
         // Maximum characters in the user prompt sent to the LLM.
         // Keeps the total prompt within typical on-device model context windows (4k–8k tokens).
@@ -174,6 +176,10 @@ class GenerateFinalInsightUseCase(
                                else storedPrompt
                 template.replace("{role}", role)
             }
+            RecordingMode.ENGLISH_COACH -> {
+                val context = if (!topic.isNullOrBlank()) topic else "daily conversation"
+                settings.englishCoachSystemPrompt.replace("{context}", context)
+            }
             else -> {
                 val storedPrompt = when (mode) {
                     RecordingMode.SIMPLE_LISTENING -> settings.simpleListeningSystemPrompt
@@ -190,7 +196,7 @@ class GenerateFinalInsightUseCase(
                 }
             }
         }
-        if (mode == RecordingMode.INTERVIEW) return basePrompt
+        if (mode == RecordingMode.INTERVIEW || mode == RecordingMode.ENGLISH_COACH) return basePrompt
         return if (!topic.isNullOrBlank()) {
             val localeCode = if (!targetLangCode.isNullOrEmpty()) targetLangCode else "en"
             val prefix = resourceProvider.getTopicPrefix(localeCode).format(topic)
@@ -206,5 +212,6 @@ class GenerateFinalInsightUseCase(
         RecordingMode.LONG_MEETING          -> MAX_TOKENS_LONG
         RecordingMode.REAL_TIME_TRANSLATION -> MAX_TOKENS_TRANSLATE
         RecordingMode.INTERVIEW             -> MAX_TOKENS_INTERVIEW
+        RecordingMode.ENGLISH_COACH         -> MAX_TOKENS_ENGLISH_COACH
     }
 }

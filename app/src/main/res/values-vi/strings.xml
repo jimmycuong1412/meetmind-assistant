@@ -60,6 +60,17 @@
     <string name="history_insight_copy_suffix_format">(Phân tích AI lúc %s)</string>
     <string name="history_insight_copy_info">Một bản sao mới của phiên này sẽ được tạo với phân tích AI.\nPhiên gốc sẽ không bị thay đổi.</string>
     <string name="onboarding_language_label">Ngôn ngữ:</string>
+    <string name="translation_panel_original">Bản gốc</string>
+    <string name="translation_panel_translation">Bản dịch</string>
+    <string name="group_section_other">Khác</string>
+    <string name="group_new">Nhóm mới</string>
+    <string name="group_name_hint">Tên nhóm</string>
+    <string name="group_assign_title">Chuyển vào nhóm</string>
+    <string name="group_no_group">Không có nhóm</string>
+    <string name="group_delete_title">Xoá nhóm?</string>
+    <string name="group_delete_message">Xoá nhóm \"%1$s\"? Các buổi sẽ được chuyển về Khác.</string>
+    <string name="group_create_confirm">Tạo</string>
+    <string name="group_move_to_group">Chuyển vào nhóm</string>
 
     <!-- Camera photo capture during recording (vision insight) -->
     <string name="camera_take_photo">Chụp ảnh để đưa vào phân tích AI</string>

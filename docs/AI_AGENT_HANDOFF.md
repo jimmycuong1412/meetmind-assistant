@@ -205,6 +205,16 @@ camera app and merges an on-device description into the next AI insight. Key fac
   `session_photos` (`id`, `session_id` FK → `transcription_sessions` with cascade delete,
   `file_path`, nullable `description`, `timestamp`) plus an index on `session_id`. New DAO:
   `SessionPhotoDao`.
+- **Gotcha — Room versions 10–12 are a reconciled fork, and migrations 10→11 and 11→12 are
+  deliberately defensive.** Two branches independently shipped a "version 10": develop's v10 =
+  `session_photos` (above), while `feature/012-english-coach` shipped its own v10
+  (`llm_insights.question_type`) and v11 (`session_groups` + `transcription_sessions.group_id`).
+  The merged chain renumbers the coach changes as `MIGRATION_10_11` (question_type) and
+  `MIGRATION_11_12` (session_groups + group_id), final `version = 12`. Because a device may
+  arrive at version 10 or 11 from *either* lineage, these migrations check column existence
+  (`hasColumn`) / use `CREATE TABLE IF NOT EXISTS`, and 11→12 also re-creates `session_photos`
+  for coach-lineage devices that never ran develop's 9→10. Don't "clean up" the guards — they
+  are what lets both lineages upgrade without a migration crash.
 - **Display placement (known deviation from the original plan)** — the design/plan docs said
   photos would show "after insights / before transcript" in Session Details, but that screen is
   tab-based, not a single scroll. Photos actually render via `SessionPhotosSection` as the first
