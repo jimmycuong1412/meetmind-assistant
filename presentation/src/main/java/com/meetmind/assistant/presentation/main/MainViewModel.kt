@@ -24,6 +24,7 @@ import com.meetmind.assistant.domain.usecase.llm.AnalyzePhotoUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateBatchInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateFinalInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.InitializeLlmUseCase
+import com.meetmind.assistant.domain.usecase.llm.PhotoAnalysisQueue
 import com.meetmind.assistant.domain.usecase.stt.StartSttStreamingUseCase
 import com.meetmind.assistant.domain.usecase.stt.StopSttStreamingUseCase
 import com.meetmind.assistant.domain.usecase.sync.SyncSttLlmUseCase
@@ -48,7 +49,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import javax.inject.Inject
@@ -144,6 +144,11 @@ class MainViewModel @Inject constructor(
     // Thread-safe: written by transcriptionJob coroutine, cleared by insightsJob coroutine.
     private val pendingContent = AtomicReference<String>("")
 
+    // FIFO worker so the user can keep capturing photos while earlier ones are
+    // still being analyzed. llama.cpp is single-threaded for inference, so jobs
+    // run strictly one at a time in capture order.
+    private val photoAnalysisQueue = PhotoAnalysisQueue()
+
     companion object {
         private const val TAG = "MainViewModel"
 
@@ -159,6 +164,14 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.getSettings().collect { settings ->
                 _uiState.update { it.copy(settings = settings) }
+            }
+        }
+
+        // Photo-analysis worker + pending-count mirror for the "Analyzing photo…" banner.
+        viewModelScope.launch { photoAnalysisQueue.process() }
+        viewModelScope.launch {
+            photoAnalysisQueue.pending.collect { count ->
+                _uiState.update { it.copy(pendingPhotoAnalysisCount = count) }
             }
         }
 
@@ -458,44 +471,40 @@ class MainViewModel @Inject constructor(
 
     /**
      * Called after the system camera app wrote a photo to [photoPath].
-     * Persists the photo row immediately, then runs vision analysis; on success the
-     * description is attached to the row and queued for the next insight tick.
+     * Persists the photo row immediately, then appends the vision analysis to a FIFO
+     * queue — the user can keep capturing while earlier photos are still analyzing;
+     * analyses run strictly one at a time in capture order. On success the description
+     * is attached to the row and queued for the next insight tick.
      *
      * @param analysisPrompt Localized instruction from string resources (passed from UI,
      *   same pattern as regenerateInsight's error message)
      * @param failureMessage Localized error banner text for analysis failure
      */
     fun onPhotoCaptured(photoPath: String, analysisPrompt: String, failureMessage: String) {
-        if (_uiState.value.isAnalyzingPhoto) {
-            // Guard against rapid double-capture: the button is disabled while analyzing,
-            // but a race is possible. Remove the just-written file so it cannot orphan.
-            File(photoPath).delete()
-            return
+        val photo = SessionPhoto(
+            id = UUID.randomUUID().toString(),
+            sessionId = sessionId,
+            filePath = photoPath,
+            description = null,
+            timestamp = System.currentTimeMillis()
+        )
+        // Persist immediately so the photo shows in Session Details even while
+        // its analysis is still queued behind earlier captures.
+        val insertJob = viewModelScope.launch {
+            transcriptionRepository.insertSessionPhoto(photo)
         }
-        _uiState.update { it.copy(isAnalyzingPhoto = true) }
-        viewModelScope.launch {
-            val photo = SessionPhoto(
-                id = UUID.randomUUID().toString(),
-                sessionId = sessionId,
-                filePath = photoPath,
-                description = null,
-                timestamp = System.currentTimeMillis()
-            )
-            try {
-                transcriptionRepository.insertSessionPhoto(photo)
-                analyzePhotoUseCase(photoPath, analysisPrompt)
-                    .onSuccess { description ->
-                        transcriptionRepository.updateSessionPhotoDescription(photo.id, description)
-                        syncSttLlmUseCase.queuePhotoDescription(description)
-                        Log.i(TAG, "Photo analyzed (${description.length} chars), queued for next insight")
-                    }
-                    .onFailure { e ->
-                        Log.e(TAG, "Photo analysis failed", e)
-                        _uiState.update { it.copy(error = failureMessage) }
-                    }
-            } finally {
-                _uiState.update { it.copy(isAnalyzingPhoto = false) }
-            }
+        photoAnalysisQueue.submit {
+            insertJob.join() // description update below needs the row to exist
+            analyzePhotoUseCase(photoPath, analysisPrompt)
+                .onSuccess { description ->
+                    transcriptionRepository.updateSessionPhotoDescription(photo.id, description)
+                    syncSttLlmUseCase.queuePhotoDescription(description)
+                    Log.i(TAG, "Photo analyzed (${description.length} chars), queued for next insight")
+                }
+                .onFailure { e ->
+                    Log.e(TAG, "Photo analysis failed", e)
+                    _uiState.update { it.copy(error = failureMessage) }
+                }
         }
     }
 
