@@ -67,11 +67,16 @@ data class MainUiState(
      */
     val isVisionCapable: Boolean = false,
     /**
-     * True while a captured photo is being analyzed by the vision model.
-     * The camera button is disabled and an "Analyzing photo…" banner is shown.
+     * Number of captured photos whose vision analysis has not finished yet
+     * (the one currently running + any queued behind it). Capture is never
+     * blocked; photos are analyzed one at a time in capture order.
      */
-    val isAnalyzingPhoto: Boolean = false
+    val pendingPhotoAnalysisCount: Int = 0
 ) {
+    /** True while at least one captured photo is being (or waiting to be) analyzed. */
+    val isAnalyzingPhoto: Boolean
+        get() = pendingPhotoAnalysisCount > 0
+
     /**
      * Returns all segments for display: completed + current partial (if exists).
      * Use this in UI to show the full transcription without duplicates.

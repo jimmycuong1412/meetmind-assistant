@@ -312,7 +312,7 @@ fun MainScreen(
                     },
                     actions = {
                         // Camera capture — vision-capable model only, while recording.
-                        // Disabled while a previous photo is still being analyzed.
+                        // Never disabled by analysis: captures queue FIFO in the ViewModel.
                         if (uiState.isRecording && uiState.isVisionCapable) {
                             IconButton(
                                 onClick = {
@@ -323,13 +323,12 @@ fun MainScreen(
                                     )
                                     pendingPhotoFile = photoFile
                                     takePictureLauncher.launch(uri)
-                                },
-                                enabled = !uiState.isAnalyzingPhoto
+                                }
                             ) {
                                 Icon(
                                     imageVector = AppIcons.Camera,
                                     contentDescription = stringResource(R.string.camera_take_photo),
-                                    tint = Color.White.copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
+                                    tint = Color.White
                                 )
                             }
                         }
@@ -596,7 +595,14 @@ fun MainScreen(
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = stringResource(R.string.photo_analyzing),
+                            text = if (uiState.pendingPhotoAnalysisCount > 1) {
+                                stringResource(
+                                    R.string.photo_analyzing_queued,
+                                    uiState.pendingPhotoAnalysisCount - 1
+                                )
+                            } else {
+                                stringResource(R.string.photo_analyzing)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
