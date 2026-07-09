@@ -12,6 +12,7 @@ import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmModelVariant
 import com.meetmind.assistant.domain.model.LlmSamplerConfig
+import com.meetmind.assistant.domain.model.LlmVariantDownloadStatus
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.ThemeMode
 import com.meetmind.assistant.domain.repository.SettingsRepository
@@ -44,8 +45,12 @@ class SettingsViewModel @Inject constructor(
     private val _settings = MutableStateFlow(AppSettings())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()
 
-    private val _isLlmDownloaded = MutableStateFlow(false)
-    val isLlmDownloaded: StateFlow<Boolean> = _isLlmDownloaded.asStateFlow()
+    // Download completeness of the currently selected variant. For the vision-capable
+    // variant this is only DOWNLOADED when both the base GGUF and the mmproj adapter
+    // exist, so devices that fetched the base model before the camera-vision feature
+    // landed see VISION_ADAPTER_MISSING instead of a false "Downloaded".
+    private val _llmDownloadStatus = MutableStateFlow(LlmVariantDownloadStatus.NOT_DOWNLOADED)
+    val llmDownloadStatus: StateFlow<LlmVariantDownloadStatus> = _llmDownloadStatus.asStateFlow()
 
     val llmDownloadState: StateFlow<DownloadState> = downloadStateManager.llmDownloadState
     val sttDownloadState: StateFlow<DownloadState> = downloadStateManager.sttDownloadState
@@ -113,15 +118,13 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.getSettings().collect { loadedSettings ->
                 _settings.value = loadedSettings
                 // Re-check download status whenever settings change (variant may have changed).
-                val filename = modelConfigForVariant(loadedSettings.llmModelVariant).llmFilename
-                _isLlmDownloaded.value = modelDownloadManager.isLlmModelDownloaded(filename)
+                _llmDownloadStatus.value = variantDownloadStatus(loadedSettings.llmModelVariant)
             }
         }
         // Also re-check download status whenever the download state changes.
         viewModelScope.launch {
             downloadStateManager.llmDownloadState.collect { state ->
-                val selectedFilename = modelConfigForVariant(_settings.value.llmModelVariant).llmFilename
-                _isLlmDownloaded.value = modelDownloadManager.isLlmModelDownloaded(selectedFilename)
+                _llmDownloadStatus.value = variantDownloadStatus(_settings.value.llmModelVariant)
                 // When a download completes, update llmModelPath to the downloaded variant's file.
                 // Use activeDownloadVariant so non-selected variants also get their path stored.
                 if (state is DownloadState.Completed) {
@@ -219,12 +222,20 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Returns true if the model file for [variant] is present on disk.
-     * Used by the Settings UI to display a "Downloaded" badge on each variant option.
+     * Returns the download completeness of [variant]'s on-disk files.
+     * Used by the Settings UI to display a "Downloaded" or "Vision adapter missing"
+     * badge on each variant option. A vision-capable variant is only
+     * [LlmVariantDownloadStatus.DOWNLOADED] when both the base GGUF and the mmproj
+     * vision adapter exist; re-triggering the download fetches only the missing file.
      */
-    fun isVariantDownloaded(variant: LlmModelVariant): Boolean {
-        val filename = modelConfigForVariant(variant).llmFilename
-        return modelDownloadManager.isLlmModelDownloaded(filename)
+    fun variantDownloadStatus(variant: LlmModelVariant): LlmVariantDownloadStatus {
+        val config = modelConfigForVariant(variant)
+        val mmproj = config.mmprojFilename
+        return LlmVariantDownloadStatus.resolve(
+            baseModelDownloaded = modelDownloadManager.isLlmModelDownloaded(config.llmFilename),
+            visionAdapterRequired = variant.supportsVision && mmproj != null,
+            visionAdapterDownloaded = mmproj != null && modelDownloadManager.isLlmModelDownloaded(mmproj)
+        )
     }
 
     /**

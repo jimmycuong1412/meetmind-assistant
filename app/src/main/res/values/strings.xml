@@ -523,6 +523,7 @@
     <string name="settings_llm_model_download">Download</string>
     <string name="settings_llm_model_retry">Retry Download</string>
     <string name="settings_llm_model_downloading">Downloading %1$d%%</string>
+    <string name="settings_llm_model_download_vision_adapter">Download vision adapter (~850 MB)</string>
 
     <!-- LLM Model Variant Setting -->
     <string name="settings_llm_model_variant_title">AI Model Quality</string>
@@ -533,6 +534,7 @@
     <string name="settings_llm_model_variant_iq4_desc">Optimized for energy efficiency</string>
     <string name="settings_llm_model_variant_recommended">Recommended for your device</string>
     <string name="settings_llm_model_variant_downloaded">Downloaded</string>
+    <string name="settings_llm_model_variant_vision_adapter_missing">Vision adapter missing</string>
     <string name="settings_llm_model_variant_beta">Beta</string>
     <string name="settings_llm_advanced_section_title">Advanced Models</string>
     <string name="settings_llm_advanced_section_desc">Experimental models for advanced users. Performance may vary from standard models.</string>
