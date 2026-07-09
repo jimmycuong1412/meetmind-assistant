@@ -209,7 +209,12 @@ camera app and merges an on-device description into the next AI insight. Key fac
   a derived val, count > 0), which drives the "Analyzing photo… N more in queue" banner
   (`photo_analyzing_queued`). Don't reintroduce a capture guard on `isAnalyzingPhoto`. Spec/plan:
   `docs/superpowers/{specs,plans}/2026-07-08-concurrent-photo-capture*`. Tests:
-  `PhotoAnalysisQueueTest`.
+  `PhotoAnalysisQueueTest`. Photos can also be **uploaded from device files** (2026-07-08):
+  a gallery button next to the camera launches the Photo Picker, and
+  `ui/util/PhotoImport.kt` re-encodes the pick as JPEG into `filesDir/photos/` before the
+  same `onPhotoCaptured` path — always transcode, because gallery images are often
+  HEIC/WebP, which the native stb_image loader can't read. Spec/plan:
+  `docs/superpowers/{specs,plans}/2026-07-08-photo-upload-from-files*`.
 - **`session_photos` table (Room DB v10)** — `MIGRATION_9_10` in `AppDatabase.kt` adds
   `session_photos` (`id`, `session_id` FK → `transcription_sessions` with cascade delete,
   `file_path`, nullable `description`, `timestamp`) plus an index on `session_id`. New DAO:

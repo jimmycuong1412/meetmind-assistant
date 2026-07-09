@@ -98,8 +98,9 @@ object AppIcons {
     val Person: ImageVector get() = Icons.Outlined.Person
     val Bookmark: ImageVector get() = Icons.Outlined.Bookmark
 
-    // Camera capture (vision insight)
+    // Camera capture / photo upload (vision insight)
     val Camera: ImageVector get() = Icons.Outlined.PhotoCamera
+    val PhotoLibrary: ImageVector get() = Icons.Outlined.PhotoLibrary
 
     // Groups / folders
     val FolderOpen: ImageVector get() = Icons.Outlined.FolderOpen

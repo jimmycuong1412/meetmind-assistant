@@ -509,6 +509,14 @@ class MainViewModel @Inject constructor(
     }
 
     /**
+     * Called when a picked device image could not be imported (decode/copy failed
+     * before any file path existed, so there is nothing to persist or queue).
+     */
+    fun onPhotoImportFailed(message: String) {
+        _uiState.update { it.copy(error = message) }
+    }
+
+    /**
      * Start STT streaming and periodic LLM inference.
      *
      * REFACTORED: Uses a single shared STT stream for both UI display and LLM processing.
