@@ -1604,7 +1604,7 @@ private fun TranscriptionSegmentCard(
     ) {
         val speakerLabel = segment.speaker
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // Left accent bar — purple if unassigned, speaker-color tinted if assigned
+            // Left accent bar - brand accent if unassigned, speaker-tinted if assigned
             Box(
                 modifier = Modifier
                     .width(3.dp)
@@ -1687,20 +1687,14 @@ private fun SpeakerChip(speaker: String, onClick: () -> Unit) {
     }
 }
 
-/** Returns a deterministic color for a speaker label. */
+/**
+ * Deterministic color for a speaker label.
+ *
+ * Delegates to the shared warm palette in the theme (DESIGN.md §7.2); the hash keeps
+ * a speaker's color stable across a session.
+ */
 @Composable
-private fun speakerColor(speaker: String): Color {
-    val palette = listOf(
-        MaterialTheme.colorScheme.primary,
-        Color(0xFF2196F3),  // blue
-        Color(0xFF4CAF50),  // green
-        Color(0xFFFF9800),  // orange
-        Color(0xFF9C27B0),  // purple
-        Color(0xFFF44336),  // red
-    )
-    val index = (speaker.hashCode() and 0x7FFFFFFF) % palette.size
-    return palette[index]
-}
+private fun speakerColor(speaker: String): Color = speakerAccent(speaker)
 
 /** Bottom-sheet dialog for assigning a speaker to a segment. */
 @OptIn(ExperimentalMaterial3Api::class)

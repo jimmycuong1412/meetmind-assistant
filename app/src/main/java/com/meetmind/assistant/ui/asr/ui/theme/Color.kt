@@ -172,7 +172,27 @@ val OnGradientDivider = Color(0x2EFFFFFF)
 val OnGradientScrim = Color(0x24FFFFFF)
 
 // -- DaytimeSkyBanner ---------------------------------------------------------
-// Still cool-toned; reinterpreted in step 5 along with the rest of that component.
-val ModeSkyBlueLight = Color(0xFF38BDF8)
-val ModeSkyBlueDark = Color(0xFF0284C7)
-val ModeAmberDark = Color(0xFFD97706)
+// Time-of-day sky, rewarmed to the parchment system. Each state is a two-stop
+// vertical gradient; hue carries the time, and legibility is handled separately by
+// SkyScrimAlpha rather than by keeping every stop dark.
+//
+// The banner carries white header text. Under the previous cool palette four of the
+// five states failed AA - white on the morning sky was 1.33:1 - because the scrim
+// started at 45% height while the text sits above it. With a full-height scrim the
+// worst case across all states is 5.14:1. See DaytimeSkyBannerContrastTest.
+val SkyNight = Color(0xFF1C1A2E) to Color(0xFF0E0D14)
+val SkyDawn = Color(0xFF8A4526) to Color(0xFFC4763F)
+val SkyMorning = Color(0xFFA8794C) to Color(0xFFD4A574)
+val SkyAfternoon = Color(0xFFB07A43) to Color(0xFFE0A868)
+val SkyDusk = Color(0xFF8D3A1E) to Color(0xFF4A2418)
+
+/** Uniform veil over the whole banner. The single knob that guarantees legibility. */
+const val SkyScrimAlpha = 0.50f
+
+val SkyStar = Color(0xA6FFFFFF)
+val SkySunGlow = Color(0xFFE8B04B)
+val SkySunDisk = Color(0xFFF0C25E)
+val SkyMoonDisk = Color(0xFFE8E2D5)
+val SkyMoonCrater = Color(0xFFC9C1B0)
+val SkyHillBack = Color(0x4D3A2418)
+val SkyHillFront = Color(0xFF3A2418)

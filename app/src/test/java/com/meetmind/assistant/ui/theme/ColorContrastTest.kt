@@ -172,4 +172,51 @@ class ColorContrastTest {
             darkGrounds.forEach { ground -> assertContrast("mode $name (dark)", color, ground, AA_TEXT) }
         }
     }
+
+    @Test
+    fun `every sky state supports the white header text`() {
+        // The banner carries white date/stat text in its top third. Under the old cool
+        // palette four of five states failed AA - white on the morning sky was 1.33:1 -
+        // because the scrim started at 45% height, below the text. A full-height scrim
+        // is what makes hue free to vary; this asserts the guarantee holds.
+        val states = mapOf(
+            "night" to SkyNight,
+            "dawn" to SkyDawn,
+            "morning" to SkyMorning,
+            "afternoon" to SkyAfternoon,
+            "dusk" to SkyDusk,
+        )
+        val scrim = md_theme_light_scrim
+
+        states.forEach { (name, stops) ->
+            listOf("top" to stops.first, "bottom" to stops.second).forEach { (edge, raw) ->
+                // What the eye sees: the scrim composited over the sky stop.
+                val ground = scrim.over(SkyScrimAlpha, raw)
+                assertContrast("sky $name/$edge primary", OnGradient, ground, AA_TEXT)
+
+                val variant = OnGradient.over(OnGradientVariant.alpha, ground)
+                assertContrast("sky $name/$edge secondary", variant, ground, AA_TEXT)
+            }
+        }
+    }
+
+    @Test
+    fun `speaker colors meet AA in both schemes`() {
+        val light = listOf(
+            Color(0xFFB35334), Color(0xFF4F6F82), Color(0xFF547449),
+            Color(0xFF8A6A2F), Color(0xFF734765), Color(0xFF5E5D59),
+        )
+        val dark = listOf(
+            Color(0xFFE08A68), Color(0xFF8FB0C4), Color(0xFF9BBE90),
+            Color(0xFFD4B36A), Color(0xFFC495B4), Color(0xFFB0AEA5),
+        )
+        light.forEachIndexed { i, c ->
+            assertContrast("speaker $i on light surface", c, md_theme_light_surface, AA_TEXT)
+            assertContrast("speaker $i on light background", c, md_theme_light_background, AA_TEXT)
+        }
+        dark.forEachIndexed { i, c ->
+            assertContrast("speaker $i on dark surface", c, md_theme_dark_surface, AA_TEXT)
+            assertContrast("speaker $i on dark background", c, md_theme_dark_background, AA_TEXT)
+        }
+    }
 }

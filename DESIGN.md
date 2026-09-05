@@ -361,9 +361,7 @@ noisy in practice.
 - `InsightsSection.kt:537` hardcodes `Color(0xFFD97706)` for coaching notes; fold it into the
   warning semantic role (§7.1) rather than the mode palette.
 
-> `DaytimeSkyBanner` still needs its own pass — it hardcodes 13 colors across five time-of-day
-> gradients plus sun, moon and hillside fills. It is the most theme-resistant component in the app
-> and is tracked as step 5, not here.
+> `DaytimeSkyBanner` was reinterpreted in step 5 — see [§7.3](#73-daytimeskybanner).
 
 ---
 
@@ -409,6 +407,45 @@ scheme-appropriate list.
 
 ---
 
+### 7.3 DaytimeSkyBanner
+
+Five time-of-day gradients, rewarmed. Hue carries the time; legibility is handled
+separately so the two never trade off against each other.
+
+| State | Window | Top | Bottom |
+|---|---|---|---|
+| Night | 21:00–05:00 | `#1C1A2E` | `#0E0D14` |
+| Dawn | 05:00–08:00 | `#8A4526` | `#C4763F` |
+| Morning | 08:00–12:00 | `#A8794C` | `#D4A574` |
+| Afternoon | 12:00–17:00 | `#B07A43` | `#E0A868` |
+| Dusk | 17:00–21:00 | `#8D3A1E` | `#4A2418` |
+
+**The bug this fixed.** The banner carries white header text — the date and the session
+stat row — in its top third. The old implementation drew a scrim that started at 45%
+height and faded to 30% black at the bottom, so it never reached the text. Measured
+against the actual text position, four of the five states failed AA:
+
+| State | White on top stop | White on bottom stop |
+|---|---|---|
+| Night | 17.42 | 19.53 |
+| Dawn | 7.72 | **2.97** |
+| Morning | **2.54** | **1.33** |
+| Afternoon | **4.10** | **2.14** |
+| Dusk | **3.19** | 7.72 |
+
+Morning at 1.33:1 is effectively invisible text.
+
+The fix is structural: a **uniform `scrim` at `SkyScrimAlpha` (0.50) across the full
+banner height**, replacing the bottom fade. Because contrast no longer depends on the sky
+hue, the palette is free to be as light as the time of day wants. Worst case across all
+five states is now **5.14:1**.
+
+`ColorContrastTest` composites the scrim over each stop and checks both the primary and
+the translucent secondary text, and it was verified to fail when the old morning sky is
+restored.
+
+---
+
 ## 8. Motion
 
 Unchanged from Material 3 defaults. This system's character comes from color and type, not motion.
@@ -442,7 +479,7 @@ Found during the audit, to be resolved as part of this work:
 | 2 | Clear 46 legacy token refs; route all color through `colorScheme` | F-06 | ✅ **Done** |
 | 3 | Decide the mode-color question (§6) | F-02 | ✅ **Done — Option C, implemented** |
 | 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ✅ **Done** |
-| 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ☐ Not started |
+| 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ✅ **Done** |
 | 6 | Rings replace elevation; normalise spacing to the 4dp grid | F-07, F-08 | ☐ Not started |
 
 Steps 1–2 changed nothing visually. Step 3 is the first visible change: mode accents now use the

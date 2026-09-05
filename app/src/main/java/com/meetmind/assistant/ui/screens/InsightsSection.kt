@@ -394,7 +394,7 @@ fun InsightsSection(
  *
  * - Enabled: solid gradient background, subtle breathing pulse animation, "Live" label
  * - Disabled: outlined style, "Sync off" label
- * - Interview mode: rose/pink gradient accent; other modes: brand-purple gradient
+ * - Interview mode: its own mode gradient; other modes: the brand gradient
  */
 @Composable
 private fun LiveSyncButton(

@@ -81,12 +81,12 @@ fun DownloadIconHero(
 /**
  * Animated meetmind logo icon for model download screens.
  *
- * Renders the full logo (ears, top arc, purple circle) with the white smile
+ * Renders the full logo (ears, top arc, brand circle) with the smile
  * rotating 360° continuously inside the circle. Intended for the Downloading
  * state where it replaces the generic CloudDownload icon.
  *
  * Coordinate system: SVG viewBox 895×721, transform translate(-1823,-867) already applied.
- * Purple circle center: (447.5, 386). Smile pivot: same point.
+ * Brand circle center: (447.5, 386). Smile pivot: same point.
  */
 @Composable
 fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
@@ -141,7 +141,7 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
             color = heroColor
         )
 
-        // Purple circle
+        // Brand circle
         drawPath(
             path = Path().apply {
                 moveTo(112f * s, 386f * s)
@@ -154,7 +154,7 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
             color = GradientTop
         )
 
-        // Rotating white smile
+        // Rotating smile
         rotate(degrees = rotation, pivot = Offset(447.5f * s, 386f * s)) {
             drawPath(
                 path = Path().apply {

@@ -80,3 +80,46 @@ fun recordingModeBrush(mode: RecordingMode): Brush {
 @Composable
 @ReadOnlyComposable
 fun isAppInDarkTheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+// ── Speaker colors ───────────────────────────────────────────────────────────
+// DESIGN.md §7.2. Replaces five raw Material 2 primaries (#2196F3, #4CAF50,
+// #FF9800, #9C27B0, #F44336) that were unthemed, cool, and marginal for small text
+// on a light ground.
+//
+// Every value is verified >=4.5:1 against both the surface and the background of its
+// own theme. Four are shared with the mode palette above on purpose: one set of warm
+// hues serves both, so the app carries fewer colors rather than more.
+
+private val SpeakersLight = listOf(
+    Color(0xFFB35334), // terracotta deep
+    Color(0xFF4F6F82), // slate blue
+    Color(0xFF547449), // moss
+    Color(0xFF8A6A2F), // ochre
+    Color(0xFF734765), // plum
+    Color(0xFF5E5D59), // olive gray
+)
+
+private val SpeakersDark = listOf(
+    Color(0xFFE08A68),
+    Color(0xFF8FB0C4),
+    Color(0xFF9BBE90),
+    Color(0xFFD4B36A),
+    Color(0xFFC495B4),
+    Color(0xFFB0AEA5),
+)
+
+/**
+ * A stable color for [speaker], picked deterministically from the name so the same
+ * person keeps the same color for the life of a session.
+ */
+@Composable
+@ReadOnlyComposable
+fun speakerAccent(speaker: String): Color {
+    val palette = if (isAppInDarkTheme()) SpeakersDark else SpeakersLight
+    return palette[(speaker.hashCode() and 0x7FFFFFFF) % palette.size]
+}
+
+/** The speaker palette for the active theme — for previews and tests. */
+@Composable
+@ReadOnlyComposable
+fun speakerPalette(): List<Color> = if (isAppInDarkTheme()) SpeakersDark else SpeakersLight
