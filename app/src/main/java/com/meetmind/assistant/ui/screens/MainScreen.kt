@@ -762,7 +762,7 @@ private fun TranslationSplitView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .background(recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.08f))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -770,13 +770,13 @@ private fun TranslationSplitView(
             Icon(
                 imageVector = AppIcons.Mic,
                 contentDescription = null,
-                tint = ModeEmeraldTint,
+                tint = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = stringResource(R.string.translation_panel_original),
                 style = MaterialTheme.typography.labelMedium,
-                color = ModeEmeraldTint,
+                color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp
             )
@@ -790,13 +790,13 @@ private fun TranslationSplitView(
                 .fillMaxWidth()
         )
 
-        HorizontalDivider(thickness = 1.dp, color = ModeEmeraldTint.copy(alpha = 0.25f))
+        HorizontalDivider(thickness = 1.dp, color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.25f))
 
         // "Translation" panel header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .background(recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.08f))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -804,13 +804,13 @@ private fun TranslationSplitView(
             Icon(
                 imageVector = AppIcons.ModeTranslation,
                 contentDescription = null,
-                tint = ModeEmeraldTint,
+                tint = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = stringResource(R.string.translation_panel_translation),
                 style = MaterialTheme.typography.labelMedium,
-                color = ModeEmeraldTint,
+                color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp
             )

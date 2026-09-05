@@ -693,7 +693,7 @@ private fun SessionCard(
                     .width(4.dp)
                     .fillMaxHeight()
                     .background(
-                        brush = recordingModeGradient(session.mode),
+                        brush = recordingModeBrush(session.mode),
                         shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
                     )
             )
@@ -731,7 +731,7 @@ private fun SessionCard(
                     Text(
                         text = stringResource(recordingModeLabel(session.mode)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = recordingModeTint(session.mode),
+                        color = recordingModeAccent(session.mode),
                         fontWeight = FontWeight.Medium,
                         maxLines = 1
                     )
@@ -1119,26 +1119,12 @@ private fun recordingModeLabel(mode: RecordingMode): Int = when (mode) {
 /**
  * Maps a [RecordingMode] to the gradient brush used for its icon container background.
  */
-private fun recordingModeGradient(mode: RecordingMode): Brush = when (mode) {
-    RecordingMode.SIMPLE_LISTENING      -> ModeSimpleListeningGradient
-    RecordingMode.SHORT_MEETING         -> ModeShortMeetingGradient
-    RecordingMode.LONG_MEETING          -> ModeLongMeetingGradient
-    RecordingMode.REAL_TIME_TRANSLATION -> ModeTranslationGradient
-    RecordingMode.INTERVIEW             -> ModeInterviewGradient
-    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachGradient
-}
+
 
 /**
  * Maps a [RecordingMode] to the flat tint color used for its label text.
  */
-private fun recordingModeTint(mode: RecordingMode): Color = when (mode) {
-    RecordingMode.SIMPLE_LISTENING      -> ModeSkyBlueTint
-    RecordingMode.SHORT_MEETING         -> ModeShortMeetingTint
-    RecordingMode.LONG_MEETING          -> ModeAmberTint
-    RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
-    RecordingMode.INTERVIEW             -> ModeInterviewTint
-    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
-}
+
 
 /**
  * Format timestamp to readable date/time.

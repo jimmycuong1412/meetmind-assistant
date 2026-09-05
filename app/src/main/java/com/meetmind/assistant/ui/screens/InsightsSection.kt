@@ -403,7 +403,7 @@ private fun LiveSyncButton(
     onToggle: (Boolean) -> Unit
 ) {
     val activeGradient: Brush = if (isInterviewMode) {
-        ModeInterviewGradient
+        recordingModeBrush(RecordingMode.INTERVIEW)
     } else {
         PrimaryGradient
     }
@@ -534,9 +534,9 @@ private fun InterviewInsightItem(
     // For coaching notes the title encodes the role as "coaching:<role>"; strip the prefix.
     // For question cards the title IS the detected question text.
     val accentColor = if (isCoachingNote) {
-        Color(0xFFD97706) // amber-600 — coaching / lightbulb feel
+        MaterialTheme.semanticColors.warning
     } else {
-        ModeInterviewTint   // rose — question detected
+        recordingModeAccent(RecordingMode.INTERVIEW)
     }
     val headerIcon = if (isCoachingNote) AppIcons.Lightbulb else AppIcons.Psychology
     val headerLabel = if (isCoachingNote) {
@@ -858,7 +858,7 @@ private fun EnglishCoachInsightItem(
     insight: LlmInsight,
     segments: List<TranscriptionSegment>
 ) {
-    val accentColor = ModeEnglishCoachTint
+    val accentColor = recordingModeAccent(RecordingMode.ENGLISH_COACH)
     val tips = remember(insight.tasks) {
         insight.tasks?.let { parseTasksJson(it) } ?: emptyList()
     }

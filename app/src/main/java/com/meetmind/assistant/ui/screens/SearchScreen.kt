@@ -188,7 +188,7 @@ private fun SearchResultCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val accentColor = result.mode.accentColor()
+    val accentColor = recordingModeAccent(result.mode)
     val dateLabel = remember(result.createdAt) {
         SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(result.createdAt))
     }
@@ -285,14 +285,7 @@ private fun RecordingMode.label(): String = when (this) {
     RecordingMode.ENGLISH_COACH -> stringResource(R.string.mode_english_coach)
 }
 
-private fun RecordingMode.accentColor(): Color = when (this) {
-    RecordingMode.SIMPLE_LISTENING -> ModeSkyBlueTint
-    RecordingMode.SHORT_MEETING -> BrandPrimary
-    RecordingMode.LONG_MEETING -> ModeAmberTint
-    RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
-    RecordingMode.INTERVIEW -> ModeInterviewTint
-    RecordingMode.ENGLISH_COACH -> ModeEnglishCoachTint
-}
+
 
 @Composable
 private fun EmptySearchPrompt(

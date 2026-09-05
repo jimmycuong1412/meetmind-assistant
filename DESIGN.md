@@ -245,60 +245,94 @@ There are currently 31 elevation settings in the UI (20 `defaultElevation`, 9 `t
 
 ## 6. Recording mode colors
 
-**This is the open design question, and it is the one that determines whether the retheme actually
-lands.** It needs a decision before the palette swap.
+> **Decided: Option C (two-tier), 2026-09-06.** The options considered are kept in
+> [§6.4](#64-options-considered-and-rejected) — the rejection reasons matter if this is revisited.
 
-Six recording modes each currently own a saturated two-stop gradient plus a flat tint — sky blue,
-brand purple, amber, emerald, rose, teal — used **44 times** across the UI. They are the most
-visually dominant color in the app. They also directly contradict rule 2 in §1, and the "color
-restraint" comment already sitting at the top of `Color.kt`.
+### 6.1 The tier split
 
-Dropping six saturated hues onto parchment unchanged produces a warm background with the old
-palette still sitting on top of it. Three ways out:
+`RecordingMode` already divides cleanly along what the mode *does*, and the color follows that
+rather than inventing a new grouping:
 
-### Option A — Rewarm (lowest risk)
+| Tier | Modes | What they have in common |
+|---|---|---|
+| **Capture** | Simple Listening, Short Meeting, Long Meeting | Record a meeting, produce a summary afterwards. Differ only in length and insight cadence. |
+| **Live assist** | Real-Time Translation, Interview, English Coach | Act on speech *during* the session. Each is a distinct activity. |
 
-Keep one hue per mode, pulled toward the earth range. Modes stay colour-coded; the palette holds.
+**Capture modes share one color — terracotta — and are told apart by icon and label.**
+**Live-assist modes each keep their own hue.**
 
-| Mode | Now | Proposed | on parchment | Safe for |
-|---|---|---|---|---|
-| Simple Listening | Sky `#0EA5E9` | Slate Blue `#5B7B8A` | 4.10 | icon / stroke |
-| Short Meeting | Purple `#6264A7` | Terracotta `#C96442` | 3.54 | icon / stroke |
-| Long Meeting | Amber `#F59E0B` | Ochre `#B3811F` | 3.13 | icon / stroke |
-| Translation | Emerald `#10B981` | Sage `#6B8F6B` | 3.30 | icon / stroke |
-| Interview | Rose `#F43F5E` | Clay `#A65543` | 4.76 | icon / stroke / **text** |
-| English Coach | Teal `#14B8A6` | Moss `#5F7355` | 4.68 | icon / stroke / **text** |
+This is the core of the decision: the three capture modes are variations of one activity, so
+spending three colors on them was never buying real separation (see §6.3). The three assist modes
+are genuinely different things and keep colour-coding where it earns its place.
 
-**All six clear 3.0:1, so they are safe as icon fills, gradient stops and active strokes. Only
-Clay and Moss clear 4.5:1 for label text.** The current code uses the `Mode*Tint` values for
-small text labels in several places — under Option A those labels must switch to
-`onSurfaceVariant`, with the mode hue carried by the icon beside them.
+### 6.2 Values
 
-Risk: Clay and Terracotta are close enough to be confusable; Sage and Moss likewise. Six earth
-tones have less separation than six saturated hues, which weakens the colour-coding exactly where
-it is load-bearing.
+Every value is verified ≥4.5:1 against **both** the surface and the background in its own theme,
+because these tints are used as small label text (`SessionsScreen.kt:734`,
+`SearchScreen.kt:261`) — not just as icons.
 
-### Option B — Icon-led, single accent (most faithful to §1)
+| Mode | Light | on surface | on bg | Dark | on surface | on bg |
+|---|---|---|---|---|---|---|
+| Simple Listening | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
+| Short Meeting | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
+| Long Meeting | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
+| Real-Time Translation | `#4F6F82` Slate Blue | 5.07 | 4.85 | `#8FB0C4` | 7.36 | 8.05 |
+| Interview | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
+| English Coach | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
 
-Modes are distinguished by **icon and label**, not hue. Everything uses terracotta. Colour returns
-as a single accent for the active/recording state.
+All four colors are mutually distinguishable — every pair differs by ≥1.5:1 in contrast or ≥25° in
+hue, in both themes.
 
-Strongest adherence to the design intent and the biggest simplification — deletes six gradients and
-six tints. But it is a real product change: mode identity currently reads at a glance from colour
-alone, and this removes that.
+Note the capture tier uses the same `#B35334` as the `primary` role. That is deliberate: capture is
+the app's default activity, so it takes the brand color rather than a color of its own.
 
-### Option C — Two-tier
+### 6.3 Why the capture modes are not three shades of terracotta
 
-Terracotta for the two core meeting modes; muted earth tones for the four specialised ones. Keeps
-glanceable separation where it matters most and reduces the palette without flattening it.
+The first attempt at Option C gave each capture mode its own terracotta-family shade — taupe
+`#6E6257`, terracotta `#B35334`, umber `#8C4A2F`. Each passed AA against the background
+individually, so it looked fine on paper. Measured against *each other* they were:
 
-**Recommendation: Option C**, falling back to A if mode recognition testing shows users rely on the
-colour more than expected. Option B is the purest but should not be chosen without checking how
-people actually navigate the mode picker.
+| Pair | Contrast |
+|---|---|
+| Simple vs Short | 1.18 |
+| Simple vs Long | 1.13 |
+| Short vs Long | 1.34 |
 
-> Whichever is chosen, `DaytimeSkyBanner` needs its own pass — it hardcodes 13 colors across five
-> time-of-day gradients (night indigo, dawn, morning, afternoon, dusk) plus sun, moon and hillside
-> fills. It is the most theme-resistant component in the app.
+Anything under ~1.5:1 reads as the same colour at label size. Their hues sat 3–14° apart, so hue
+could not separate them either. A tier of three near-identical colours is worse than one honest
+colour, because it implies a distinction the eye cannot resolve — and it triples the palette for
+nothing. Hence: one colour, three icons.
+
+### 6.4 Options considered and rejected
+
+**Option A — rewarm all six.** Keeps one hue per mode, pulled to the earth range. Rejected: it
+preserves a six-colour palette that contradicts §1 rule 2, and the rewarmed hues crowd each other
+(Clay vs Terracotta, Sage vs Moss). It also failed the text-contrast bar — four of the six proposed
+tints landed between 3.13 and 4.10 against parchment, below the 4.5 these labels need.
+
+**Option B — single accent, icon-led throughout.** Purest reading of §1 and the biggest
+simplification. Rejected as too blunt for now: it removes glanceable identity from Translation,
+Interview and Coach, which are genuinely different activities a user picks deliberately. Option C
+gets most of B's simplification while keeping that. B stays the fallback if the assist hues prove
+noisy in practice.
+
+### 6.5 Implementation notes
+
+- Three near-duplicate mode→color mappings currently exist — `SessionsScreen.kt:1134`,
+  `SearchScreen.kt:288`, `NewSessionDialog.kt:461`. Consolidate into one
+  `RecordingMode.accentColor()` in the theme package, scheme-aware, and delete the other two.
+- Likewise `recordingModeGradient()` — with capture collapsed to one colour, six gradients become
+  four.
+- `ModeShortMeetingGradient`/`Tint` currently alias `PrimaryGradient`/`BrandPrimary`, so
+  `SearchScreen.kt:290` (the last `BrandPrimary` reference in the app) resolves as part of this work.
+- `InsightsSection.kt:539` uses `ModeInterviewTint` for a "question detected" accent and `:861`
+  uses `ModeEnglishCoachTint` for coaching — both stay valid under the new values.
+- `InsightsSection.kt:537` hardcodes `Color(0xFFD97706)` for coaching notes; fold it into the
+  warning semantic role (§7.1) rather than the mode palette.
+
+> `DaytimeSkyBanner` still needs its own pass — it hardcodes 13 colors across five time-of-day
+> gradients plus sun, moon and hillside fills. It is the most theme-resistant component in the app
+> and is tracked as step 5, not here.
 
 ---
 
@@ -324,17 +358,20 @@ Semantic color is **separate from the accent** and never substitutes for it.
 Material 2 primaries (`#2196F3`, `#4CAF50`, `#FF9800`, `#9C27B0`, `#F44336`). These are unthemed,
 cool, and marginal for small text on a light ground.
 
-Replacement — six warm hues, each verified ≥4.5:1 on both `#FAF9F5` and `#1E1D1B` where used as
-label text:
+Replacement — six warm hues, each verified ≥4.5:1 against **both** the surface and the background
+in its own theme:
 
-| # | Light | Dark |
-|---|---|---|
-| 1 | `#B35334` Terracotta Deep | `#E08A68` |
-| 2 | `#4F6F82` Slate Blue | `#8FB0C4` |
-| 3 | `#5A7A50` Moss | `#9BBE90` |
-| 4 | `#8A6A2F` Ochre | `#D4B36A` |
-| 5 | `#7A4E6B` Plum | `#C495B4` |
-| 6 | `#5E5D59` Olive Gray | `#B0AEA5` |
+| # | Light | on surface | on bg | Dark | on surface | on bg |
+|---|---|---|---|---|---|---|
+| 1 | `#B35334` Terracotta Deep | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
+| 2 | `#4F6F82` Slate Blue | 5.07 | 4.85 | `#8FB0C4` | 7.36 | 8.05 |
+| 3 | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
+| 4 | `#8A6A2F` Ochre | 4.77 | 4.55 | `#D4B36A` | 8.39 | 9.18 |
+| 5 | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
+| 6 | `#5E5D59` Olive Gray | 6.26 | 5.98 | `#B0AEA5` | 7.57 | 8.29 |
+
+Speakers 1–3 and 5 share their values with the mode palette (§6.2) deliberately — one set of
+warm hues serves both, so the app has fewer colors to hold, not more.
 
 Keep the deterministic hash so a speaker keeps their color across a session, but index into the
 scheme-appropriate list.
@@ -372,12 +409,14 @@ Found during the audit, to be resolved as part of this work:
 |---|---|---|---|
 | 1 | Rewrite this spec | F-03, F-09 | ✅ **Done** |
 | 2 | Clear 46 legacy token refs; route all color through `colorScheme` | F-06 | ✅ **Done** |
-| 3 | Decide the mode-color question (§6) | F-02 | ☐ **Needs a decision** |
+| 3 | Decide the mode-color question (§6) | F-02 | ✅ **Done — Option C, implemented** |
 | 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ☐ Not started |
 | 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ☐ Not started |
 | 6 | Rings replace elevation; normalise spacing to the 4dp grid | F-07, F-08 | ☐ Not started |
 
-Steps 1–2 change nothing visually. The visible switch happens once, at step 4.
+Steps 1–2 changed nothing visually. Step 3 is the first visible change: mode accents now use the
+warm two-tier palette while the rest of the app is still slate-violet, so the two systems sit side
+by side until step 4 lands. The full switch happens once, at step 4.
 
 ### Known blockers
 
@@ -386,7 +425,6 @@ Steps 1–2 change nothing visually. The visible switch happens once, at step 4.
   catches nothing. Most sit on gradient surfaces where white-on-violet currently works; on
   parchment many become unreadable. Each site needs a judgement call between `onPrimary`,
   `onSurface`, or a new `onGradient` token.
-- **§6 is undecided** and blocks step 4.
 
 ---
 

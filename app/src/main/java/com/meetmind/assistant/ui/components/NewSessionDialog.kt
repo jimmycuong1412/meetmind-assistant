@@ -458,14 +458,7 @@ private fun ModeCard(
     onClick: () -> Unit,
     insightIntervalLabel: String? = null
 ) {
-    val accentColor = when (mode) {
-        RecordingMode.SIMPLE_LISTENING      -> ModeSkyBlueTint
-        RecordingMode.SHORT_MEETING         -> ModeShortMeetingTint
-        RecordingMode.LONG_MEETING          -> ModeAmberTint
-        RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
-        RecordingMode.INTERVIEW             -> ModeInterviewTint
-        RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
-    }
+    val accentColor = recordingModeAccent(mode)
     val borderColor = if (isSelected) accentColor else MaterialTheme.colorScheme.outlineVariant
     val bgColor = if (isSelected) accentColor.copy(alpha = 0.07f) else MaterialTheme.colorScheme.surface
 

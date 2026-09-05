@@ -128,27 +128,12 @@ val Success = SuccessLight
 )
 val Warning = WarningLight
 
-// Legacy colors (kept for backward compatibility during transition)
-// TODO: Replace usages with MaterialTheme.colorScheme equivalents
+// Legacy: the gray ramp and Accent*/BrandPrimary aliases are gone — every call site
+// now reads from MaterialTheme.colorScheme (see DESIGN.md step 2).
+//
+// `White` survives only for the three sites that still paint on a gradient; those are
+// resolved in step 4 along with the ~104 raw `Color.White` literals (DESIGN.md F-01).
 val White = Color(0xFFFFFFFF)
-val Black = Color(0xFF000000)
-val OffWhite = Color(0xFFFAFAFA)
-val LightGray = Color(0xFFF5F5F5)
-val Gray100 = Color(0xFFE8E8E8)
-val Gray200 = Color(0xFFD0D0D0)
-val Gray300 = Color(0xFFB8B8B8)
-val Gray400 = Color(0xFF909090)
-val Gray500 = Color(0xFF6B6B6B)
-val Gray600 = Color(0xFF4A4A4A)
-val Gray700 = Color(0xFF2E2E2E)
-val Gray800 = Color(0xFF1A1A1A)
-val Gray900 = Color(0xFF0D0D0D)
-val AccentPrimary = Gray700
-val AccentSecondary = Gray500
-val AccentSuccess = Color(0xFF4CAF50)
-val AccentError = Color(0xFFE53935)
-val AccentWarning = Color(0xFFFFA726)
-val BrandPrimary = BrandPurple  // Alias
 
 /**
  * Gradient brushes for brand elements
@@ -175,61 +160,13 @@ val AccentGradient = Brush.linearGradient(
 )
 
 // ── Recording mode colors ────────────────────────────────────────────────────
-// Each mode has a distinct identity: icon background gradient + flat tint for labels.
+// Mode accents now live in ModeColors.kt as a single scheme-aware mapping
+// (DESIGN.md §6, Option C). Only the values DaytimeSkyBanner still needs remain
+// here; they go away with that component's pass (step 5).
 
-// Simple Listening — sky blue (calm, passive, listening)
 val ModeSkyBlueLight = Color(0xFF38BDF8)
 val ModeSkyBlueDark  = Color(0xFF0284C7)
-val ModeSkyBlueTint  = Color(0xFF0EA5E9)
-val ModeSimpleListeningGradient = Brush.linearGradient(
-    colors = listOf(ModeSkyBlueLight, ModeSkyBlueDark),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
-
-// Short Meeting — brand purple (meetings are the core use case)
-val ModeShortMeetingGradient = PrimaryGradient
-val ModeShortMeetingTint = BrandPrimary
-
-// Long Meeting — amber/orange (extended, high-intensity, important)
-val ModeAmberLight = Color(0xFFFBBF24)
-val ModeAmberDark  = Color(0xFFD97706)
-val ModeAmberTint  = Color(0xFFF59E0B)
-val ModeLongMeetingGradient = Brush.linearGradient(
-    colors = listOf(ModeAmberLight, ModeAmberDark),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
-
-// Real-Time Translation — emerald green (bridge between languages)
-val ModeEmeraldLight = Color(0xFF34D399)
-val ModeEmeraldDark  = Color(0xFF059669)
-val ModeEmeraldTint  = Color(0xFF10B981)
-val ModeTranslationGradient = Brush.linearGradient(
-    colors = listOf(ModeEmeraldLight, ModeEmeraldDark),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
-
-// Interview Mode — rose/pink (professional, confident, energetic)
-val ModeInterviewLight = Color(0xFFFB7185)
-val ModeInterviewDark  = Color(0xFFE11D48)
-val ModeInterviewTint  = Color(0xFFF43F5E)
-val ModeInterviewGradient = Brush.linearGradient(
-    colors = listOf(ModeInterviewLight, ModeInterviewDark),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
-
-// English Coach Mode — teal/green (learning, growth, language)
-val ModeEnglishCoachLight = Color(0xFF2DD4BF)
-val ModeEnglishCoachDark  = Color(0xFF0D9488)
-val ModeEnglishCoachTint  = Color(0xFF14B8A6)
-val ModeEnglishCoachGradient = Brush.linearGradient(
-    colors = listOf(ModeEnglishCoachLight, ModeEnglishCoachDark),
-    start = Offset(0f, 0f),
-    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-)
+val ModeAmberDark    = Color(0xFFD97706)
 
 // ── Download immersive screen ────────────────────────────────────────────────
 /** Deep navy used as the bottom stop of the full-screen download gradient. */
