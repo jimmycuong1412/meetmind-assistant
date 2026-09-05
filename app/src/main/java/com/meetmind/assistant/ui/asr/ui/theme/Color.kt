@@ -103,9 +103,30 @@ val md_theme_dark_onTertiary = Color(0xFF492532)
 val md_theme_dark_tertiaryContainer = Color(0xFF633B48)
 val md_theme_dark_onTertiaryContainer = Color(0xFFFFD8E4)
 
-// Functional colors (custom, not in M3 spec)
-val Success = Color(0xFF10B981)
-val Warning = Color(0xFFF59E0B)
+// ── Semantic colors (no M3 role exists for these) ────────────────────────────
+// Material 3 defines `error` but has no success/warning role, so these are
+// supplied per-scheme and surfaced through `MaterialTheme.semanticColors`
+// (see Theme.kt). Always go through that accessor — never reference these
+// values directly, so the retheme in DESIGN.md step 4 is a one-file change.
+//
+// Palette values and their verified contrast ratios: DESIGN.md §7.1.
+val SuccessLight = Color(0xFF10B981)
+val SuccessDark  = Color(0xFF34D399)
+val WarningLight = Color(0xFFF59E0B)
+val WarningDark  = Color(0xFFFBBF24)
+
+// Deprecated flat aliases — scheme-unaware, so they are wrong in one theme.
+@Deprecated(
+    "Use MaterialTheme.semanticColors.success",
+    ReplaceWith("MaterialTheme.semanticColors.success")
+)
+val Success = SuccessLight
+
+@Deprecated(
+    "Use MaterialTheme.semanticColors.warning",
+    ReplaceWith("MaterialTheme.semanticColors.warning")
+)
+val Warning = WarningLight
 
 // Legacy colors (kept for backward compatibility during transition)
 // TODO: Replace usages with MaterialTheme.colorScheme equivalents

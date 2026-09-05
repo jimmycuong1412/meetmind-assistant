@@ -490,13 +490,13 @@ fun MainScreen(
                             // label so blind users can hear the status text below; tint conveys
                             // ready/not-ready visually for sighted users.
                             contentDescription = stringResource(R.string.ai_status_indicator),
-                            tint = if (aiReady) AccentSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (aiReady) MaterialTheme.semanticColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
                             text = stringResource(R.string.llm),
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (aiReady) AccentSuccess else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (aiReady) MaterialTheme.semanticColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -616,7 +616,7 @@ fun MainScreen(
             } else {
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = BrandPrimary,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 divider = {},
                 indicator = { tabPositions ->

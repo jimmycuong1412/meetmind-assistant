@@ -1594,7 +1594,7 @@ private fun LlmModelDownloadSetting(
                 if (isDownloaded || isDownloading) {
                     Spacer(modifier = Modifier.width(12.dp))
                     Surface(
-                        color = if (isDownloaded) AccentSuccess.copy(alpha = 0.15f)
+                        color = if (isDownloaded) MaterialTheme.semanticColors.success.copy(alpha = 0.15f)
                         else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                         shape = MaterialTheme.shapes.small
                     ) {
@@ -1604,7 +1604,7 @@ private fun LlmModelDownloadSetting(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (isDownloaded) AccentSuccess
+                            color = if (isDownloaded) MaterialTheme.semanticColors.success
                             else MaterialTheme.colorScheme.primary
                         )
                     }
@@ -1702,7 +1702,7 @@ private fun DiarizationModelSetting(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Surface(
-                color = if (isDownloaded) AccentSuccess.copy(alpha = 0.15f)
+                color = if (isDownloaded) MaterialTheme.semanticColors.success.copy(alpha = 0.15f)
                 else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 shape = MaterialTheme.shapes.small
             ) {
@@ -1712,7 +1712,7 @@ private fun DiarizationModelSetting(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDownloaded) AccentSuccess
+                    color = if (isDownloaded) MaterialTheme.semanticColors.success
                     else MaterialTheme.colorScheme.primary
                 )
             }
@@ -1969,14 +1969,14 @@ private fun SttLanguageItem(
                     )
                     if (isDownloaded) {
                         Surface(
-                            color = AccentSuccess.copy(alpha = 0.15f),
+                            color = MaterialTheme.semanticColors.success.copy(alpha = 0.15f),
                             shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_stt_downloaded),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = AccentSuccess,
+                                color = MaterialTheme.semanticColors.success,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }

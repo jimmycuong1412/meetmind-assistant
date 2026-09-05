@@ -48,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
-import com.meetmind.assistant.ui.ui.theme.BrandPrimary
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meetmind.assistant.ui.R
@@ -1612,7 +1611,7 @@ private fun TranscriptionSegmentCard(
                     .fillMaxHeight()
                     .background(
                         if (speakerLabel != null) speakerColor(speakerLabel).copy(alpha = 0.8f)
-                        else BrandPrimary.copy(alpha = 0.45f)
+                        else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                     )
             )
             Column(modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp)) {

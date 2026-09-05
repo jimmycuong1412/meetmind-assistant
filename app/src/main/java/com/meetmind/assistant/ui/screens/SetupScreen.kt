@@ -160,7 +160,7 @@ private fun IdleContent(
     Button(
         onClick = onStart,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Icon(AppIcons.Download, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))
@@ -173,7 +173,7 @@ private fun IdleContent(
     ) {
         Text(
             text = stringResource(R.string.onboarding_llm_skip_short),
-            color = Gray600,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
@@ -229,7 +229,7 @@ private fun DownloadingContent(state: DownloadState.Downloading) {
         text = "${state.progress.percentage}%",
         style = MaterialTheme.typography.displaySmall,
         fontWeight = FontWeight.Bold,
-        color = BrandPrimary
+        color = MaterialTheme.colorScheme.primary
     )
 
     // Progress bar
@@ -238,8 +238,8 @@ private fun DownloadingContent(state: DownloadState.Downloading) {
         modifier = Modifier
             .fillMaxWidth()
             .height(8.dp),
-        color = BrandPrimary,
-        trackColor = Gray200
+        color = MaterialTheme.colorScheme.primary,
+        trackColor = MaterialTheme.colorScheme.surfaceVariant
     )
 
     // Download stats
@@ -315,7 +315,7 @@ private fun CompletedContent() {
         imageVector = AppIcons.CheckCircle,
         contentDescription = null,
         modifier = Modifier.size(64.dp),
-        tint = AccentSuccess
+        tint = MaterialTheme.semanticColors.success
     )
 
     Text(
@@ -330,14 +330,14 @@ private fun CompletedContent() {
     Text(
         text = stringResource(R.string.onboarding_llm_initializing),
         style = MaterialTheme.typography.bodyMedium,
-        color = Gray600,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
     )
 
     CircularProgressIndicator(
         modifier = Modifier.size(40.dp),
-        color = BrandPrimary
+        color = MaterialTheme.colorScheme.primary
     )
 }
 
@@ -354,7 +354,7 @@ private fun ErrorContent(
         imageVector = AppIcons.Error,
         contentDescription = null,
         modifier = Modifier.size(64.dp),
-        tint = AccentError
+        tint = MaterialTheme.colorScheme.error
     )
 
     Text(
@@ -365,21 +365,21 @@ private fun ErrorContent(
     )
 
     Surface(
-        color = AccentError.copy(alpha = 0.1f),
+        color = MaterialTheme.colorScheme.error.copy(alpha = 0.1f),
         shape = MaterialTheme.shapes.small
     ) {
         Text(
             text = message,
             modifier = Modifier.padding(12.dp),
             style = MaterialTheme.typography.bodySmall,
-            color = AccentError
+            color = MaterialTheme.colorScheme.error
         )
     }
 
     Button(
         onClick = onRetry,
         modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
     ) {
         Icon(AppIcons.Refresh, contentDescription = null)
         Spacer(modifier = Modifier.width(8.dp))
@@ -392,7 +392,7 @@ private fun ErrorContent(
     ) {
         Text(
             text = stringResource(R.string.setup_continue_no_ai),
-            color = Gray600,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             maxLines = 1
         )
@@ -446,7 +446,7 @@ private fun ModelInfoRow(label: String, value: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Gray600
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,

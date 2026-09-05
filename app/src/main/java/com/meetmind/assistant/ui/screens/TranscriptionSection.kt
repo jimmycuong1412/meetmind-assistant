@@ -156,8 +156,8 @@ private fun TranscriptionItem(segment: TranscriptionSegment) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(imageVector = AppIcons.CheckCircle, contentDescription = null, tint = Success, modifier = Modifier.size(14.dp))
-                    Text(text = stringResource(R.string.transcription_complete), style = MaterialTheme.typography.labelSmall, color = Success, fontWeight = FontWeight.Medium)
+                    Icon(imageVector = AppIcons.CheckCircle, contentDescription = null, tint = MaterialTheme.semanticColors.success, modifier = Modifier.size(14.dp))
+                    Text(text = stringResource(R.string.transcription_complete), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.semanticColors.success, fontWeight = FontWeight.Medium)
                 }
             }
         }

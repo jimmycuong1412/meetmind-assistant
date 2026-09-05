@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.sp
 import com.meetmind.assistant.domain.model.SupportedLanguages
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.components.GradientButton
-import com.meetmind.assistant.ui.ui.theme.BrandPrimary
 
 /**
  * Returns the flag emoji for a BCP-47 language code using Unicode regional indicator symbols.
@@ -156,7 +155,7 @@ private fun LanguageCell(
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = if (isSelected) 
-            androidx.compose.foundation.BorderStroke(2.dp, BrandPrimary) 
+            androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary) 
         else 
             null
     ) {

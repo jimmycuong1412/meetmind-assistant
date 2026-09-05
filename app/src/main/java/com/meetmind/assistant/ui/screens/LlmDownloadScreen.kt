@@ -208,9 +208,9 @@ private fun LlmResultLayout(
 ) {
     val isSuccess = downloadState is DownloadState.Completed
     val gradient = if (isSuccess)
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, AccentSuccess.copy(alpha = 0.60f)))
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, MaterialTheme.semanticColors.success.copy(alpha = 0.60f)))
     else
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, AccentError.copy(alpha = 0.60f)))
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, MaterialTheme.colorScheme.error.copy(alpha = 0.60f)))
 
     Box(
         modifier = Modifier
@@ -419,7 +419,7 @@ private fun LlmIdleLayout(
                     ) {
                         Icon(
                             AppIcons.Info, null,
-                            tint = BrandPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
@@ -440,7 +440,7 @@ private fun LlmBenefitRow(icon: androidx.compose.ui.graphics.vector.ImageVector,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, null, tint = BrandPrimary, modifier = Modifier.size(20.dp))
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -470,14 +470,14 @@ private fun LlmLicenseLinkRow() {
                 text = "Gemma Terms of Use",
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
-                color = BrandPrimary
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(2.dp))
             Icon(
                 imageVector = AppIcons.OpenInNew,
                 contentDescription = null,
                 modifier = Modifier.size(12.dp),
-                tint = BrandPrimary
+                tint = MaterialTheme.colorScheme.primary
             )
         }
     }

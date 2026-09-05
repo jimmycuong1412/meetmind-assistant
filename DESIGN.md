@@ -371,7 +371,7 @@ Found during the audit, to be resolved as part of this work:
 | # | Step | Findings | Status |
 |---|---|---|---|
 | 1 | Rewrite this spec | F-03, F-09 | ✅ **Done** |
-| 2 | Clear 46 legacy token refs; route all color through `colorScheme` | F-06 | ☐ Not started |
+| 2 | Clear 46 legacy token refs; route all color through `colorScheme` | F-06 | ✅ **Done** |
 | 3 | Decide the mode-color question (§6) | F-02 | ☐ **Needs a decision** |
 | 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ☐ Not started |
 | 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ☐ Not started |

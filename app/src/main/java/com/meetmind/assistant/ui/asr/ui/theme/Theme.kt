@@ -8,6 +8,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.meetmind.assistant.domain.model.ThemeMode
 
@@ -88,6 +93,43 @@ private val DarkColorScheme = darkColorScheme(
     outlineVariant = md_theme_dark_outlineVariant,
 )
 
+/**
+ * Semantic colors that Material 3 has no role for.
+ *
+ * M3 ships `error` but nothing for success or warning, so these travel alongside
+ * the color scheme instead of being hardcoded at call sites. Read them through
+ * [semanticColors] so both themes resolve correctly:
+ *
+ * ```
+ * tint = MaterialTheme.semanticColors.success
+ * ```
+ *
+ * Values and verified contrast ratios: DESIGN.md §7.1.
+ */
+@Immutable
+data class SemanticColors(
+    val success: Color,
+    val warning: Color,
+)
+
+private val LightSemanticColors = SemanticColors(
+    success = SuccessLight,
+    warning = WarningLight,
+)
+
+private val DarkSemanticColors = SemanticColors(
+    success = SuccessDark,
+    warning = WarningDark,
+)
+
+private val LocalSemanticColors = staticCompositionLocalOf { LightSemanticColors }
+
+/** Semantic colors for the active theme. Companion to `MaterialTheme.colorScheme`. */
+val MaterialTheme.semanticColors: SemanticColors
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalSemanticColors.current
+
 @Composable
 fun LibellulaTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -112,12 +154,16 @@ fun LibellulaTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = AppShapes,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalSemanticColors provides if (darkTheme) DarkSemanticColors else LightSemanticColors
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = AppShapes,
+            content = content
+        )
+    }
 }
 
 // Backward compatibility alias
