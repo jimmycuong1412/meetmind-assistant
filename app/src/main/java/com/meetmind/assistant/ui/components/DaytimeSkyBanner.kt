@@ -32,10 +32,10 @@ import kotlin.math.sin
  *
  * Sky palette is harmonised with the brand purple family:
  *   night   → deep indigo  → near-black  (matches DownloadImmersiveNavy)
- *   dawn    → BrandPurpleDark → warm orange
+ *   dawn    → GradientTop → warm orange
  *   morning → soft blue    → pale sky
  *   afternoon → ModeSkyBlueDark → ModeSkyBlueLight
- *   dusk    → ModeAmberDark → BrandPurpleDark
+ *   dusk    → ModeAmberDark → GradientTop
  */
 @Composable
 fun DaytimeSkyBanner(modifier: Modifier = Modifier) {
@@ -58,13 +58,13 @@ fun DaytimeSkyBanner(modifier: Modifier = Modifier) {
             totalMinutes < 5 * 60 || totalMinutes >= 21 * 60 ->
                 Color(0xFF1A0E4A) to Color(0xFF0A0A1E)   // night: deep indigo → near-black
             totalMinutes < 8 * 60 ->
-                Color(0xFF5636C4) to Color(0xFFE07B39)   // dawn: BrandPurpleDark → warm orange
+                Color(0xFF5636C4) to Color(0xFFE07B39)   // dawn: GradientTop → warm orange
             totalMinutes < 12 * 60 ->
                 Color(0xFF60A5FA) to Color(0xFFBAE6FD)   // morning: soft blue → pale sky
             totalMinutes < 17 * 60 ->
                 Color(0xFF0284C7) to Color(0xFF38BDF8)   // afternoon: ModeSkyBlueDark → ModeSkyBlueLight
             else ->
-                Color(0xFFD97706) to Color(0xFF5636C4)   // dusk: ModeAmberDark → BrandPurpleDark
+                Color(0xFFD97706) to Color(0xFF5636C4)   // dusk: ModeAmberDark → GradientTop
         }
     }
 
@@ -119,7 +119,7 @@ fun DaytimeSkyBanner(modifier: Modifier = Modifier) {
             drawCircle(Color(0xFFCAC4D0), 3.5.dp.toPx(), Offset(cx + 4.dp.toPx(), cy - 3.dp.toPx()))
         }
 
-        // 4. Back hills — BrandPurpleDark, low alpha (distant layer)
+        // 4. Back hills — GradientTop, low alpha (distant layer)
         val backHill = Path().apply {
             moveTo(0f, h)
             lineTo(0f, h * 0.60f)
@@ -130,7 +130,7 @@ fun DaytimeSkyBanner(modifier: Modifier = Modifier) {
         }
         drawPath(backHill, Color(0xFF5636C4).copy(alpha = 0.30f))
 
-        // 5. Front hills — BrandPurpleDark, fully opaque (foreground layer)
+        // 5. Front hills — GradientTop, fully opaque (foreground layer)
         //    Drawn after the celestial body so it completely hides the body near the horizon.
         val frontHill = Path().apply {
             moveTo(0f, h)

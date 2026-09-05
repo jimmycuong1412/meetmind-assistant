@@ -258,7 +258,7 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            Box(modifier = Modifier.background(BrandPurpleDark)) {
+            Box(modifier = Modifier.background(GradientTop)) {
                 TopAppBar(
                     title = {
                         Column {
@@ -267,7 +267,7 @@ fun MainScreen(
                                 fontSize = 20.sp,
                                 fontFamily = SpaceGroteskFont,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.semanticColors.onGradient
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -287,7 +287,7 @@ fun MainScreen(
                                         stringResource(R.string.recording_session)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = if (uiState.isRecording) 1f else 0.75f),
+                                    color = MaterialTheme.semanticColors.onGradient.copy(alpha = if (uiState.isRecording) 1f else 0.75f),
                                     fontWeight = if (uiState.isRecording) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
@@ -329,7 +329,7 @@ fun MainScreen(
                                 Icon(
                                     imageVector = AppIcons.Camera,
                                     contentDescription = stringResource(R.string.camera_take_photo),
-                                    tint = Color.White.copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
+                                    tint = MaterialTheme.semanticColors.onGradient.copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
                                 )
                             }
                         }
@@ -344,7 +344,7 @@ fun MainScreen(
                                         stringResource(R.string.screen_wake_enable)
                                     else
                                         stringResource(R.string.screen_wake_disable),
-                                    tint = Color.White.copy(alpha = if (userDimmedScreen) 0.5f else 1f)
+                                    tint = MaterialTheme.semanticColors.onGradient.copy(alpha = if (userDimmedScreen) 0.5f else 1f)
                                 )
                             }
                         }
@@ -358,21 +358,21 @@ fun MainScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color.White
+                                    color = MaterialTheme.semanticColors.onGradient
                                 )
                                 Text(
                                     text = "${uiState.downloadProgress}%",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White
+                                    color = MaterialTheme.semanticColors.onGradient
                                 )
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        titleContentColor = MaterialTheme.semanticColors.onGradient,
+                        navigationIconContentColor = MaterialTheme.semanticColors.onGradient,
+                        actionIconContentColor = MaterialTheme.semanticColors.onGradient
                     )
                 )
             }
@@ -460,7 +460,7 @@ fun MainScreen(
                             Icon(
                                 imageVector = if (uiState.isRecording) AppIcons.Stop else AppIcons.Mic,
                                 contentDescription = if (uiState.isRecording) stringResource(R.string.stop) else stringResource(R.string.record),
-                                tint = Color.White,
+                                tint = MaterialTheme.semanticColors.onGradient,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -617,7 +617,7 @@ fun MainScreen(
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = Color.White,
+                contentColor = MaterialTheme.semanticColors.onGradient,
                 divider = {},
                 indicator = { tabPositions ->
                     if (selectedTab < tabPositions.size) {
@@ -629,7 +629,7 @@ fun MainScreen(
                                 .offset(x = tab.left)
                                 .width(tab.width)
                                 .height(3.dp)
-                                .background(Color.White)
+                                .background(MaterialTheme.semanticColors.onGradient)
                         )
                     }
                 }

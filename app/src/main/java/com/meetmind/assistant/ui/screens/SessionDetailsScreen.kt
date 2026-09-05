@@ -104,14 +104,14 @@ fun SessionDetailsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            Box(modifier = Modifier.background(BrandPurpleDark)) {
+            Box(modifier = Modifier.background(GradientTop)) {
                 TopAppBar(
                     title = {
                         Text(
                             text = stringResource(R.string.session_details),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.semanticColors.onGradient
                         )
                     },
                     navigationIcon = {
@@ -139,7 +139,7 @@ fun SessionDetailsScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color.White
+                                    color = MaterialTheme.semanticColors.onGradient
                                 )
                             }
                         } else {
@@ -187,7 +187,7 @@ fun SessionDetailsScreen(
                                     Icon(
                                         imageVector = AppIcons.AutoAwesome,
                                         contentDescription = stringResource(R.string.generate_history_insight),
-                                        tint = Color.White,
+                                        tint = MaterialTheme.semanticColors.onGradient,
                                         modifier = Modifier.scale(pulseScale)
                                     )
                                 }
@@ -209,7 +209,7 @@ fun SessionDetailsScreen(
                                 Icon(
                                     imageVector = AppIcons.Share,
                                     contentDescription = stringResource(R.string.export),
-                                    tint = Color.White
+                                    tint = MaterialTheme.semanticColors.onGradient
                                 )
                             }
                             DropdownMenu(
@@ -282,13 +282,13 @@ fun SessionDetailsScreen(
                                     androidx.compose.material3.CircularProgressIndicator(
                                         modifier = Modifier.size(22.dp),
                                         strokeWidth = 2.dp,
-                                        color = Color.White
+                                        color = MaterialTheme.semanticColors.onGradient
                                     )
                                 } else {
                                     Icon(
                                         imageVector = AppIcons.RecordVoiceOver,
                                         contentDescription = stringResource(R.string.identify_speakers),
-                                        tint = Color.White
+                                        tint = MaterialTheme.semanticColors.onGradient
                                     )
                                 }
                             }
@@ -300,15 +300,15 @@ fun SessionDetailsScreen(
                             Icon(
                                 imageVector = AppIcons.Delete,
                                 contentDescription = stringResource(R.string.delete),
-                                tint = Color.White
+                                tint = MaterialTheme.semanticColors.onGradient
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        titleContentColor = MaterialTheme.semanticColors.onGradient,
+                        navigationIconContentColor = MaterialTheme.semanticColors.onGradient,
+                        actionIconContentColor = MaterialTheme.semanticColors.onGradient
                     )
                 )
             }
@@ -686,7 +686,7 @@ private fun HeroHeader(details: SessionWithDetails, onRename: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(BrandPurpleDark)
+            .background(GradientTop)
             .padding(horizontal = 20.dp, vertical = 20.dp)
     ) {
         Row(
@@ -706,7 +706,7 @@ private fun HeroHeader(details: SessionWithDetails, onRename: () -> Unit) {
                         text = details.session.name ?: stringResource(R.string.session_unnamed),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White,
+                        color = MaterialTheme.semanticColors.onGradient,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -715,14 +715,14 @@ private fun HeroHeader(details: SessionWithDetails, onRename: () -> Unit) {
                     Icon(
                         imageVector = AppIcons.Edit,
                         contentDescription = stringResource(R.string.rename),
-                        tint = Color.White.copy(alpha = 0.6f),
+                        tint = MaterialTheme.semanticColors.onGradient.copy(alpha = 0.6f),
                         modifier = Modifier.size(16.dp)
                     )
                 }
                 Text(
                     text = formatTimestamp(details.session.createdAt),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.75f)
+                    color = MaterialTheme.semanticColors.onGradientVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -747,13 +747,13 @@ private fun SessionStatChip(
 ) {
     Row(
         modifier = Modifier
-            .background(Color.White.copy(alpha = 0.20f), RoundedCornerShape(20.dp))
+            .background(MaterialTheme.semanticColors.onGradient.copy(alpha = 0.20f), RoundedCornerShape(20.dp))
             .padding(horizontal = 10.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.White)
+        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.semanticColors.onGradient, modifier = Modifier.size(12.dp))
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.semanticColors.onGradient)
     }
 }
 

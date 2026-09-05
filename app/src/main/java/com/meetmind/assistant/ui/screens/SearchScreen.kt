@@ -59,7 +59,7 @@ fun SearchScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            Box(modifier = Modifier.background(BrandPurpleDark)) {
+            Box(modifier = Modifier.background(GradientTop)) {
                 TopAppBar(
                     title = {
                         SearchBarInput(
@@ -74,13 +74,13 @@ fun SearchScreen(
                             Icon(
                                 imageVector = AppIcons.Back,
                                 contentDescription = stringResource(R.string.back),
-                                tint = Color.White
+                                tint = MaterialTheme.semanticColors.onGradient
                             )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        actionIconContentColor = Color.White
+                        actionIconContentColor = MaterialTheme.semanticColors.onGradient
                     )
                 )
             }
@@ -155,7 +155,7 @@ private fun SearchBarInput(
         placeholder = {
             Text(
                 text = stringResource(R.string.search_hint),
-                color = Color.White.copy(alpha = 0.6f)
+                color = MaterialTheme.semanticColors.onGradient.copy(alpha = 0.6f)
             )
         },
         singleLine = true,
@@ -165,7 +165,7 @@ private fun SearchBarInput(
                     Icon(
                         imageVector = AppIcons.Close,
                         contentDescription = stringResource(R.string.clear_search),
-                        tint = Color.White
+                        tint = MaterialTheme.semanticColors.onGradient
                     )
                 }
             }
@@ -173,9 +173,9 @@ private fun SearchBarInput(
         colors = TextFieldDefaults.colors(
             focusedContainerColor = Color.Transparent,
             unfocusedContainerColor = Color.Transparent,
-            focusedTextColor = Color.White,
-            unfocusedTextColor = Color.White,
-            cursorColor = Color.White,
+            focusedTextColor = MaterialTheme.semanticColors.onGradient,
+            unfocusedTextColor = MaterialTheme.semanticColors.onGradient,
+            cursorColor = MaterialTheme.semanticColors.onGradient,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent
         )

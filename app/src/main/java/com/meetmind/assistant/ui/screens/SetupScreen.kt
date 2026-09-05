@@ -405,7 +405,7 @@ private fun ErrorContent(
 @Composable
 private fun ModelInfoCard() {
     Surface(
-        color = White.copy(alpha = 0.7f),
+        color = MaterialTheme.semanticColors.onGradient.copy(alpha = 0.90f),
         shape = MaterialTheme.shapes.medium
     ) {
         Column(

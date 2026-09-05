@@ -1,8 +1,8 @@
 # MeetMind Design System
 
-> **Status:** Target specification. The code has **not** been migrated yet — it currently ships
-> the Teams slate-violet palette (`#6264A7`). This document defines where we are going and is the
-> source of truth for the retheme. See [§10 Migration state](#10-migration-state) for what is done.
+> **Status:** Implemented. The warm palette ships as of step 4; `ColorContrastTest` enforces
+> every ratio in §2.4, §2.5 and §7.1 on each build. Steps 5–6 (bespoke components, rings and
+> spacing) remain — see [§10 Migration state](#10-migration-state).
 >
 > **Scope:** Android / Jetpack Compose, Material 3. Every color below is expressed as an M3 role
 > so it can be dropped into `lightColorScheme()` / `darkColorScheme()` directly.
@@ -147,6 +147,37 @@ text require 3.0:1.**
 >   3.54:1, which clears that bar.
 >
 > Never put small text on `#C96442`.
+
+### 2.5 Gradient surfaces
+
+The full-bleed download / welcome screens, brand headers and the record button sit on a
+gradient rather than a scheme surface. M3 has no role meaning "on top of a brand
+gradient", so the stops and their content colors live alongside the scheme and are read
+through `MaterialTheme.semanticColors`.
+
+| Token | Value | Note |
+|---|---|---|
+| `GradientTop` | `#8D3A1E` | Lightest stop — the worst case for contrast |
+| `GradientMid` | `#6B3320` | Header bands |
+| `GradientBottom` | `#241A16` | Immersive screens |
+| `OnGradient` | `#FFFFFF` | 7.62 on top, 17.01 on bottom |
+| `OnGradientVariant` | white @ 80% | 5.47 composited on top, 6.96 on mid |
+| `OnGradientDivider` | white @ 18% | Non-text |
+| `OnGradientScrim` | white @ 14% | Glass pill fills |
+
+**Why the top stop is not the brand terracotta.** Secondary text on these screens is
+translucent white. Over `#B35334` at 80% alpha that composites to 3.78:1 — below AA for
+the `bodySmall`/`bodyMedium` it is actually used on. Over `#8D3A1E` it is 5.47:1.
+
+The previous violet build had the same defect, drawing secondary text at 70–75% alpha for
+roughly 3.3:1. It was fixed during the migration rather than carried across, and
+`ColorContrastTest` composites the translucent value against the ground so it cannot
+return.
+
+These content colors are **identical in both themes** — a brand gradient is a dark ground
+whichever scheme is active, so they do not flip.
+
+---
 
 ---
 
@@ -410,7 +441,7 @@ Found during the audit, to be resolved as part of this work:
 | 1 | Rewrite this spec | F-03, F-09 | ✅ **Done** |
 | 2 | Clear 46 legacy token refs; route all color through `colorScheme` | F-06 | ✅ **Done** |
 | 3 | Decide the mode-color question (§6) | F-02 | ✅ **Done — Option C, implemented** |
-| 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ☐ Not started |
+| 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ✅ **Done** |
 | 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ☐ Not started |
 | 6 | Rings replace elevation; normalise spacing to the 4dp grid | F-07, F-08 | ☐ Not started |
 
@@ -420,11 +451,12 @@ by side until step 4 lands. The full switch happens once, at step 4.
 
 ### Known blockers
 
-- **104 hardcoded `Color.White` calls** across 14 files. These are Compose's `Color.White`
-  literal, *not* the theme's `White` token — only 3 sites use the token, so a find-and-replace
-  catches nothing. Most sit on gradient surfaces where white-on-violet currently works; on
-  parchment many become unreadable. Each site needs a judgement call between `onPrimary`,
-  `onSurface`, or a new `onGradient` token.
+None. The remaining steps (5, 6) are independent of each other.
+
+Resolved in step 4: the 104 `Color.White` literals turned out to sit almost entirely on
+gradient or dark grounds, so they mapped to the four `onGradient*` tokens (§2.5) by alpha
+rather than needing 104 individual judgements. One remains, a star in `DaytimeSkyBanner`,
+which step 5 owns.
 
 ---
 

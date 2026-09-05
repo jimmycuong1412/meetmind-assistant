@@ -407,7 +407,7 @@ private fun LiveSyncButton(
     } else {
         PrimaryGradient
     }
-    val activeTextColor = Color.White
+    val activeTextColor = MaterialTheme.semanticColors.onGradient
     val inactiveContainerColor = MaterialTheme.colorScheme.surfaceVariant
     val inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant
 

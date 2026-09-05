@@ -108,7 +108,7 @@ private fun LlmImmersiveLayout(
             Text(
                 text = stringResource(R.string.onboarding_llm_downloading),
                 style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.70f),
+                color = MaterialTheme.semanticColors.onGradientVariant,
                 textAlign = TextAlign.Center
             )
 
@@ -119,7 +119,7 @@ private fun LlmImmersiveLayout(
                 text = "${downloadState.progress.percentage}%",
                 style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.semanticColors.onGradient
             )
 
             Spacer(modifier = Modifier.weight(1f))
@@ -137,7 +137,7 @@ private fun LlmImmersiveLayout(
                         downloadState.progress.bytesDownloaded / 1_000_000
                     ),
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.70f),
+                    color = MaterialTheme.semanticColors.onGradientVariant,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -154,8 +154,8 @@ private fun LlmImmersiveLayout(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp),
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.25f),
+                color = MaterialTheme.semanticColors.onGradient,
+                trackColor = MaterialTheme.semanticColors.onGradientDivider,
                 strokeCap = StrokeCap.Round
             )
 
@@ -187,7 +187,7 @@ private fun LlmImmersiveStats(downloadState: DownloadState.Downloading) {
         Text(
             text = parts.joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.70f),
+            color = MaterialTheme.semanticColors.onGradientVariant,
             textAlign = TextAlign.Center
         )
     }
@@ -208,9 +208,9 @@ private fun LlmResultLayout(
 ) {
     val isSuccess = downloadState is DownloadState.Completed
     val gradient = if (isSuccess)
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, MaterialTheme.semanticColors.success.copy(alpha = 0.60f)))
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(GradientTop, MaterialTheme.semanticColors.success.copy(alpha = 0.60f)))
     else
-        androidx.compose.ui.graphics.Brush.linearGradient(listOf(BrandPurpleDark, MaterialTheme.colorScheme.error.copy(alpha = 0.60f)))
+        androidx.compose.ui.graphics.Brush.linearGradient(listOf(GradientTop, MaterialTheme.colorScheme.error.copy(alpha = 0.60f)))
 
     Box(
         modifier = Modifier
@@ -229,7 +229,7 @@ private fun LlmResultLayout(
             Icon(
                 imageVector = if (isSuccess) AppIcons.CheckCircle else AppIcons.Error,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.semanticColors.onGradient,
                 modifier = Modifier.size(80.dp)
             )
             Text(
@@ -237,19 +237,19 @@ private fun LlmResultLayout(
                        else stringResource(R.string.onboarding_download_failed),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.semanticColors.onGradient,
                 textAlign = TextAlign.Center
             )
             if (isSuccess) {
                 Text(
                     text = stringResource(R.string.onboarding_llm_initializing),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.75f),
+                    color = MaterialTheme.semanticColors.onGradientVariant,
                     textAlign = TextAlign.Center
                 )
                 CircularProgressIndicator(
                     modifier = Modifier.size(36.dp),
-                    color = Color.White,
+                    color = MaterialTheme.semanticColors.onGradient,
                     strokeWidth = 2.5.dp
                 )
             } else {
@@ -258,13 +258,13 @@ private fun LlmResultLayout(
                     text = stringResource(R.string.onboarding_retry_download),
                     onClick = onRetry,
                     modifier = Modifier.fillMaxWidth(),
-                    gradient = androidx.compose.ui.graphics.SolidColor(Color.White),
-                    textColor = BrandPurpleDark
+                    gradient = androidx.compose.ui.graphics.SolidColor(MaterialTheme.semanticColors.onGradient),
+                    textColor = GradientTop
                 )
                 TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         stringResource(R.string.onboarding_llm_skip_short),
-                        color = Color.White.copy(alpha = 0.75f)
+                        color = MaterialTheme.semanticColors.onGradientVariant
                     )
                 }
             }
@@ -289,7 +289,7 @@ private fun LlmIdleLayout(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(androidx.compose.ui.graphics.SolidColor(BrandPurpleDark)),
+                .background(androidx.compose.ui.graphics.SolidColor(GradientTop)),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -302,14 +302,14 @@ private fun LlmIdleLayout(
                 Icon(
                     imageVector = AppIcons.AutoAwesome,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.semanticColors.onGradient,
                     modifier = Modifier.size(72.dp)
                 )
                 Text(
                     text = stringResource(R.string.onboarding_llm_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.semanticColors.onGradient,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )

@@ -137,7 +137,7 @@ fun NewSessionDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                        .background(BrandPurpleDark)
+                        .background(GradientTop)
                         .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
                     Row(
@@ -150,12 +150,12 @@ fun NewSessionDialog(
                                 text = stringResource(R.string.new_session_dialog_title),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.semanticColors.onGradient
                             )
                             Text(
                                 text = stringResource(R.string.new_session_recording_mode),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.75f)
+                                color = MaterialTheme.semanticColors.onGradientVariant
                             )
                         }
                         Row(
@@ -179,8 +179,8 @@ fun NewSessionDialog(
                                     onConfirm(effectiveTopic, selectedMode, inputLanguage, langArg, insightStrategy, effectiveTopic)
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = BrandPurpleDark
+                                    containerColor = MaterialTheme.semanticColors.onGradient,
+                                    contentColor = GradientTop
                                 ),
                                 shape = MaterialTheme.shapes.medium,
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -202,11 +202,11 @@ fun NewSessionDialog(
                             }
                             if (onSaveTemplate != null) {
                                 IconButton(onClick = { showSaveTemplateDialog = true }) {
-                                    Icon(AppIcons.Bookmark, contentDescription = stringResource(R.string.templates_save), tint = Color.White)
+                                    Icon(AppIcons.Bookmark, contentDescription = stringResource(R.string.templates_save), tint = MaterialTheme.semanticColors.onGradient)
                                 }
                             }
                             IconButton(onClick = onDismiss) {
-                                Icon(AppIcons.Close, contentDescription = stringResource(R.string.cancel), tint = Color.White)
+                                Icon(AppIcons.Close, contentDescription = stringResource(R.string.cancel), tint = MaterialTheme.semanticColors.onGradient)
                             }
                         }
                     }
@@ -402,8 +402,8 @@ private fun TemplateChip(
         Surface(
             onClick = onClick,
             shape = RoundedCornerShape(20.dp),
-            color = BrandPurple.copy(alpha = 0.10f),
-            border = androidx.compose.foundation.BorderStroke(1.dp, BrandPurple.copy(alpha = 0.3f)),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
             modifier = Modifier.clickable(onClickLabel = stringResource(R.string.use_template)) {
                 onClick()
             }
@@ -416,13 +416,13 @@ private fun TemplateChip(
                 Icon(
                     AppIcons.Bookmark,
                     contentDescription = null,
-                    tint = BrandPurple,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(14.dp)
                 )
                 Text(
                     text = template.name,
                     style = MaterialTheme.typography.labelMedium,
-                    color = BrandPurple
+                    color = MaterialTheme.colorScheme.primary
                 )
                 // Delete button inside chip
                 IconButton(
@@ -432,7 +432,7 @@ private fun TemplateChip(
                     Icon(
                         AppIcons.Close,
                         contentDescription = stringResource(R.string.delete),
-                        tint = BrandPurple.copy(alpha = 0.6f),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
                         modifier = Modifier.size(12.dp)
                     )
                 }
