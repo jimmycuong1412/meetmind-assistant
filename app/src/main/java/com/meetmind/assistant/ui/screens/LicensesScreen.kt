@@ -22,7 +22,6 @@ import com.meetmind.assistant.domain.model.LicenseEntry
 import com.meetmind.assistant.presentation.licenses.LicensesViewModel
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.icons.AppIcons
-import com.meetmind.assistant.ui.ui.theme.BrandPrimary
 import com.meetmind.assistant.ui.components.ResponsiveContent
 
 /**
@@ -125,7 +124,7 @@ private fun LicenseCard(
                     Text(
                         text = entry.licenseType,
                         style = MaterialTheme.typography.labelSmall,
-                        color = BrandPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
                 IconButton(onClick = onToggleExpand) {
@@ -149,7 +148,7 @@ private fun LicenseCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // ── URL chips ─────────────────────────────────────────────────
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

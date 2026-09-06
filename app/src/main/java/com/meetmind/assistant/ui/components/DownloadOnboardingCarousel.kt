@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.PrimaryGradient
 import kotlinx.coroutines.delay
+import com.meetmind.assistant.ui.ui.theme.semanticColors
 
 /** How long each message is visible before crossfading to the next. */
 private const val CAROUSEL_DISPLAY_MS = 4_000L
@@ -84,7 +85,7 @@ fun DownloadOnboardingCarousel(
                 style = if (immersive) MaterialTheme.typography.headlineSmall
                         else MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium,
-                color = Color.White,
+                color = MaterialTheme.semanticColors.onGradient,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

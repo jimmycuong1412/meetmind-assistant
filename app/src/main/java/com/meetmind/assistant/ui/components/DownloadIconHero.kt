@@ -25,7 +25,9 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.meetmind.assistant.ui.ui.theme.BrandPurpleDark
+import com.meetmind.assistant.ui.ui.theme.GradientTop
+import androidx.compose.material3.MaterialTheme
+import com.meetmind.assistant.ui.ui.theme.semanticColors
 
 /**
  * Hero icon for download screens.
@@ -70,7 +72,7 @@ fun DownloadIconHero(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.White,
+            tint = MaterialTheme.semanticColors.onGradient,
             modifier = Modifier.size(40.dp)
         )
     }
@@ -79,12 +81,12 @@ fun DownloadIconHero(
 /**
  * Animated meetmind logo icon for model download screens.
  *
- * Renders the full logo (ears, top arc, purple circle) with the white smile
+ * Renders the full logo (ears, top arc, brand circle) with the smile
  * rotating 360° continuously inside the circle. Intended for the Downloading
  * state where it replaces the generic CloudDownload icon.
  *
  * Coordinate system: SVG viewBox 895×721, transform translate(-1823,-867) already applied.
- * Purple circle center: (447.5, 386). Smile pivot: same point.
+ * Brand circle center: (447.5, 386). Smile pivot: same point.
  */
 @Composable
 fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
@@ -96,6 +98,8 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
         label = "spin"
     )
 
+    // Read theme colors outside the draw lambda - DrawScope is not @Composable.
+    val heroColor = MaterialTheme.semanticColors.onGradient
     Canvas(modifier = modifier) {
         val s = size.width / 895f
 
@@ -109,7 +113,7 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
                 cubicTo(39.17f * s, 515f * s, 0f, 468.21f * s, 0f, 410.5f * s)
                 close()
             },
-            color = Color.White
+            color = heroColor
         )
 
         // Right ear
@@ -122,7 +126,7 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
                 cubicTo(759.18f * s, 515f * s, 720f * s, 468.21f * s, 720f * s, 410.5f * s)
                 close()
             },
-            color = Color.White
+            color = heroColor
         )
 
         // Top arc
@@ -134,10 +138,10 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
                 lineTo(447f * s, 374f * s)
                 close()
             },
-            color = Color.White
+            color = heroColor
         )
 
-        // Purple circle
+        // Brand circle
         drawPath(
             path = Path().apply {
                 moveTo(112f * s, 386f * s)
@@ -147,10 +151,10 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
                 cubicTo(262.21f * s, 721f * s, 112f * s, 571.02f * s, 112f * s, 386f * s)
                 close()
             },
-            color = BrandPurpleDark
+            color = GradientTop
         )
 
-        // Rotating white smile
+        // Rotating smile
         rotate(degrees = rotation, pivot = Offset(447.5f * s, 386f * s)) {
             drawPath(
                 path = Path().apply {
@@ -160,7 +164,7 @@ fun MeetMindDownloadIcon(modifier: Modifier = Modifier) {
                     lineTo(447.5f * s, 507.5f * s)
                     close()
                 },
-                color = Color.White
+                color = heroColor
             )
         }
     }
@@ -185,7 +189,7 @@ fun DownloadIconHero(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.White,
+            tint = MaterialTheme.semanticColors.onGradient,
             modifier = Modifier.size(40.dp)
         )
     }

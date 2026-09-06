@@ -388,7 +388,7 @@ private fun ModeAccordionCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -623,7 +623,7 @@ private fun ModelVariantOption(
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = name,
@@ -643,7 +643,7 @@ private fun ModelVariantOption(
                                 text = stringResource(R.string.settings_llm_model_variant_downloaded),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -656,7 +656,7 @@ private fun ModelVariantOption(
                                 text = stringResource(R.string.settings_llm_model_variant_vision_adapter_missing),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -669,7 +669,7 @@ private fun ModelVariantOption(
                                 text = stringResource(R.string.settings_llm_model_variant_beta),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -690,7 +690,7 @@ private fun ModelVariantOption(
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
                 }
@@ -779,7 +779,7 @@ private fun SettingsSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1354,7 +1354,7 @@ private fun VadParameterSlider(
             ) {
                 Text(
                     text = formatValue(value),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -1606,7 +1606,7 @@ private fun LlmModelDownloadSetting(
                     Spacer(modifier = Modifier.width(12.dp))
                     Surface(
                         color = when {
-                            isDownloaded -> AccentSuccess.copy(alpha = 0.15f)
+                            isDownloaded -> MaterialTheme.semanticColors.success.copy(alpha = 0.15f)
                             isDownloading -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                             else -> MaterialTheme.colorScheme.errorContainer
                         },
@@ -1618,11 +1618,11 @@ private fun LlmModelDownloadSetting(
                                 isDownloading -> stringResource(R.string.settings_llm_model_downloading, progress)
                                 else -> stringResource(R.string.settings_llm_model_variant_vision_adapter_missing)
                             },
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = when {
-                                isDownloaded -> AccentSuccess
+                                isDownloaded -> MaterialTheme.semanticColors.success
                                 isDownloading -> MaterialTheme.colorScheme.primary
                                 else -> MaterialTheme.colorScheme.onErrorContainer
                             }
@@ -1725,17 +1725,17 @@ private fun DiarizationModelSetting(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Surface(
-                color = if (isDownloaded) AccentSuccess.copy(alpha = 0.15f)
+                color = if (isDownloaded) MaterialTheme.semanticColors.success.copy(alpha = 0.15f)
                 else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                 shape = MaterialTheme.shapes.small
             ) {
                 Text(
                     text = if (isDownloaded) stringResource(R.string.settings_diarization_downloaded)
                     else stringResource(R.string.settings_diarization_size_label, sizeMb),
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isDownloaded) AccentSuccess
+                    color = if (isDownloaded) MaterialTheme.semanticColors.success
                     else MaterialTheme.colorScheme.primary
                 )
             }
@@ -1992,15 +1992,15 @@ private fun SttLanguageItem(
                     )
                     if (isDownloaded) {
                         Surface(
-                            color = AccentSuccess.copy(alpha = 0.15f),
+                            color = MaterialTheme.semanticColors.success.copy(alpha = 0.15f),
                             shape = MaterialTheme.shapes.extraSmall
                         ) {
                             Text(
                                 text = stringResource(R.string.settings_stt_downloaded),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = AccentSuccess,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                color = MaterialTheme.semanticColors.success,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     }

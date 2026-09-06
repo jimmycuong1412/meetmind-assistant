@@ -77,7 +77,7 @@ fun SessionsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            Box(modifier = Modifier.background(BrandPurpleDark)) {
+            Box(modifier = Modifier.background(GradientTop)) {
                 TopAppBar(
                     title = {
                         Column {
@@ -86,12 +86,12 @@ fun SessionsScreen(
                                 fontSize = 20.sp,
                                 fontFamily = SpaceGroteskFont,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.semanticColors.onGradient
                             )
                             Text(
                                 text = stringResource(R.string.sessions_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.75f)
+                                color = MaterialTheme.semanticColors.onGradientVariant
                             )
                         }
                     },
@@ -105,8 +105,8 @@ fun SessionsScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        titleContentColor = MaterialTheme.semanticColors.onGradient,
+                        actionIconContentColor = MaterialTheme.semanticColors.onGradient
                     )
                 )
             }
@@ -403,7 +403,7 @@ private fun SessionsList(
                         text = stringResource(R.string.group_section_other),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
                 items(ungroupedSessions, key = { it.id }) { session ->
@@ -517,20 +517,20 @@ private fun SessionsHeader(sessions: List<TranscriptionSession>, totalDataSizeBy
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(top = 20.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Row 1: day name + full date — white text on sky
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = today,
                     style = MaterialTheme.typography.labelLarge,
-                    color = Color.White.copy(alpha = 0.80f)
+                    color = MaterialTheme.semanticColors.onGradientVariant
                 )
                 Text(
                     text = dateStr,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.semanticColors.onGradient
                 )
             }
 
@@ -539,44 +539,44 @@ private fun SessionsHeader(sessions: List<TranscriptionSession>, totalDataSizeBy
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        Color.White.copy(alpha = 0.13f),
+                        MaterialTheme.semanticColors.onGradientScrim,
                         RoundedCornerShape(14.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SessionStatBlock(
                     value = "${sessions.size}",
                     label = stringResource(R.string.header_stat_sessions),
                     modifier = Modifier.weight(1f),
-                    valueColor = Color.White,
-                    labelColor = Color.White.copy(alpha = 0.72f)
+                    valueColor = MaterialTheme.semanticColors.onGradient,
+                    labelColor = MaterialTheme.semanticColors.onGradientVariant
                 )
                 Box(
                     modifier = Modifier
                         .width(1.dp)
                         .height(28.dp)
-                        .background(Color.White.copy(alpha = 0.30f))
+                        .background(MaterialTheme.semanticColors.onGradientDivider)
                 )
                 SessionStatBlock(
                     value = formatHeaderDuration(totalMillis),
                     label = stringResource(R.string.header_stat_duration),
                     modifier = Modifier.weight(1f),
-                    valueColor = Color.White,
-                    labelColor = Color.White.copy(alpha = 0.72f)
+                    valueColor = MaterialTheme.semanticColors.onGradient,
+                    labelColor = MaterialTheme.semanticColors.onGradientVariant
                 )
                 Box(
                     modifier = Modifier
                         .width(1.dp)
                         .height(28.dp)
-                        .background(Color.White.copy(alpha = 0.30f))
+                        .background(MaterialTheme.semanticColors.onGradientDivider)
                 )
                 SessionStatBlock(
                     value = formatDataSize(totalDataSizeBytes),
                     label = stringResource(R.string.header_stat_data),
                     modifier = Modifier.weight(1f),
-                    valueColor = Color.White,
-                    labelColor = Color.White.copy(alpha = 0.72f)
+                    valueColor = MaterialTheme.semanticColors.onGradient,
+                    labelColor = MaterialTheme.semanticColors.onGradientVariant
                 )
             }
         }
@@ -603,14 +603,14 @@ private fun GroupSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(
             imageVector = com.meetmind.assistant.ui.icons.AppIcons.Folder,
             contentDescription = null,
-            tint = BrandPurple,
+            tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(18.dp)
         )
         Text(
@@ -693,7 +693,7 @@ private fun SessionCard(
                     .width(4.dp)
                     .fillMaxHeight()
                     .background(
-                        brush = recordingModeGradient(session.mode),
+                        brush = recordingModeBrush(session.mode),
                         shape = RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
                     )
             )
@@ -726,12 +726,12 @@ private fun SessionCard(
                 // Mode + duration row — always fits on one line
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = stringResource(recordingModeLabel(session.mode)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = recordingModeTint(session.mode),
+                        color = recordingModeAccent(session.mode),
                         fontWeight = FontWeight.Medium,
                         maxLines = 1
                     )
@@ -778,7 +778,7 @@ private fun SessionCard(
                     Icon(
                         imageVector = AppIcons.AutoAwesome,
                         contentDescription = stringResource(R.string.generate_history_insight),
-                        tint = BrandPurple,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -837,7 +837,7 @@ private fun DiarizationStatusBadge(
         shape = RoundedCornerShape(10.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -903,7 +903,7 @@ private fun EmptyState(
                 text = stringResource(R.string.empty_state_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = MaterialTheme.semanticColors.onGradient,
                 textAlign = TextAlign.Center
             )
 
@@ -912,13 +912,13 @@ private fun EmptyState(
             Text(
                 text = stringResource(R.string.empty_state_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.70f),
+                color = MaterialTheme.semanticColors.onGradientVariant,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(36.dp))
 
-            HorizontalDivider(color = Color.White.copy(alpha = 0.18f))
+            HorizontalDivider(color = MaterialTheme.semanticColors.onGradientDivider)
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -971,7 +971,7 @@ private fun ImmersiveStepRow(
             modifier = Modifier
                 .size(44.dp)
                 .background(
-                    color = Color.White.copy(alpha = 0.15f),
+                    color = MaterialTheme.semanticColors.onGradientScrim,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -979,7 +979,7 @@ private fun ImmersiveStepRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.semanticColors.onGradient,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -988,12 +988,12 @@ private fun ImmersiveStepRow(
                 text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.semanticColors.onGradient
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.70f)
+                color = MaterialTheme.semanticColors.onGradientVariant
             )
         }
     }
@@ -1119,26 +1119,12 @@ private fun recordingModeLabel(mode: RecordingMode): Int = when (mode) {
 /**
  * Maps a [RecordingMode] to the gradient brush used for its icon container background.
  */
-private fun recordingModeGradient(mode: RecordingMode): Brush = when (mode) {
-    RecordingMode.SIMPLE_LISTENING      -> ModeSimpleListeningGradient
-    RecordingMode.SHORT_MEETING         -> ModeShortMeetingGradient
-    RecordingMode.LONG_MEETING          -> ModeLongMeetingGradient
-    RecordingMode.REAL_TIME_TRANSLATION -> ModeTranslationGradient
-    RecordingMode.INTERVIEW             -> ModeInterviewGradient
-    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachGradient
-}
+
 
 /**
  * Maps a [RecordingMode] to the flat tint color used for its label text.
  */
-private fun recordingModeTint(mode: RecordingMode): Color = when (mode) {
-    RecordingMode.SIMPLE_LISTENING      -> ModeSkyBlueTint
-    RecordingMode.SHORT_MEETING         -> ModeShortMeetingTint
-    RecordingMode.LONG_MEETING          -> ModeAmberTint
-    RecordingMode.REAL_TIME_TRANSLATION -> ModeEmeraldTint
-    RecordingMode.INTERVIEW             -> ModeInterviewTint
-    RecordingMode.ENGLISH_COACH         -> ModeEnglishCoachTint
-}
+
 
 /**
  * Format timestamp to readable date/time.

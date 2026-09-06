@@ -20,7 +20,6 @@ import androidx.compose.ui.window.Dialog
 import com.meetmind.assistant.domain.model.SessionGroup
 import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.icons.AppIcons
-import com.meetmind.assistant.ui.ui.theme.BrandPrimary
 
 /**
  * Centered dialog that lets the user assign a session to an existing group,
@@ -94,7 +93,7 @@ fun AssignGroupSheet(
                                 Icon(
                                     AppIcons.Folder,
                                     contentDescription = null,
-                                    tint = BrandPrimary,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
@@ -147,7 +146,7 @@ fun AssignGroupSheet(
                                     Icon(
                                         AppIcons.Add,
                                         contentDescription = null,
-                                        tint = BrandPrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 },
@@ -172,7 +171,7 @@ private fun GroupRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 24.dp, vertical = 14.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -187,7 +186,7 @@ private fun GroupRow(
             Icon(
                 AppIcons.CheckCircle,
                 contentDescription = null,
-                tint = BrandPrimary,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
         }

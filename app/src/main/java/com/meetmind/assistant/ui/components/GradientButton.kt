@@ -14,22 +14,24 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
-import com.meetmind.assistant.ui.ui.theme.BrandPurpleDark
-import com.meetmind.assistant.ui.ui.theme.White
+import com.meetmind.assistant.ui.ui.theme.GradientTop
+import com.meetmind.assistant.ui.ui.theme.semanticColors
 
 /**
- * Primary button with gradient background
- * Uses brand purple gradient for premium look
+ * Primary button with a gradient background.
+ *
+ * [textColor] defaults to the on-gradient content color for the active theme.
  */
 @Composable
 fun GradientButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    gradient: Brush = SolidColor(BrandPurpleDark),
-    textColor: Color = White,
+    gradient: Brush = SolidColor(GradientTop),
+    textColor: Color? = null,
     enabled: Boolean = true
 ) {
+    val resolvedTextColor = textColor ?: MaterialTheme.semanticColors.onGradient
     Box(
         modifier = modifier
             .background(
@@ -46,9 +48,9 @@ fun GradientButton(
             enabled = enabled,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent,
-                contentColor = textColor,
+                contentColor = resolvedTextColor,
                 disabledContainerColor = Color.Transparent,
-                disabledContentColor = textColor.copy(alpha = 0.6f)
+                disabledContentColor = resolvedTextColor.copy(alpha = 0.6f)
             ),
             contentPadding = PaddingValues(vertical = 16.dp),
             elevation = ButtonDefaults.buttonElevation(

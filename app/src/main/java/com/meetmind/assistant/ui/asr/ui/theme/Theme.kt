@@ -8,18 +8,25 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.meetmind.assistant.domain.model.ThemeMode
 
 /**
  * MeetMind Assistant Material 3 Theme
  *
- * Design philosophy (2026):
- * - Color restraint: slate-violet (#6264A7) only for primary actions
- * - Warm neutrals for calm, professional feel
- * - Borders over shadows for modern flat design
- * - Surface layering with subtle tints
- * - Full dark mode support (OLED-friendly)
+ * Warm parchment system - see DESIGN.md for the full specification.
+ *
+ * Design philosophy:
+ * - Color restraint: terracotta only for primary actions
+ * - Warm neutrals throughout; no cool blue-grays
+ * - Borders over shadows (DESIGN.md section 5)
+ * - Explicit surfaceContainer tiers for layering
+ * - Both schemes fully specified and contrast-verified
  */
 
 private val LightColorScheme = lightColorScheme(
@@ -51,8 +58,15 @@ private val LightColorScheme = lightColorScheme(
     surfaceVariant = md_theme_light_surfaceVariant,
     onSurfaceVariant = md_theme_light_onSurfaceVariant,
 
+    surfaceContainerLowest = md_theme_light_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_light_surfaceContainerLow,
+    surfaceContainer = md_theme_light_surfaceContainer,
+    surfaceContainerHigh = md_theme_light_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_light_surfaceContainerHighest,
+
     outline = md_theme_light_outline,
     outlineVariant = md_theme_light_outlineVariant,
+    scrim = md_theme_light_scrim,
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -84,15 +98,77 @@ private val DarkColorScheme = darkColorScheme(
     surfaceVariant = md_theme_dark_surfaceVariant,
     onSurfaceVariant = md_theme_dark_onSurfaceVariant,
 
+    surfaceContainerLowest = md_theme_dark_surfaceContainerLowest,
+    surfaceContainerLow = md_theme_dark_surfaceContainerLow,
+    surfaceContainer = md_theme_dark_surfaceContainer,
+    surfaceContainerHigh = md_theme_dark_surfaceContainerHigh,
+    surfaceContainerHighest = md_theme_dark_surfaceContainerHighest,
+
     outline = md_theme_dark_outline,
     outlineVariant = md_theme_dark_outlineVariant,
+    scrim = md_theme_dark_scrim,
 )
+
+/**
+ * Semantic colors that Material 3 has no role for.
+ *
+ * M3 ships `error` but nothing for success or warning, so these travel alongside
+ * the color scheme instead of being hardcoded at call sites. Read them through
+ * [semanticColors] so both themes resolve correctly:
+ *
+ * ```
+ * tint = MaterialTheme.semanticColors.success
+ * ```
+ *
+ * Values and verified contrast ratios: DESIGN.md §7.1.
+ */
+@Immutable
+data class SemanticColors(
+    val success: Color,
+    val warning: Color,
+    /** Primary text/icons on a brand gradient. */
+    val onGradient: Color,
+    /** Secondary text on a brand gradient (80% alpha - AA-safe for bodySmall). */
+    val onGradientVariant: Color,
+    /** Hairline divider on a brand gradient. */
+    val onGradientDivider: Color,
+    /** Translucent glass fill for pills sitting on a brand gradient. */
+    val onGradientScrim: Color,
+)
+
+// The onGradient* values are identical in both schemes: a brand gradient is a dark
+// ground whichever theme is active, so its content colors do not flip.
+private val LightSemanticColors = SemanticColors(
+    success = SuccessLight,
+    warning = WarningLight,
+    onGradient = OnGradient,
+    onGradientVariant = OnGradientVariant,
+    onGradientDivider = OnGradientDivider,
+    onGradientScrim = OnGradientScrim,
+)
+
+private val DarkSemanticColors = SemanticColors(
+    success = SuccessDark,
+    warning = WarningDark,
+    onGradient = OnGradient,
+    onGradientVariant = OnGradientVariant,
+    onGradientDivider = OnGradientDivider,
+    onGradientScrim = OnGradientScrim,
+)
+
+private val LocalSemanticColors = staticCompositionLocalOf { LightSemanticColors }
+
+/** Semantic colors for the active theme. Companion to `MaterialTheme.colorScheme`. */
+val MaterialTheme.semanticColors: SemanticColors
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalSemanticColors.current
 
 @Composable
 fun LibellulaTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
-    // Dynamic color is available on Android 12+ (Material You)
-    // Setting to false to maintain brand identity with #6264A7
+    // Dynamic color is available on Android 12+ (Material You).
+    // Off by default: Material You would discard the warm palette this app is built on.
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -112,12 +188,16 @@ fun LibellulaTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = AppShapes,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalSemanticColors provides if (darkTheme) DarkSemanticColors else LightSemanticColors
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = AppShapes,
+            content = content
+        )
+    }
 }
 
 // Backward compatibility alias

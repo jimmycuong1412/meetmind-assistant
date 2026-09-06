@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    DayNight so the platform window follows the system theme instead of being
+    pinned to light. The window background is painted with the parchment ground
+    so the pre-Compose frame does not flash white before the app draws.
+-->
 <resources>
-
-    <style name="Theme.SimulateStreamingAsr" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.SimulateStreamingAsr" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
 </resources>

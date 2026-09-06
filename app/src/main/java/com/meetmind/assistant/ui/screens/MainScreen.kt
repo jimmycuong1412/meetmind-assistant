@@ -282,7 +282,7 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            Box(modifier = Modifier.background(BrandPurpleDark)) {
+            Box(modifier = Modifier.background(GradientTop)) {
                 TopAppBar(
                     title = {
                         Column {
@@ -291,7 +291,7 @@ fun MainScreen(
                                 fontSize = 20.sp,
                                 fontFamily = SpaceGroteskFont,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = MaterialTheme.semanticColors.onGradient
                             )
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -311,7 +311,7 @@ fun MainScreen(
                                         stringResource(R.string.recording_session)
                                     },
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = if (uiState.isRecording) 1f else 0.75f),
+                                    color = MaterialTheme.semanticColors.onGradient.copy(alpha = if (uiState.isRecording) 1f else 0.75f),
                                     fontWeight = if (uiState.isRecording) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
@@ -352,7 +352,8 @@ fun MainScreen(
                                 Icon(
                                     imageVector = AppIcons.Camera,
                                     contentDescription = stringResource(R.string.camera_take_photo),
-                                    tint = Color.White
+                                    tint = MaterialTheme.semanticColors.onGradient
+                                        .copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
                                 )
                             }
                             // Photo upload from device files — same pipeline as capture.
@@ -368,7 +369,8 @@ fun MainScreen(
                                 Icon(
                                     imageVector = AppIcons.PhotoLibrary,
                                     contentDescription = stringResource(R.string.photo_pick_from_files),
-                                    tint = Color.White
+                                    tint = MaterialTheme.semanticColors.onGradient
+                                        .copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
                                 )
                             }
                         }
@@ -383,7 +385,7 @@ fun MainScreen(
                                         stringResource(R.string.screen_wake_enable)
                                     else
                                         stringResource(R.string.screen_wake_disable),
-                                    tint = Color.White.copy(alpha = if (userDimmedScreen) 0.5f else 1f)
+                                    tint = MaterialTheme.semanticColors.onGradient.copy(alpha = if (userDimmedScreen) 0.5f else 1f)
                                 )
                             }
                         }
@@ -397,21 +399,21 @@ fun MainScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
-                                    color = Color.White
+                                    color = MaterialTheme.semanticColors.onGradient
                                 )
                                 Text(
                                     text = "${uiState.downloadProgress}%",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White
+                                    color = MaterialTheme.semanticColors.onGradient
                                 )
                             }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        titleContentColor = MaterialTheme.semanticColors.onGradient,
+                        navigationIconContentColor = MaterialTheme.semanticColors.onGradient,
+                        actionIconContentColor = MaterialTheme.semanticColors.onGradient
                     )
                 )
             }
@@ -499,7 +501,7 @@ fun MainScreen(
                             Icon(
                                 imageVector = if (uiState.isRecording) AppIcons.Stop else AppIcons.Mic,
                                 contentDescription = if (uiState.isRecording) stringResource(R.string.stop) else stringResource(R.string.record),
-                                tint = Color.White,
+                                tint = MaterialTheme.semanticColors.onGradient,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -529,13 +531,13 @@ fun MainScreen(
                             // label so blind users can hear the status text below; tint conveys
                             // ready/not-ready visually for sighted users.
                             contentDescription = stringResource(R.string.ai_status_indicator),
-                            tint = if (aiReady) AccentSuccess else MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (aiReady) MaterialTheme.semanticColors.success else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
                         Text(
                             text = stringResource(R.string.llm),
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (aiReady) AccentSuccess else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (aiReady) MaterialTheme.semanticColors.success else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -625,7 +627,7 @@ fun MainScreen(
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -662,8 +664,8 @@ fun MainScreen(
             } else {
             TabRow(
                 selectedTabIndex = selectedTab,
-                containerColor = BrandPrimary,
-                contentColor = Color.White,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.semanticColors.onGradient,
                 divider = {},
                 indicator = { tabPositions ->
                     if (selectedTab < tabPositions.size) {
@@ -675,7 +677,7 @@ fun MainScreen(
                                 .offset(x = tab.left)
                                 .width(tab.width)
                                 .height(3.dp)
-                                .background(Color.White)
+                                .background(MaterialTheme.semanticColors.onGradient)
                         )
                     }
                 }
@@ -776,7 +778,7 @@ fun MainScreen(
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -808,21 +810,21 @@ private fun TranslationSplitView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .background(recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.08f))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = AppIcons.Mic,
                 contentDescription = null,
-                tint = ModeEmeraldTint,
+                tint = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = stringResource(R.string.translation_panel_original),
                 style = MaterialTheme.typography.labelMedium,
-                color = ModeEmeraldTint,
+                color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp
             )
@@ -836,27 +838,27 @@ private fun TranslationSplitView(
                 .fillMaxWidth()
         )
 
-        HorizontalDivider(thickness = 1.dp, color = ModeEmeraldTint.copy(alpha = 0.25f))
+        HorizontalDivider(thickness = 1.dp, color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.25f))
 
         // "Translation" panel header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(ModeEmeraldTint.copy(alpha = 0.08f))
+                .background(recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION).copy(alpha = 0.08f))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = AppIcons.ModeTranslation,
                 contentDescription = null,
-                tint = ModeEmeraldTint,
+                tint = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = stringResource(R.string.translation_panel_translation),
                 style = MaterialTheme.typography.labelMedium,
-                color = ModeEmeraldTint,
+                color = recordingModeAccent(RecordingMode.REAL_TIME_TRANSLATION),
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 0.8.sp
             )

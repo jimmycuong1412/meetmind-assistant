@@ -71,22 +71,22 @@ fun WelcomeScreen(
                 fontSize = 30.sp,
                 fontFamily = SpaceGroteskFont,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = MaterialTheme.semanticColors.onGradient
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = stringResource(R.string.welcome_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.75f),
+                color = MaterialTheme.semanticColors.onGradientVariant,
                 textAlign = TextAlign.Center
             )
 
             Spacer(modifier = Modifier.height(40.dp))
 
             // ── Divider ──────────────────────────────────────────────────
-            HorizontalDivider(color = Color.White.copy(alpha = 0.18f))
+            HorizontalDivider(color = MaterialTheme.semanticColors.onGradientDivider)
 
             Spacer(modifier = Modifier.height(36.dp))
 
@@ -121,8 +121,8 @@ fun WelcomeScreen(
                 text = stringResource(R.string.welcome_get_started),
                 onClick = onGetStarted,
                 modifier = Modifier.fillMaxWidth(),
-                gradient = SolidColor(Color.White),
-                textColor = BrandPurpleDark
+                gradient = SolidColor(MaterialTheme.semanticColors.onGradient),
+                textColor = GradientTop
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -149,7 +149,7 @@ private fun ImmersiveFeatureRow(
             modifier = Modifier
                 .size(44.dp)
                 .background(
-                    color = Color.White.copy(alpha = 0.15f),
+                    color = MaterialTheme.semanticColors.onGradientScrim,
                     shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -157,22 +157,22 @@ private fun ImmersiveFeatureRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.semanticColors.onGradient,
                 modifier = Modifier.size(22.dp)
             )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.White
+                color = MaterialTheme.semanticColors.onGradient
             )
             Text(
                 text = description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.70f)
+                color = MaterialTheme.semanticColors.onGradientVariant
             )
         }
     }
