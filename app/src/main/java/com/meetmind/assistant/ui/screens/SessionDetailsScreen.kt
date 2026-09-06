@@ -711,7 +711,7 @@ private fun HeroHeader(details: SessionWithDetails, onRename: () -> Unit) {
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Icon(
                         imageVector = AppIcons.Edit,
                         contentDescription = stringResource(R.string.rename),
@@ -748,7 +748,7 @@ private fun SessionStatChip(
     Row(
         modifier = Modifier
             .background(MaterialTheme.semanticColors.onGradient.copy(alpha = 0.20f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -806,7 +806,7 @@ private fun TranscriptTab(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (photos.isNotEmpty()) {
                 item(key = "session_photos_section") {
@@ -1065,7 +1065,7 @@ private fun GenerationProgressBanner(
             // Privacy notice — reuses existing onboarding string, already translated in all locales.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = AppIcons.Info,
@@ -1235,11 +1235,13 @@ private fun TaskItem(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium,
+            // Done vs pending reads from the surface tone step, not elevation
+            // (DESIGN.md section 5).
             color = if (item.isDone)
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
             else
-                MaterialTheme.colorScheme.surface,
-            tonalElevation = if (item.isDone) 0.dp else 1.dp
+                MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
@@ -1322,7 +1324,7 @@ private fun InsightCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.weight(1f)
                 ) {
                     // Icon container
@@ -1487,10 +1489,10 @@ private fun TasksSection(tasks: List<String>) {
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = AppIcons.CheckCircle,
@@ -1509,7 +1511,7 @@ private fun TasksSection(tasks: List<String>) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "\u2022",
@@ -1614,7 +1616,7 @@ private fun TranscriptionSegmentCard(
                         else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                     )
             )
-            Column(modifier = Modifier.padding(start = 12.dp, top = 10.dp, bottom = 10.dp, end = 4.dp)) {
+            Column(modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1622,7 +1624,7 @@ private fun TranscriptionSegmentCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
                             text = formatTimestamp(segment.timestamp),
@@ -1950,7 +1952,7 @@ fun HistoryInsightConfirmDialog(
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.Top
                     ) {
                         Icon(

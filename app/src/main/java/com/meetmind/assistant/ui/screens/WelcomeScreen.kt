@@ -74,7 +74,7 @@ fun WelcomeScreen(
                 color = MaterialTheme.semanticColors.onGradient
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = stringResource(R.string.welcome_subtitle),
@@ -162,7 +162,7 @@ private fun ImmersiveFeatureRow(
             )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = title,
                 fontSize = 18.sp,

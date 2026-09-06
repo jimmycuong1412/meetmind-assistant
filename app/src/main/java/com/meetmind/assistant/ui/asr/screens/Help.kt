@@ -23,10 +23,10 @@ fun HelpScreen() {
                         "for streaming/real-time speech recognition. ",
                 fontSize=10.sp
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text("Please see http://github.com/k2-fsa/sherpa-onnx ")
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text("Everything is open-sourced!", fontSize = 20.sp)
         }
     }

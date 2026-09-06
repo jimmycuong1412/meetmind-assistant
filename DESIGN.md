@@ -1,8 +1,8 @@
 # MeetMind Design System
 
-> **Status:** Implemented. The warm palette ships as of step 4; `ColorContrastTest` enforces
-> every ratio in §2.4, §2.5 and §7.1 on each build. Steps 5–6 (bespoke components, rings and
-> spacing) remain — see [§10 Migration state](#10-migration-state).
+> **Status:** Implemented. All six migration steps are done — see
+> [§10](#10-migration-state). `ColorContrastTest` and `SpacingGridTest` enforce the contrast,
+> spacing and no-raw-color rules on every build; see [§11 Enforcement](#enforcement).
 >
 > **Scope:** Android / Jetpack Compose, Material 3. Every color below is expressed as an M3 role
 > so it can be dropped into `lightColorScheme()` / `darkColorScheme()` directly.
@@ -269,8 +269,14 @@ border plus a surface-tone step.
 Exceptions where elevation stays: **FAB, modal bottom sheets, menus, and dialogs** — floating
 things that genuinely sit above the page and need to read that way.
 
-There are currently 31 elevation settings in the UI (20 `defaultElevation`, 9 `tonalElevation`,
-2 `shadowElevation`) to work through.
+Helpers live in `Containment.kt` — `flatCardElevation()`, `containmentRing()` and
+`containedCardColors()` — so ring weight and surface tone stay consistent rather than being
+re-derived per screen.
+
+The original audit counted 31 elevation settings, but 27 of those were already `0.dp`: the
+codebase was mostly following this rule and only four places actually raised elevation (two
+shimmer skeletons, the setup download card, and the task-row `tonalElevation`). All four now
+use containment.
 
 ---
 
@@ -480,11 +486,14 @@ Found during the audit, to be resolved as part of this work:
 | 3 | Decide the mode-color question (§6) | F-02 | ✅ **Done — Option C, implemented** |
 | 4 | Swap palette in `Color.kt` / `Theme.kt`; audit 104 `Color.White` sites | F-01 | ✅ **Done** |
 | 5 | Reinterpret bespoke components (sky banner, speaker chips, download heroes) | F-04, F-05 | ✅ **Done** |
-| 6 | Rings replace elevation; normalise spacing to the 4dp grid | F-07, F-08 | ☐ Not started |
+| 6 | Rings replace elevation; normalise spacing to the 4dp grid | F-07, F-08 | ✅ **Done** |
 
-Steps 1–2 changed nothing visually. Step 3 is the first visible change: mode accents now use the
-warm two-tier palette while the rest of the app is still slate-violet, so the two systems sit side
-by side until step 4 lands. The full switch happens once, at step 4.
+Steps 1–2 changed nothing visually; step 3 moved the mode accents; step 4 was the full switch;
+steps 5–6 finished the bespoke components and the containment/spacing rules.
+
+**Not yet done:** none of this has been reviewed on a device. Every claim above is verified by
+measurement and compilation, which is not the same as looking right. The warm sky gradients
+(§7.3) and the dark scheme are the two places most worth a human eye.
 
 ### Known blockers
 
@@ -502,8 +511,27 @@ which step 5 owns.
 1. **Never** hardcode a color. No `Color(0xFF…)`, no `Color.White`, no `Color.Gray`.
    Everything comes from `MaterialTheme.colorScheme`.
 2. If a color you need has no role, **add a role** — do not inline a literal.
-3. Spacing is a multiple of **4dp**. The current drift (27× `6.dp`, 27× `10.dp`, 20× `14.dp`,
-   10× `5.dp`, 10× `18.dp`, 8× `3.dp`) is a bug, not a style.
+3. Structural spacing — `padding`, `spacedBy`, `Spacer` gaps — is a multiple of **4dp**, with
+   1–2dp allowed as an optical half-step for tight work (badge insets, label/value gaps).
+   Enforced by `SpacingGridTest`.
+
+   This does **not** apply to icon `size()` (14/18/22dp are standard optical steps) or to
+   stroke widths, corner radii and Canvas geometry, where odd and fractional values are
+   deliberate.
 4. Check both schemes before committing. `@Preview(uiMode = UI_MODE_NIGHT_YES)`.
 5. Body text clears **4.5:1**; icons, strokes and large text clear **3.0:1**. When in doubt,
    compute it — see the terracotta trap in §2.4 for why assuming is not safe.
+6. No raw `Color(0x…)` outside the theme package. Enforced by `SpacingGridTest`.
+
+### Enforcement
+
+Three of these rules are tests rather than conventions, because all three had already been
+violated in ways nobody noticed:
+
+| Test | Guards | Count |
+|---|---|---|
+| `ColorContrastTest` | Every AA ratio in §2.4, §2.5, §6.2, §7.1–7.3 | 11 |
+| `SpacingGridTest` | The 4dp grid and the no-raw-color rule | 3 |
+
+Each was verified to fail when the defect it guards is reintroduced — a green test that has
+never been seen red is not evidence.

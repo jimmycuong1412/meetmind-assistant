@@ -72,8 +72,9 @@ fun SetupScreen(
             // Download content
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                elevation = flatCardElevation(),
+                border = containmentRing(emphasised = true),
+                colors = containedCardColors()
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),

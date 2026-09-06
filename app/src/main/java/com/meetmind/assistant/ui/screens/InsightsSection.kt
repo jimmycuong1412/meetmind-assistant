@@ -441,12 +441,12 @@ private fun LiveSyncButton(
                 }
             )
             .clickable { onToggle(!isEnabled) }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             if (isEnabled) {
                 // Live indicator dot — solid circle
@@ -630,7 +630,7 @@ private fun InterviewInsightItem(
             // Shown only when a question was detected. Renders the question text in a
             // lightly tinted surface so it's visually distinct from the answer below.
             if (detectedQuestion != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.small,
@@ -880,7 +880,7 @@ private fun EnglishCoachInsightItem(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header
             Row(
@@ -933,7 +933,7 @@ private fun EnglishCoachInsightItem(
                         text = stringResource(R.string.english_coach_no_errors),
                         style = MaterialTheme.typography.bodySmall,
                         color = accentColor,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             } else {
@@ -960,7 +960,7 @@ private fun EnglishCoachInsightItem(
                     color = accentColor.copy(alpha = 0.07f)
                 ) {
                     Column(
-                        modifier = Modifier.padding(10.dp),
+                        modifier = Modifier.padding(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
@@ -986,7 +986,7 @@ private fun EnglishCoachInsightItem(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(10.dp),
+                        modifier = Modifier.padding(8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
@@ -1035,7 +1035,7 @@ private fun TasksList(tasksJson: String) {
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = AppIcons.CheckCircle,
@@ -1094,7 +1094,7 @@ private fun CoachingTipsList(tasksJson: String, accentColor: Color) {
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Icon(
                         imageVector = AppIcons.Lightbulb,

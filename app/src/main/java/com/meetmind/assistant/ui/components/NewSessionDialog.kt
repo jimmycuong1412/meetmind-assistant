@@ -193,7 +193,7 @@ fun NewSessionDialog(
                                         .size(16.dp)
                                         .padding(end = 0.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = stringResource(R.string.start),
                                     fontWeight = FontWeight.Bold,
@@ -222,7 +222,7 @@ fun NewSessionDialog(
                 ) {
                     // Templates row — quick-pick presets
                     if (templates.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
                                 text = stringResource(R.string.templates_title),
                                 style = MaterialTheme.typography.labelMedium,
@@ -411,7 +411,7 @@ private fun TemplateChip(
             Row(
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     AppIcons.Bookmark,
@@ -482,9 +482,9 @@ private fun ModeCard(
                 shape = MaterialTheme.shapes.medium
             )
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Icon container
         Box(

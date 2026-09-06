@@ -212,7 +212,7 @@ private fun SearchResultCard(
 
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
                     .weight(1f)
             ) {
                 // Header row: session name + date
@@ -247,7 +247,7 @@ private fun SearchResultCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Source chip
                 Surface(
@@ -256,7 +256,7 @@ private fun SearchResultCard(
                 ) {
                     Text(
                         text = result.matchSource.label(),
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = accentColor,
                         fontWeight = FontWeight.Medium

@@ -403,7 +403,7 @@ private fun SessionsList(
                         text = stringResource(R.string.group_section_other),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                     )
                 }
                 items(ungroupedSessions, key = { it.id }) { session ->
@@ -517,7 +517,7 @@ private fun SessionsHeader(sessions: List<TranscriptionSession>, totalDataSizeBy
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
                 .padding(top = 20.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Row 1: day name + full date — white text on sky
             Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
@@ -542,7 +542,7 @@ private fun SessionsHeader(sessions: List<TranscriptionSession>, totalDataSizeBy
                         MaterialTheme.semanticColors.onGradientScrim,
                         RoundedCornerShape(14.dp)
                     )
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SessionStatBlock(
@@ -603,7 +603,7 @@ private fun GroupSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onToggle)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -726,7 +726,7 @@ private fun SessionCard(
                 // Mode + duration row — always fits on one line
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = stringResource(recordingModeLabel(session.mode)),
@@ -837,7 +837,7 @@ private fun DiarizationStatusBadge(
         shape = RoundedCornerShape(10.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {

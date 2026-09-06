@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.valentinilk.shimmer.shimmer
+import com.meetmind.assistant.ui.ui.theme.flatCardElevation
+import com.meetmind.assistant.ui.ui.theme.containmentRing
 
 /**
  * Shimmer skeleton for session list item.
@@ -27,7 +29,8 @@ fun ShimmerSessionItem(modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = flatCardElevation(),
+        border = containmentRing()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -82,7 +85,7 @@ fun ShimmerTranscriptionSegment(modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .shimmer()
             .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Timestamp placeholder
         Box(
@@ -142,7 +145,8 @@ fun ShimmerInsightCard(modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = flatCardElevation(),
+        border = containmentRing()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

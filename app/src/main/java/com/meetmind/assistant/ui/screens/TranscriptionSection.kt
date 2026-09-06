@@ -119,7 +119,7 @@ private fun TranscriptionEmptyState(
         )
 
         if (!isRecording) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.transcription_press_record),
                 style = MaterialTheme.typography.bodySmall,
