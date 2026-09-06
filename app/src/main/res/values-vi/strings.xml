@@ -75,6 +75,9 @@
     <!-- Camera photo capture during recording (vision insight) -->
     <string name="camera_take_photo">Chụp ảnh để đưa vào phân tích AI</string>
     <string name="photo_analyzing">Đang phân tích ảnh…</string>
+    <string name="photo_analyzing_queued">Đang phân tích ảnh… còn %1$d ảnh trong hàng đợi</string>
+    <string name="photo_pick_from_files">Chọn ảnh có sẵn để đưa vào phân tích AI</string>
+    <string name="photo_import_failed">Không thể tải ảnh đã chọn.</string>
     <string name="photo_analysis_failed">Phân tích ảnh thất bại. Ảnh vẫn được lưu cùng phiên ghi.</string>
     <string name="prompt_photo_analysis">Hãy mô tả hình ảnh này một cách ngắn gọn cho ghi chú cuộc họp. Tập trung vào bất kỳ văn bản, sơ đồ, biểu đồ và thông tin quan trọng nào hiển thị.</string>
     <string name="session_photos_title">Ảnh</string>

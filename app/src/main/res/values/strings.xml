@@ -523,6 +523,7 @@
     <string name="settings_llm_model_download">Download</string>
     <string name="settings_llm_model_retry">Retry Download</string>
     <string name="settings_llm_model_downloading">Downloading %1$d%%</string>
+    <string name="settings_llm_model_download_vision_adapter">Download vision adapter (~850 MB)</string>
 
     <!-- LLM Model Variant Setting -->
     <string name="settings_llm_model_variant_title">AI Model Quality</string>
@@ -533,6 +534,7 @@
     <string name="settings_llm_model_variant_iq4_desc">Optimized for energy efficiency</string>
     <string name="settings_llm_model_variant_recommended">Recommended for your device</string>
     <string name="settings_llm_model_variant_downloaded">Downloaded</string>
+    <string name="settings_llm_model_variant_vision_adapter_missing">Vision adapter missing</string>
     <string name="settings_llm_model_variant_beta">Beta</string>
     <string name="settings_llm_advanced_section_title">Advanced Models</string>
     <string name="settings_llm_advanced_section_desc">Experimental models for advanced users. Performance may vary from standard models.</string>
@@ -550,6 +552,9 @@
     <!-- Camera photo capture during recording (vision insight) -->
     <string name="camera_take_photo">Take a photo to include in the AI insight</string>
     <string name="photo_analyzing">Analyzing photo…</string>
+    <string name="photo_analyzing_queued">Analyzing photo… %1$d more in queue</string>
+    <string name="photo_pick_from_files">Choose a photo to include in the AI insight</string>
+    <string name="photo_import_failed">Couldn\'t load the selected image.</string>
     <string name="photo_analysis_failed">Photo analysis failed. The photo was kept with the session.</string>
     <string name="prompt_photo_analysis">Describe this image concisely for meeting notes. Focus on any visible text, diagrams, charts and key information.</string>
 

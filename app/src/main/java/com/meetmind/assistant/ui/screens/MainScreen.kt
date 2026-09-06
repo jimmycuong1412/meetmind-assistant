@@ -9,6 +9,7 @@ import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -41,6 +42,8 @@ import com.meetmind.assistant.domain.model.DownloadState
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.presentation.main.MainViewModel
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
+import com.meetmind.assistant.ui.util.importPhotoForAnalysis
+import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -125,6 +128,27 @@ fun MainScreen(
         } else {
             // Cancelled or failed capture — remove the empty placeholder file.
             file?.delete()
+        }
+    }
+
+    // Photo upload: the system Photo Picker returns a temporary-access content URI;
+    // importPhotoForAnalysis copies it as JPEG into filesDir/photos/ (HEIC/WebP get
+    // transcoded — the native vision loader only reads formats stb_image supports).
+    val coroutineScope = rememberCoroutineScope()
+    val photoImportFailedMessage = stringResource(R.string.photo_import_failed)
+    val pickPhotoLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                importPhotoForAnalysis(context, uri)
+                    .onSuccess { path ->
+                        viewModel.onPhotoCaptured(path, photoAnalysisPrompt, photoFailureMessage)
+                    }
+                    .onFailure {
+                        viewModel.onPhotoImportFailed(photoImportFailedMessage)
+                    }
+            }
         }
     }
 
@@ -312,7 +336,7 @@ fun MainScreen(
                     },
                     actions = {
                         // Camera capture — vision-capable model only, while recording.
-                        // Disabled while a previous photo is still being analyzed.
+                        // Never disabled by analysis: captures queue FIFO in the ViewModel.
                         if (uiState.isRecording && uiState.isVisionCapable) {
                             IconButton(
                                 onClick = {
@@ -323,13 +347,30 @@ fun MainScreen(
                                     )
                                     pendingPhotoFile = photoFile
                                     takePictureLauncher.launch(uri)
-                                },
-                                enabled = !uiState.isAnalyzingPhoto
+                                }
                             ) {
                                 Icon(
                                     imageVector = AppIcons.Camera,
                                     contentDescription = stringResource(R.string.camera_take_photo),
-                                    tint = MaterialTheme.semanticColors.onGradient.copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
+                                    tint = MaterialTheme.semanticColors.onGradient
+                                        .copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
+                                )
+                            }
+                            // Photo upload from device files — same pipeline as capture.
+                            IconButton(
+                                onClick = {
+                                    pickPhotoLauncher.launch(
+                                        PickVisualMediaRequest(
+                                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                                        )
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = AppIcons.PhotoLibrary,
+                                    contentDescription = stringResource(R.string.photo_pick_from_files),
+                                    tint = MaterialTheme.semanticColors.onGradient
+                                        .copy(alpha = if (uiState.isAnalyzingPhoto) 0.4f else 1f)
                                 )
                             }
                         }
@@ -596,7 +637,14 @@ fun MainScreen(
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
                         Text(
-                            text = stringResource(R.string.photo_analyzing),
+                            text = if (uiState.pendingPhotoAnalysisCount > 1) {
+                                stringResource(
+                                    R.string.photo_analyzing_queued,
+                                    uiState.pendingPhotoAnalysisCount - 1
+                                )
+                            } else {
+                                stringResource(R.string.photo_analyzing)
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
