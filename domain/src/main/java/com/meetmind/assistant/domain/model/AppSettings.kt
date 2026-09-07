@@ -12,6 +12,34 @@ package com.meetmind.assistant.domain.model
  * @property vadMinSilenceDuration Minimum silence duration (seconds) to consider speech ended (0.25-2.0, default 0.5)
  * @property vadMaxSpeechDuration Maximum continuous speech duration (seconds) before forced segmentation (5.0-30.0, default 10.0)
  * @property vadThreshold VAD detection threshold (0.0-1.0, default 0.5). Lower = more sensitive
+ * @property interviewCandidateProfile Interview Mode only: free-text background —
+ *   clouds, scale, tooling, notable incidents. Injected into the LLM prompt by
+ *   [com.meetmind.assistant.domain.usecase.llm.InterviewPromptBuilder].
+ *
+ *   This is the single biggest lever on answer quality with a small on-device model.
+ *   Asked to answer as a "Senior DevOps Engineer", a 1B model produces advice any
+ *   interviewer spots as non-experience-backed within one follow-up. Given "EKS, 40
+ *   nodes, ~200 services, Terraform monorepo via Atlantis, war story: state corruption
+ *   during a multi-region migration", it reaches for the candidate's own incident.
+ *
+ *   Empty string means no profile; the prompt then omits the section entirely.
+ * @property preferBluetoothMic Whether to capture from a connected Bluetooth headset mic
+ *   instead of the built-in mic. **Defaults to false, and that default is deliberate.**
+ *
+ *   Routing input to a BT headset requires putting the audio stack into communication
+ *   (HFP/SCO) mode, which switches the mic to a *telephony* path: narrowband (often
+ *   8 kHz, at best 16 kHz), lossy-codec compressed, and processed by the HAL's noise
+ *   reduction / AGC. That is the same HAL processing this pipeline deliberately avoids
+ *   by choosing `AudioSource.MIC` over `VOICE_RECOGNITION` (see README §STT Pipeline) —
+ *   so auto-routing to Bluetooth silently discarded that decision whenever a headset
+ *   happened to be paired.
+ *
+ *   The built-in mic delivers full-band 16 kHz raw PCM, which is what the Parakeet TDT
+ *   model was trained on. For transcription accuracy it beats a Bluetooth headset mic
+ *   essentially always — even though the headset is physically closer to the speaker.
+ *
+ *   Set true only to deliberately trade accuracy for convenience (e.g. the phone is in
+ *   a bag or across the room, where the built-in mic captures nothing usable).
  */
 data class AppSettings(
     // Mode-specific intervals
@@ -50,6 +78,17 @@ data class AppSettings(
     val vadMinSilenceDuration: Float = 0.5F,
     val vadMaxSpeechDuration: Float = 10.0F,
     val vadThreshold: Float = 0.5F,
+
+    // Interview Mode: the candidate's own background, injected into the prompt so
+    // generated answers cite real experience instead of textbook generalities.
+    // Lives in settings rather than per-session because it describes the *person*, not
+    // the meeting — typed once, reused by every interview session.
+    val interviewCandidateProfile: String = "",
+
+    // Audio input routing. Default false = always use the built-in mic, even when a
+    // Bluetooth headset is connected. See the property doc for why this default is
+    // the accuracy-preserving one.
+    val preferBluetoothMic: Boolean = false,
 
     // JSON output field names — localized per device locale so the LLM prompt
     // schema uses the target language, reducing English bias in model output.

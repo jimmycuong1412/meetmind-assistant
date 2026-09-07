@@ -68,6 +68,12 @@ class SettingsRepositoryImpl @Inject constructor(
         val VAD_MAX_SPEECH_DURATION = floatPreferencesKey("vad_max_speech_duration")
         val VAD_THRESHOLD = floatPreferencesKey("vad_threshold")
 
+        // Audio input routing
+        val PREFER_BLUETOOTH_MIC = booleanPreferencesKey("prefer_bluetooth_mic")
+
+        // Interview Mode candidate profile
+        val INTERVIEW_CANDIDATE_PROFILE = stringPreferencesKey("interview_candidate_profile")
+
         // Per-mode default insight strategy
         val SIMPLE_LISTENING_DEFAULT_STRATEGY = stringPreferencesKey("simple_listening_default_strategy")
         val SHORT_MEETING_DEFAULT_STRATEGY = stringPreferencesKey("short_meeting_default_strategy")
@@ -149,6 +155,12 @@ class SettingsRepositoryImpl @Inject constructor(
                 vadMinSilenceDuration = preferences[Keys.VAD_MIN_SILENCE_DURATION] ?: defaults.vadMinSilenceDuration,
                 vadMaxSpeechDuration = preferences[Keys.VAD_MAX_SPEECH_DURATION] ?: defaults.vadMaxSpeechDuration,
                 vadThreshold = preferences[Keys.VAD_THRESHOLD] ?: defaults.vadThreshold,
+
+                // Audio input routing
+                preferBluetoothMic = preferences[Keys.PREFER_BLUETOOTH_MIC] ?: defaults.preferBluetoothMic,
+
+                interviewCandidateProfile = preferences[Keys.INTERVIEW_CANDIDATE_PROFILE]
+                    ?: defaults.interviewCandidateProfile,
 
                 // JSON field names — always from locale resources, never persisted to DataStore
                 jsonFieldTitle = resourceProvider.getJsonFieldTitle(),
@@ -249,6 +261,11 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[Keys.VAD_MIN_SILENCE_DURATION] = settings.vadMinSilenceDuration
             preferences[Keys.VAD_MAX_SPEECH_DURATION] = settings.vadMaxSpeechDuration
             preferences[Keys.VAD_THRESHOLD] = settings.vadThreshold
+
+            // Audio input routing
+            preferences[Keys.PREFER_BLUETOOTH_MIC] = settings.preferBluetoothMic
+
+            preferences[Keys.INTERVIEW_CANDIDATE_PROFILE] = settings.interviewCandidateProfile
 
             // LLM model variant
             preferences[Keys.LLM_MODEL_VARIANT] = settings.llmModelVariant.name

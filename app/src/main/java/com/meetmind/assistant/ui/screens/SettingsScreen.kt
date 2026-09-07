@@ -163,6 +163,14 @@ fun SettingsScreen(
                 RecordingModesAccordion(settings = settings, viewModel = viewModel)
             }
 
+            // Audio Input Section
+            SettingsSection(title = stringResource(R.string.settings_section_audio_input)) {
+                PreferBluetoothMicSetting(
+                    enabled = settings.preferBluetoothMic,
+                    onEnabledChange = { viewModel.updatePreferBluetoothMic(it) }
+                )
+            }
+
             // VAD Settings Section
             SettingsSection(title = stringResource(R.string.settings_section_vad)) {
                 VadParametersSetting(
@@ -338,6 +346,10 @@ private fun RecordingModesAccordion(
             DefaultStrategySetting(
                 currentStrategy = settings.interviewDefaultStrategy,
                 onStrategyChange = { viewModel.updateModeDefaultStrategy(RecordingMode.INTERVIEW, it) }
+            )
+            CandidateProfileSetting(
+                profile = settings.interviewCandidateProfile,
+                onProfileChange = { viewModel.updateInterviewCandidateProfile(it) }
             )
         }
 
@@ -1796,6 +1808,97 @@ private fun DiarizationModelSetting(
                 )
             }
         }
+    }
+}
+
+/**
+ * Free-text candidate background injected into Interview Mode prompts.
+ *
+ * The single biggest lever on answer quality with a 1B model: without it the model
+ * produces textbook advice any interviewer identifies as non-experience-backed within
+ * one follow-up; with it, answers cite the candidate's own stack and incidents.
+ *
+ * Multi-line and unvalidated on purpose — the useful shape is shorthand notes, not a
+ * form. The placeholder demonstrates that shape rather than prescribing it.
+ *
+ * @param profile Current profile text (empty when unset)
+ * @param onProfileChange Callback on each edit
+ */
+@Composable
+private fun CandidateProfileSetting(
+    profile: String,
+    onProfileChange: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(R.string.settings_candidate_profile_title),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = stringResource(R.string.settings_candidate_profile_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = profile,
+            onValueChange = onProfileChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp),
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.settings_candidate_profile_hint),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            },
+            textStyle = MaterialTheme.typography.bodyMedium,
+            minLines = 5
+        )
+    }
+}
+
+/**
+ * Bluetooth-microphone opt-in toggle.
+ *
+ * Off by default: capturing through a BT headset forces the narrowband, HAL-processed
+ * telephony (HFP/SCO) path, which measurably degrades transcription accuracy compared
+ * with the built-in mic's full-band 16 kHz raw PCM. The description string states this
+ * trade-off plainly, because "use my headset" is the intuitive-but-wrong expectation.
+ *
+ * @param enabled True when the user has opted into the Bluetooth headset mic
+ * @param onEnabledChange Callback when the toggle changes
+ */
+@Composable
+private fun PreferBluetoothMicSetting(
+    enabled: Boolean,
+    onEnabledChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_prefer_bluetooth_mic_title),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = stringResource(R.string.settings_prefer_bluetooth_mic_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = enabled,
+            onCheckedChange = onEnabledChange
+        )
     }
 }
 
