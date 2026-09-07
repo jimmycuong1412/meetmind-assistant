@@ -29,6 +29,24 @@ interface SttDataSource {
     fun setAudioOutputFile(path: String?)
 
     /**
+     * Configure audio input routing for subsequent [startRecording] calls.
+     *
+     * @param prefer When false (the default), capture is pinned to the built-in
+     *   microphone even if a Bluetooth headset is connected. When true, a connected
+     *   BT headset mic is used instead.
+     *
+     * Defaults to false because routing to a BT headset forces the audio stack into
+     * communication (HFP/SCO) mode — a narrowband, codec-compressed, HAL-processed
+     * telephony path that measurably degrades transcription accuracy relative to the
+     * built-in mic's full-band 16 kHz raw PCM. See
+     * [com.meetmind.assistant.domain.model.AppSettings.preferBluetoothMic].
+     *
+     * Must be called BEFORE [startRecording]; changing it during an active session
+     * has no effect on that session.
+     */
+    fun setPreferBluetoothMic(prefer: Boolean)
+
+    /**
      * Start audio recording and real-time recognition.
      *
      * @return Flow of recognition results
