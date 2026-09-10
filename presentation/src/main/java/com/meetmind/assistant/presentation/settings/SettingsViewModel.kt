@@ -411,6 +411,43 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
+     * Update the Interview Mode candidate profile.
+     *
+     * Free text, stored verbatim: the useful shape is shorthand notes (stacks, scale,
+     * war stories), and the prompt builder bounds its length, so no validation here.
+     * Takes effect on the next recording.
+     *
+     * @param profile The candidate's background, or empty to inject no profile
+     */
+    fun updateInterviewCandidateProfile(profile: String) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(
+                _settings.value.copy(interviewCandidateProfile = profile)
+            )
+        }
+    }
+
+    /**
+     * Choose whether to capture from a connected Bluetooth headset mic instead of the
+     * built-in mic.
+     *
+     * Off (the default) is the accuracy-preserving choice: routing input to a BT headset
+     * forces the audio stack into communication (HFP/SCO) mode, a narrowband and
+     * HAL-processed telephony path, while the built-in mic supplies the full-band 16 kHz
+     * raw PCM the STT model expects. Takes effect on the next recording.
+     *
+     * @param prefer True to use the Bluetooth headset mic, false to pin to the built-in mic
+     */
+    fun updatePreferBluetoothMic(prefer: Boolean) {
+        viewModelScope.launch {
+            val updatedSettings = _settings.value.copy(
+                preferBluetoothMic = prefer
+            )
+            settingsRepository.updateSettings(updatedSettings)
+        }
+    }
+
+    /**
      * Enable or disable the LLM model for recording sessions.
      *
      * When disabled, the LLM is never loaded during recording and no AI insights

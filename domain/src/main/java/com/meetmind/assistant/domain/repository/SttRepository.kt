@@ -29,6 +29,23 @@ interface SttRepository {
     fun setAudioOutputFile(path: String?)
 
     /**
+     * Configure audio input routing for the next [startStreaming] call.
+     *
+     * @param prefer When false (the default), capture is pinned to the built-in
+     *   microphone even if a Bluetooth headset is connected; when true, the headset
+     *   mic is used.
+     *
+     * The default is false for transcription accuracy: using a BT headset mic forces
+     * the audio stack into communication (HFP/SCO) mode — a narrowband, codec-
+     * compressed, HAL-processed telephony path — whereas the built-in mic delivers the
+     * full-band 16 kHz raw PCM the STT model expects. See
+     * [com.meetmind.assistant.domain.model.AppSettings.preferBluetoothMic].
+     *
+     * Has no effect on a session already in progress.
+     */
+    fun setPreferBluetoothMic(prefer: Boolean)
+
+    /**
      * Start streaming audio recording and transcription.
      *
      * @return Flow of transcription segments. Flow never completes until stopStreaming is called.

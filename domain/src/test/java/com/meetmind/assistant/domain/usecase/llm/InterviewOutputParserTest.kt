@@ -1,5 +1,7 @@
 package com.meetmind.assistant.domain.usecase.llm
 
+import com.meetmind.assistant.domain.model.InterviewInsight
+import com.meetmind.assistant.domain.model.QuestionType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -227,5 +229,167 @@ class InterviewOutputParserTest {
         val parsed = InterviewOutputParser.parse(raw, role)
         val insight = InterviewOutputParser.toLlmInsight(parsed, "s1", 1L, emptyList())
         assertNull(insight.tasks)
+    }
+
+    // ─── Skeleton schema (Phase 3) ──────────────────────────────────────────────
+
+    @Test
+    fun `parses the skeleton schema`() {
+        val raw = """
+            {
+              "question_detected": true,
+              "question_type": "technical_deep_dive",
+              "detected_question": "How do you handle Terraform state locking across teams?",
+              "skeleton": [
+                "S3 backend + DynamoDB lock table",
+                "per-env state separation, not per-team",
+                "war story: state corruption during multi-region migration",
+                "moved to Atlantis for serialized applies"
+              ],
+              "depth_probe": "Expect a follow-up on orphaned locks",
+              "coaching_tips": ["Lead with the incident, not the tooling"]
+            }
+        """.trimIndent()
+
+        val result = InterviewOutputParser.parse(raw, role)
+
+        assertTrue(result.questionDetected)
+        assertEquals(QuestionType.TECHNICAL_DEEP_DIVE, result.questionType)
+        assertEquals(4, result.skeleton.size)
+        assertEquals("S3 backend + DynamoDB lock table", result.skeleton.first())
+        assertEquals("Expect a follow-up on orphaned locks", result.depthProbe)
+        assertEquals(listOf("Lead with the incident, not the tooling"), result.coachingTips)
+    }
+
+    @Test
+    fun `maps every documented question type`() {
+        val cases = mapOf(
+            "technical_deep_dive" to QuestionType.TECHNICAL_DEEP_DIVE,
+            "behavioral" to QuestionType.BEHAVIORAL,
+            "system_design" to QuestionType.SYSTEM_DESIGN,
+            "incident_retro" to QuestionType.INCIDENT_RETRO,
+            "culture_fit" to QuestionType.CULTURE_FIT
+        )
+        cases.forEach { (raw, expected) ->
+            val json = """{"question_detected":true,"question_type":"$raw","skeleton":["x"]}"""
+            assertEquals("failed for $raw", expected, InterviewOutputParser.parse(json, role).questionType)
+        }
+    }
+
+    @Test
+    fun `unknown question type degrades to null rather than throwing`() {
+        val json = """{"question_detected":true,"question_type":"interpretive_dance","skeleton":["x"]}"""
+
+        assertNull(InterviewOutputParser.parse(json, role).questionType)
+    }
+
+    // ─── Backward compatibility with the prose schema ───────────────────────────
+
+    @Test
+    fun `old prose schema still parses and synthesises a skeleton`() {
+        // Insights persisted before Phase 3 carry "answer" and no "skeleton". They must
+        // keep rendering rather than showing an empty card.
+        val raw = """
+            {
+              "question_detected": true,
+              "detected_question": "Tell me about a hard bug.",
+              "answer": "I tracked down a race condition in our payment retry path.",
+              "coaching_tips": ["Lead with impact"]
+            }
+        """.trimIndent()
+
+        val result = InterviewOutputParser.parse(raw, role)
+
+        assertEquals(
+            "I tracked down a race condition in our payment retry path.",
+            result.answerSuggestion
+        )
+        assertEquals(
+            "prose answers become a single-item skeleton",
+            listOf("I tracked down a race condition in our payment retry path."),
+            result.skeleton
+        )
+        assertNull(result.questionType)
+        assertNull(result.depthProbe)
+    }
+
+    @Test
+    fun `skeleton wins over answer when both are present`() {
+        val raw = """
+            {"question_detected":true,"answer":"prose fallback",
+             "skeleton":["bullet one","bullet two"]}
+        """.trimIndent()
+
+        val result = InterviewOutputParser.parse(raw, role)
+
+        assertEquals(listOf("bullet one", "bullet two"), result.skeleton)
+    }
+
+    @Test
+    fun `answerSuggestion is derived from the skeleton when no answer field exists`() {
+        // answerSuggestion still backs LlmInsight.content, so it must never be blank
+        // when the model returned only a skeleton.
+        val raw = """{"question_detected":true,"skeleton":["alpha","beta"]}"""
+
+        val result = InterviewOutputParser.parse(raw, role)
+
+        assertTrue("alpha" in result.answerSuggestion)
+        assertTrue("beta" in result.answerSuggestion)
+    }
+
+    // ─── Degradation ────────────────────────────────────────────────────────────
+
+    @Test
+    fun `truncated skeleton json degrades without throwing`() {
+        // Small models truncate mid-array when they hit the token budget.
+        val raw = """{"question_detected":true,"skeleton":["first bullet","second"""
+
+        val result = InterviewOutputParser.parse(raw, role)
+
+        assertNotNull(result)
+        assertTrue(result.answerSuggestion.isNotBlank())
+    }
+
+    // ─── Persistence mapping ────────────────────────────────────────────────────
+
+    @Test
+    fun `skeleton is persisted in the tasks column`() {
+        val insight = InterviewInsight(
+            questionDetected = true,
+            detectedQuestion = "How do you handle state locking?",
+            answerSuggestion = "S3 + DynamoDB",
+            coachingTips = listOf("Lead with the incident"),
+            skeleton = listOf("S3 backend", "DynamoDB lock table"),
+            questionType = QuestionType.TECHNICAL_DEEP_DIVE,
+            depthProbe = "Expect a follow-up on orphaned locks",
+            role = role
+        )
+
+        val llm = InterviewOutputParser.toLlmInsight(insight, "s1", 123L, emptyList())
+
+        // Reuses the existing llm_insights table — no schema migration.
+        assertTrue("skeleton must reach the tasks column", llm.tasks!!.contains("S3 backend"))
+        assertTrue(llm.tasks!!.contains("DynamoDB lock table"))
+    }
+
+    @Test
+    fun `depth probe survives the round trip to LlmInsight`() {
+        val insight = InterviewInsight(
+            questionDetected = true,
+            detectedQuestion = "Q?",
+            answerSuggestion = "A",
+            coachingTips = emptyList(),
+            skeleton = listOf("bullet"),
+            questionType = null,
+            depthProbe = "Expect a follow-up on orphaned locks",
+            role = role
+        )
+
+        val llm = InterviewOutputParser.toLlmInsight(insight, "s1", 123L, emptyList())
+
+        assertTrue(
+            "depth probe must be recoverable from the persisted insight",
+            llm.content.contains("orphaned locks")
+        )
     }
 }

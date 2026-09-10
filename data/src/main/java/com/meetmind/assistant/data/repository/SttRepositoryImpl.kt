@@ -27,6 +27,10 @@ class SttRepositoryImpl @Inject constructor(
         sttDataSource.setAudioOutputFile(path)
     }
 
+    override fun setPreferBluetoothMic(prefer: Boolean) {
+        sttDataSource.setPreferBluetoothMic(prefer)
+    }
+
     override fun startStreaming(): Flow<TranscriptionSegment> {
         return sttDataSource.startRecording()
             .map { result ->

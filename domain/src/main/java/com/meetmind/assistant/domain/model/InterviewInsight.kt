@@ -30,11 +30,35 @@ package com.meetmind.assistant.domain.model
  * @property coachingTips Ordered list of follow-up coaching tips or behavioural
  *   recommendations. Always non-empty (minimum one tip).
  * @property role The target role used for prompt generation (e.g. "Developer").
+ * @property skeleton Keyword bullets the candidate speaks **from**, rather than reads.
+ *   3-5 short fragments ("S3 backend + DynamoDB lock table"), glanceable in ~2 s.
+ *
+ *   This is the primary output of Interview Mode. Reading generated prose aloud in a
+ *   live interview is audible to the interviewer — cadence flattens, eye-line shifts —
+ *   and produces a worse answer than the candidate's own words. Structure prompts
+ *   recall; sentences invite recitation.
+ *
+ *   Empty for insights persisted before this field existed; [answerSuggestion] then
+ *   carries the prose and the parser synthesises a single-item skeleton from it.
+ * @property isSkeletonSynthesised True when [skeleton] was derived from prose rather
+ *   than returned by the model. Such a skeleton is shown but never persisted into the
+ *   tasks column: it would duplicate text already in the answer, and would make a prose
+ *   insight indistinguishable from a genuine one-bullet skeleton.
+ * @property questionType Shape hint for the answer, or null when the model omitted it
+ *   or returned an unrecognised value. Null means "no hint" — never assume a default.
+ * @property depthProbe The follow-up the candidate should expect, e.g. "expect a
+ *   follow-up on orphaned locks". Senior interviews are decided on the second and third
+ *   follow-up rather than the first answer, so cueing what is coming is worth as much as
+ *   the answer itself. Null when the model did not supply one.
  */
 data class InterviewInsight(
     val questionDetected: Boolean,
     val detectedQuestion: String?,
     val answerSuggestion: String,
     val coachingTips: List<String>,
-    val role: String
+    val role: String,
+    val skeleton: List<String> = emptyList(),
+    val isSkeletonSynthesised: Boolean = false,
+    val questionType: QuestionType? = null,
+    val depthProbe: String? = null
 )
