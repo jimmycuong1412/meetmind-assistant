@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Git-specific common functions for the git extension.
 # Extracted from scripts/powershell/common.ps1 — contains only git-specific
 # branch validation and detection logic.

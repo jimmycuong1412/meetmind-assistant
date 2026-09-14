@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Git extension: initialize-repo.ps1
 # Initialize a Git repository with an initial commit.
 # Customizable — replace this script to add .gitignore templates,
