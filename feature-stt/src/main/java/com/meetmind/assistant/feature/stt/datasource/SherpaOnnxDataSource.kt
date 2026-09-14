@@ -133,6 +133,12 @@ class SherpaOnnxDataSource(
     // Used to tear it down symmetrically in stopRecording().
     private var bluetoothScoActive = false
 
+    // User opt-in for capturing from a Bluetooth headset mic. Default false pins capture
+    // to the built-in mic — see setPreferBluetoothMic() / activateBluetoothSco() for why
+    // the accuracy-preserving default is NOT to follow the headset.
+    // @Volatile: written from the ViewModel thread, read on the recording coroutine.
+    @Volatile private var preferBluetoothMic = false
+
     // Optional WAV mirror of the live PCM stream. Set via setAudioOutputFile() before
     // startRecording(); a single recorder instance is reused across sessions.
     // The path is consumed at start; callers must call setAudioOutputFile() each session.
@@ -168,7 +174,24 @@ class SherpaOnnxDataSource(
      * startBluetoothSco()). Searches availableCommunicationDevices for a BT headset
      * input device and activates it synchronously — no broadcast receiver needed.
      *
-     * Falls back to the built-in device mic silently if no BT headset is available.
+     * ## Opt-in only — do not restore auto-routing
+     *
+     * This is called **only** when the user has explicitly set
+     * [com.meetmind.assistant.domain.model.AppSettings.preferBluetoothMic]. It used to
+     * run unconditionally whenever any BT headset was paired, which silently degraded
+     * transcription accuracy:
+     *
+     * Selecting a BT input device puts the audio stack into communication (HFP/SCO)
+     * mode, which routes the mic through the *telephony* path — narrowband (commonly
+     * 8 kHz, at best 16 kHz), lossy-codec compressed, with HAL noise reduction and AGC
+     * applied. That is precisely the HAL processing this pipeline avoids by choosing
+     * `AudioSource.MIC` over `VOICE_RECOGNITION` (README §STT Pipeline). Auto-routing
+     * therefore threw away that carefully-made decision whenever the user happened to
+     * be wearing earbuds — the common case during a remote meeting or interview, i.e.
+     * exactly when accuracy matters most.
+     *
+     * The built-in mic gives Parakeet TDT the full-band 16 kHz raw PCM it expects, and
+     * wins on word-error rate despite being further from the speaker.
      *
      * @return true if a BT headset was selected, false if falling back to device mic.
      */
@@ -183,12 +206,41 @@ class SherpaOnnxDataSource(
         }
         val success = audioManager.setCommunicationDevice(btDevice)
         return if (success) {
-            Log.i(TAG, "Bluetooth communication device set: ${btDevice.productName} (type=${btDevice.type})")
+            Log.i(
+                TAG,
+                "Bluetooth communication device set: ${btDevice.productName} " +
+                    "(type=${btDevice.type}) — narrowband telephony path, " +
+                    "transcription accuracy will be reduced (user opted in)"
+            )
             true
         } else {
             Log.w(TAG, "setCommunicationDevice() failed — using device mic")
             false
         }
+    }
+
+    /**
+     * Pins audio capture to the phone's built-in microphone.
+     *
+     * Without this, Android may still hand the capture to a connected headset's mic
+     * depending on OEM routing policy, even though we never entered communication
+     * mode. Setting the preferred device makes the full-band built-in mic explicit
+     * rather than merely likely.
+     *
+     * Best-effort: if no built-in mic is enumerated, or the platform declines the
+     * request, capture proceeds on the system default and we log the outcome.
+     */
+    private fun preferBuiltInMic(record: AudioRecord) {
+        val builtIn = audioManager
+            .getDevices(AudioManager.GET_DEVICES_INPUTS)
+            .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_MIC }
+
+        if (builtIn == null) {
+            Log.d(TAG, "No built-in mic enumerated — using system default input")
+            return
+        }
+        val ok = record.setPreferredDevice(builtIn)
+        Log.i(TAG, "Preferred input = built-in mic (accepted=$ok)")
     }
 
     /**
@@ -217,6 +269,10 @@ class SherpaOnnxDataSource(
         // Clear stale path from the previous session so callers can't accidentally
         // read a result that doesn't correspond to the upcoming startRecording().
         lastRecordedAudioPath = null
+    }
+
+    override fun setPreferBluetoothMic(prefer: Boolean) {
+        preferBluetoothMic = prefer
     }
 
     override fun lastRecordedAudioFilePath(): String? = lastRecordedAudioPath
@@ -325,8 +381,15 @@ class SherpaOnnxDataSource(
             v.reset()
         }
 
-        // Route audio input to BT headset if available; falls back to device mic silently.
-        bluetoothScoActive = activateBluetoothSco()
+        // Audio input routing. Bluetooth is OPT-IN: routing to a headset mic forces the
+        // narrowband, HAL-processed telephony path and costs transcription accuracy, so
+        // by default we stay on the built-in mic even when a headset is connected.
+        // Do not "fix" this back to unconditional auto-routing — see activateBluetoothSco().
+        bluetoothScoActive = if (preferBluetoothMic) {
+            activateBluetoothSco()
+        } else {
+            false
+        }
 
         // Reset metrics for new session
         metrics = AudioMetrics()
@@ -379,6 +442,14 @@ class SherpaOnnxDataSource(
                 AudioFormat.ENCODING_PCM_16BIT,
                 actualBufferSize
             )
+
+            // Unless the user opted into the Bluetooth mic, explicitly pin capture to the
+            // built-in mic. Skipping communication mode alone is not always enough: some
+            // OEM routing policies still prefer a connected headset's mic for MIC-source
+            // capture, which would silently reintroduce the narrowband telephony path.
+            if (!preferBluetoothMic) {
+                audioRecord?.let { preferBuiltInMic(it) }
+            }
 
             audioRecord?.startRecording()
 

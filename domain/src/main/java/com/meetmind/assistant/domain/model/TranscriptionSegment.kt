@@ -22,6 +22,17 @@ package com.meetmind.assistant.domain.model
  *   speaker spans. Null for segments produced before audio offsets were tracked.
  * @property endOffsetMs Audio offset of segment end, in milliseconds since the start of
  *   the session's recording. Null for partials and for legacy segments.
+ * @property speakerChannel Which party spoke this segment, resolved **live** from the
+ *   capture source (Interview Mode). Distinct from [speakerCluster], which is an
+ *   acoustic guess produced after the fact by the offline diarization pipeline: a
+ *   channel is known at capture time, typically with certainty.
+ *
+ *   Null when live attribution does not apply (non-interview modes, or segments
+ *   recorded before this existed). [com.meetmind.assistant.domain.model.SpeakerChannel.UNKNOWN]
+ *   is different from null — it means attribution was attempted and was not confident.
+ *
+ *   Not yet persisted: the Room column arrives with the capture producer (plan Task 3),
+ *   since nothing writes a non-null value until then.
  */
 data class TranscriptionSegment(
     val id: String,
@@ -31,6 +42,7 @@ data class TranscriptionSegment(
     val isComplete: Boolean,
     val speaker: String? = null,
     val speakerCluster: Int? = null,
+    val speakerChannel: SpeakerChannel? = null,
     val startOffsetMs: Long? = null,
     val endOffsetMs: Long? = null
 )

@@ -174,6 +174,7 @@ AudioRecord (16 kHz mono, PCM 16-bit, AudioSource.MIC)
 | Parameter | Value | Rationale |
 |---|---|---|
 | `AudioSource.MIC` | — | Delivers raw PCM; `VOICE_RECOGNITION` activates HAL noise reduction on some devices that degrades transducer accuracy |
+| Bluetooth mic | Opt-in (default **off**) | Routing input to a BT headset forces communication (HFP/SCO) mode: narrowband (often 8 kHz), codec-compressed, HAL-processed — the same processing `AudioSource.MIC` is chosen to avoid. The built-in mic's full-band 16 kHz raw PCM is more accurate despite the greater distance. Capture is additionally pinned via `setPreferredDevice(TYPE_BUILTIN_MIC)`, because skipping communication mode alone does not stop some OEM routing policies from selecting the headset mic. Toggle: Settings → Audio Input |
 | Recording thread priority | `URGENT_AUDIO` | Prevents audio buffer drops under CPU load |
 | ADPF hint (VAD/ASR thread) | 50 ms target | Signals scheduler to prefer big cores on big.LITTLE SoCs; prevents ASR parking on efficiency cores |
 | VAD window size | 512 samples | Standard Silero-VAD frame size |

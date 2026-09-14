@@ -158,7 +158,15 @@
     <string name="prompt_long_meeting">You are an assistant analyzing extended discussions.\nWrite a title (max 8 words) capturing the main topic, a comprehensive summary of key topics, decisions, and conclusions (proportional to input length), and a list of actionable tasks.\nOutput ONLY valid JSON with this exact structure. No markdown. No code fences. No backticks:\n{\"title\": \"...\", \"summary\": \"...\", \"action_items\": [\"...\", \"...\"]}\nBe direct. Focus on high-level insights and concrete outcomes.</string>
     <string name="prompt_translation">You are a professional translator.\nTranslate the following text into {target_language}.\nOutput the translation only. No explanations, no labels, no prefixes.</string>
     <!-- Interview mode prompt. {role} is replaced at runtime with the selected role name. -->
-    <string name="prompt_interview">You are an expert interview coach for a {role} candidate. Analyse the transcript and produce a JSON object with exactly these four fields:\n\"question_detected\": true if an interview question was asked (direct question, hypothetical, or request for example), false otherwise.\n\"detected_question\": the verbatim question extracted from the transcript, or null if question_detected is false.\n\"answer\": a concise, role-appropriate suggested answer the candidate can use — 2-3 key talking points tailored to the {role} role. If no question was detected, write a brief coaching observation instead.\n\"coaching_tips\": array of 2-3 short, actionable coaching tips relevant to the {role} role (delivery advice, follow-up suggestions, or behavioural guidance).\nOutput ONLY valid JSON. No markdown. No code fences. No backticks:\n{\"question_detected\": true, \"detected_question\": \"…\", \"answer\": \"…\", \"coaching_tips\": [\"…\", \"…\"]}\nBe direct, concise, and role-specific.</string>
+    <string name="prompt_interview">You are an interview coach for a {role} candidate. Analyse the transcript and produce a JSON object with exactly these six fields:
+\"question_detected\": true if the interviewer asked a question (direct, hypothetical, or a request for an example), false otherwise.
+\"question_type\": one of technical_deep_dive, behavioral, system_design, incident_retro, culture_fit.
+\"detected_question\": the verbatim question, or null if question_detected is false.
+\"skeleton\": array of 3-5 VERY SHORT keyword bullets the candidate can speak from. Fragments, not sentences. No more than 8 words each. If a CANDIDATE PROFILE is given, draw on that specific experience — name their real tools, scale, and incidents rather than generic best practice. Shape by question_type: behavioral gets situation-action-result; system_design gets constraints-tradeoffs-decision; incident_retro gets impact-detection-fix.
+\"depth_probe\": one short line naming the follow-up the interviewer is likely to ask next, or null.
+\"coaching_tips\": array of 1-2 short delivery tips.
+The skeleton is spoken aloud from memory, so favour concrete nouns over full sentences. Output ONLY valid JSON. No markdown. No code fences. No backticks:
+{\"question_detected\": true, \"question_type\": \"technical_deep_dive\", \"detected_question\": \"…\", \"skeleton\": [\"…\", \"…\"], \"depth_probe\": \"…\", \"coaching_tips\": [\"…\"]}</string>
     <!-- JSON output field names in English (default locale). Localized in values-XX/strings.xml. -->
     <string name="json_field_title">title</string>
     <string name="json_field_summary">summary</string>
@@ -329,6 +337,17 @@
     <string name="settings_section_translation">Live Translation</string>
     <string name="settings_section_interview">Interview Coach</string>
     <string name="settings_section_vad">Voice Activity Detection (VAD)</string>
+    <string name="settings_section_audio_input">Audio Input</string>
+    <string name="settings_candidate_profile_title">Your background</string>
+    <string name="settings_candidate_profile_desc">Used only in Interview Mode. Answers will draw on your real tools, scale and incidents instead of generic advice.</string>
+    <string name="settings_candidate_profile_hint">Clouds: AWS (6 yrs), GCP
+K8s: EKS, 40 nodes, ~200 services
+IaC: Terraform monorepo + Atlantis
+CI/CD: GitLab CI → ArgoCD
+Scale: 12k req/s peak, 99.95%% SLO
+War stories: Postgres failover cascade; Terraform state corruption mid-migration</string>
+    <string name="settings_prefer_bluetooth_mic_title">Use Bluetooth headset mic</string>
+    <string name="settings_prefer_bluetooth_mic_desc">Off is recommended. A Bluetooth mic uses a narrowband call audio path that lowers transcription accuracy. The phone\'s built-in mic is more accurate even from further away. Turn on only if the phone is too far to hear you.</string>
     <string name="settings_interval_analysis">Analysis Interval</string>
     <string name="settings_interval_translation">Translation Interval</string>
 

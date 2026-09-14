@@ -552,6 +552,37 @@ private fun InterviewInsightItem(
         insight.sourceSegmentIds.mapNotNull { id -> segmentMap[id] }
     }
 
+    // The tasks column holds skeleton bullets, then TIPS_SEPARATOR, then coaching tips.
+    // Insights written before skeletons existed have no separator — everything in them
+    // is tips, which is what the `else` branch preserves.
+    val taskItems = remember(insight.tasks) {
+        insight.tasks?.let { parseTasksJson(it) } ?: emptyList()
+    }
+    val separatorIndex = remember(taskItems) {
+        taskItems.indexOf(InterviewOutputParser.TIPS_SEPARATOR)
+    }
+    val skeletonBullets = remember(taskItems, separatorIndex) {
+        when {
+            separatorIndex >= 0 -> taskItems.take(separatorIndex)
+            // No separator: either skeleton-only or tips-only. A question card's bullets
+            // are the skeleton; a coaching note has no skeleton by construction.
+            isCoachingNote -> emptyList()
+            else -> taskItems
+        }
+    }
+    val coachingTips = remember(taskItems, separatorIndex) {
+        if (separatorIndex >= 0) taskItems.drop(separatorIndex + 1)
+        else if (isCoachingNote) taskItems else emptyList()
+    }
+    // CoachingTipsList takes the raw JSON form, so re-encode just the tips half.
+    val coachingTipsJson = remember(coachingTips) {
+        coachingTips.joinToString(
+            separator = ",",
+            prefix = "[",
+            postfix = "]"
+        ) { "\"" + it.replace("\\", "\\\\").replace("\"", "\\\"") + "\"" }
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -646,7 +677,16 @@ private fun InterviewInsightItem(
                 }
             }
 
-            // ── Answer suggestion label + content ──────────────────────────
+            // ── Answer: skeleton bullets, or prose for legacy insights ─────
+            // The skeleton is what the candidate actually glances at mid-interview, so
+            // it is rendered large and first. The depth probe rides in `content` behind
+            // DEPTH_PROBE_MARKER (no extra DB column) and is split back out here.
+            val probeDelimiter = "\n" + InterviewOutputParser.DEPTH_PROBE_MARKER
+            val answerBody = insight.content.substringBefore(probeDelimiter)
+            val depthProbe = insight.content
+                .substringAfter(probeDelimiter, "")
+                .takeIf { it.isNotBlank() }
+
             Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.interview_answer_suggestion),
@@ -655,12 +695,40 @@ private fun InterviewInsightItem(
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(4.dp))
-            FormattedInsightText(insight.content)
+
+            if (skeletonBullets.isNotEmpty()) {
+                SkeletonBulletList(skeletonBullets, accentColor)
+            } else {
+                // Pre-skeleton insights (and any model output that ignored the schema)
+                // still render as prose rather than showing an empty card.
+                FormattedInsightText(answerBody)
+            }
+
+            // ── Depth probe ────────────────────────────────────────────────
+            // What the interviewer is likely to ask next. Senior interviews turn on the
+            // second and third follow-up, so this is cued distinctly from the answer.
+            if (depthProbe != null) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = InterviewOutputParser.DEPTH_PROBE_MARKER,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = depthProbe,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontStyle = FontStyle.Italic
+                    )
+                }
+            }
 
             // ── Coaching tips ──────────────────────────────────────────────
-            insight.tasks?.let { tasksJson ->
+            if (coachingTips.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
-                CoachingTipsList(tasksJson, accentColor)
+                CoachingTipsList(coachingTipsJson, accentColor)
             }
 
             // ── Source transcription (collapsed) ───────────────────────────
@@ -1068,6 +1136,43 @@ private fun TasksList(tasksJson: String) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * The skeleton: keyword bullets the candidate speaks **from**, mid-interview.
+ *
+ * Deliberately the largest, highest-contrast text on the card, because it is read in a
+ * ~2-second glance while someone is watching the candidate's face. Bullets are short
+ * fragments, so each gets its own line with a generous accent dot — no wrapping, no
+ * paragraph shape, nothing that invites reading aloud. Prose is what this replaces:
+ * reciting generated sentences is audible to an interviewer and produces a worse answer
+ * than the candidate's own words.
+ */
+@Composable
+private fun SkeletonBulletList(bullets: List<String>, accentColor: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        bullets.forEach { bullet ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Small dot rather than a glyph bullet: reads as structure at a glance
+                // without competing with the text for attention.
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .size(6.dp)
+                        .background(color = accentColor, shape = CircleShape)
+                )
+                Text(
+                    text = bullet,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

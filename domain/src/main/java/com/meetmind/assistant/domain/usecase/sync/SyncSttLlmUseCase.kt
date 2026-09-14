@@ -3,6 +3,7 @@ package com.meetmind.assistant.domain.usecase.sync
 import com.meetmind.assistant.domain.model.AppSettings
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
+import com.meetmind.assistant.domain.model.SpeakerChannel
 import com.meetmind.assistant.domain.usecase.llm.EnglishCoachOutputParser
 import com.meetmind.assistant.domain.usecase.llm.InsightOutputParser
 import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
@@ -14,6 +15,7 @@ import com.meetmind.assistant.domain.provider.ResourceProvider
 import com.meetmind.assistant.domain.repository.LlmRepository
 import com.meetmind.assistant.domain.repository.SettingsRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -111,6 +113,8 @@ class SyncSttLlmUseCase(
      * @param inputLanguage Language of the audio source
      * @param outputLanguage Target language BCP-47 code for translation (if applicable)
      * @param topic Optional session topic injected into the system prompt for focused analysis
+     * @param candidateProfile Interview Mode only: the candidate's own background, so
+     *   generated answers cite their real experience rather than textbook generalities.
      * @return Flow of LLM insights
      */
     operator fun invoke(
@@ -119,7 +123,8 @@ class SyncSttLlmUseCase(
         mode: RecordingMode,
         inputLanguage: String,
         outputLanguage: String?,
-        topic: String? = null
+        topic: String? = null,
+        candidateProfile: String? = null
     ): Flow<LlmInsight> = channelFlow {
         val settings = settingsRepository.getSettings().first()
         var baseIntervalMs = calculateIntervalMs(mode, settings)
@@ -206,6 +211,21 @@ class SyncSttLlmUseCase(
 
         val maxTokens = maxTokensForMode(mode)
 
+        // Interview Mode fires on question onset rather than on the interval clock, so
+        // help lands ~3-4 s after a question ends instead of up to a full interval later.
+        // The detector owns that decision (debounce, barge-in, heartbeat fallback); this
+        // loop only feeds it segments and acts on what it returns.
+        // allowUnattributedQuestions = true because no capture producer sets
+        // TranscriptionSegment.speakerChannel yet (plan Tasks 3/3b), so every segment
+        // arrives UNKNOWN. Without it the detector would refuse everything and the mode
+        // would run heartbeat-only. Flip to false once a real producer ships — the
+        // detector already prefers known attribution whenever it is present.
+        val turnDetector = if (mode == RecordingMode.INTERVIEW) {
+            InterviewTurnDetector(allowUnattributedQuestions = true)
+        } else null
+        // Tracks the in-flight interview job so a candidate barge-in can cancel it.
+        var interviewJob: Job? = null
+
         transcriptionFlow
             .collect { segment ->
                 if (segment.text.isNotBlank()) {
@@ -283,6 +303,116 @@ class SyncSttLlmUseCase(
                         }
                         return@collect
                     }
+                }
+
+                // Interview Mode: event-driven. Instead of waiting for the interval clock,
+                // feed the detector and act the moment it says the interviewer finished a
+                // question. See InterviewTurnDetector for the debounce/barge-in rules.
+                if (turnDetector != null && interviewRole != null) {
+                    val nowMs = System.currentTimeMillis()
+                    val heartbeatMs = intervalMs
+
+                    // Only finalized segments carry reliable text and attribution; partials
+                    // are still mutating and would double-count clauses in the pending turn.
+                    val segmentTrigger = if (segment.isComplete) {
+                        turnDetector.onSegment(
+                            text = segment.text,
+                            channel = segment.speakerChannel ?: SpeakerChannel.UNKNOWN,
+                            nowMs = nowMs,
+                            heartbeatIntervalMs = heartbeatMs
+                        )
+                    } else null
+
+                    // A barge-in cancel must be honoured even while isLlmBusy is true —
+                    // that is precisely when there is something to cancel.
+                    if (segmentTrigger is InterviewTrigger.Cancel) {
+                        interviewJob?.cancel()
+                        interviewJob = null
+                        turnDetector.onGenerationFinished()
+                        isLlmBusy.set(false)
+                        return@collect
+                    }
+
+                    val trigger = segmentTrigger ?: turnDetector.poll(nowMs, heartbeatMs)
+
+                    if (trigger != null && !isLlmBusy.get() && !llmRepository.isGenerating) {
+                        val promptContent = when (trigger) {
+                            is InterviewTrigger.Question -> trigger.text
+                            // Heartbeat: no question detected this interval, so fall back to
+                            // the accumulated transcript for a general coaching observation.
+                            InterviewTrigger.Heartbeat -> {
+                                val delta = buildList {
+                                    addAll(newSegmentsSinceLastLlm)
+                                    if (currentPartialSegment.isNotBlank()) add(currentPartialSegment)
+                                }.joinToString(" ").trim()
+                                delta
+                            }
+                            InterviewTrigger.Cancel -> "" // handled above; unreachable
+                        }
+
+                        val wordCount = promptContent.split(Regex("\\s+")).count { it.isNotEmpty() }
+                        if (wordCount >= MIN_NEW_WORDS_FOR_INFERENCE) {
+                            val sourceIds = completeSegmentIds.toList()
+                            val insightTimestamp = System.currentTimeMillis()
+                            lastInferenceTime = insightTimestamp
+                            newSegmentsSinceLastLlm.clear()
+                            completeSegmentIds.clear()
+
+                            val finalPrompt = InterviewPromptBuilder.build(
+                                role = interviewRole,
+                                newContent = promptContent,
+                                candidateProfile = candidateProfile
+                            )
+                            if (llmRepository.isLargeContext(finalPrompt.length)) {
+                                llmRepository.useConservativeThreads()
+                            }
+
+                            isLlmBusy.set(true)
+                            turnDetector.onGenerationStarted()
+                            interviewJob = launch {
+                                try {
+                                    llmRepository.beginInference()
+                                    llmRepository.reloadModel()
+                                    llmRepository.checkAndCacheMemoryConstraint()
+
+                                    val insightBuilder = StringBuilder()
+                                    llmRepository.generateInsight(finalPrompt, currentSystemPrompt, maxTokens)
+                                        .collect { token -> insightBuilder.append(token) }
+
+                                    val rawOutput = insightBuilder.toString().trim()
+                                    if (rawOutput.isNotBlank()) {
+                                        val interviewInsight = InterviewOutputParser.parse(
+                                            rawOutput = rawOutput,
+                                            role = interviewRole
+                                        )
+                                        send(
+                                            InterviewOutputParser.toLlmInsight(
+                                                interviewInsight = interviewInsight,
+                                                sessionId = sessionId,
+                                                timestamp = insightTimestamp,
+                                                sourceSegmentIds = sourceIds
+                                            )
+                                        )
+                                    }
+                                } catch (e: Exception) {
+                                    // Barge-in cancellation arrives here as a
+                                    // CancellationException; rethrow so the coroutine
+                                    // machinery unwinds correctly (the finally below still
+                                    // runs under NonCancellable).
+                                    if (e is CancellationException) throw e
+                                    println("Interview LLM error: ${e.message}")
+                                } finally {
+                                    withContext(NonCancellable) {
+                                        llmRepository.endInference()
+                                        llmRepository.recordConstrainedInference(finalPrompt.length)
+                                        turnDetector.onGenerationFinished()
+                                        isLlmBusy.set(false)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    return@collect
                 }
 
                 val now = System.currentTimeMillis()

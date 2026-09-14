@@ -577,6 +577,12 @@ class MainViewModel @Inject constructor(
         val audioPath = audioStorage.audioFilePathForSession(sessionId)
         sttRepository.setAudioOutputFile(audioPath)
 
+        // Audio input routing. Read from the live settings mirror at each start, so
+        // toggling the setting takes effect on the next recording without an app restart.
+        // Default false keeps capture on the built-in mic for transcription accuracy —
+        // a Bluetooth headset mic forces the narrowband telephony path.
+        sttRepository.setPreferBluetoothMic(_uiState.value.settings.preferBluetoothMic)
+
         // Create a SINGLE shared STT stream
         val sharedSttStream = sttRepository.startStreaming()
             .catch { e ->
@@ -688,7 +694,11 @@ class MainViewModel @Inject constructor(
                     mode = currentRecordingMode,
                     inputLanguage = currentInputLanguage,
                     outputLanguage = currentOutputLanguage,
-                    topic = currentTopic
+                    topic = currentTopic,
+                    // Read at stream start so an edit in Settings applies to the next
+                    // recording without an app restart.
+                    candidateProfile = _uiState.value.settings.interviewCandidateProfile
+                        .takeIf { it.isNotBlank() }
                 )
                     .catch { e ->
                         // Handle errors without crashing

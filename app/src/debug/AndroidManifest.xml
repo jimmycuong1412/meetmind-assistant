@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only additions. Merged into the main manifest for debug builds only, so
+    nothing here can ship in a release APK.
+
+    Registers the Task 0 playback-capture probe
+    (com.meetmind.assistant.debug.PlaybackCaptureProbeActivity), a throwaway harness
+    that measures whether conferencing-app audio is capturable on real hardware.
+    See docs/superpowers/plans/2026-09-07-interview-mode-real-interviews.md (Task 0).
+
+    android:exported="true" is required so the probe can be launched from adb:
+        adb shell am start -n com.meetmind.assistant/com.meetmind.assistant.debug.PlaybackCaptureProbeActivity
+    That is acceptable for a debug-only component and must not be copied into the
+    main manifest.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Android 14+ requires a running foreground service of this type before
+         MediaProjectionManager.getMediaProjection() may be called. Debug-only here;
+         the production equivalent is plan Task 4, which adds the mediaProjection type
+         to the existing RecordingService instead of declaring a separate service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+    <application>
+        <activity
+            android:name="com.meetmind.assistant.debug.PlaybackCaptureProbeActivity"
+            android:exported="true"
+            android:label="Playback Capture Probe" />
+
+        <service
+            android:name="com.meetmind.assistant.debug.ProbeProjectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+    </application>
+
+</manifest>

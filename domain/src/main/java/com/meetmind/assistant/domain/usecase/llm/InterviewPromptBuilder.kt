@@ -34,6 +34,11 @@ object InterviewPromptBuilder {
     // Keeping this below the 12 000-char meeting-mode ceiling speeds up prefill.
     private const val MAX_TRANSCRIPT_CHARS = 4_000
 
+    // Cap on the injected candidate profile (~180 tokens). Generous for the intended
+    // shorthand (stacks, scale, a few war stories) while leaving the transcript and the
+    // output budget room inside Gemma 3 1B's 4096-token window.
+    private const val MAX_PROFILE_CHARS = 750
+
     /**
      * Build the user prompt for an Interview Mode inference call.
      *
@@ -42,10 +47,39 @@ object InterviewPromptBuilder {
      * @param newContent The most recent transcription text from this inference interval.
      * @return           A concise, structured prompt ready for the LLM.
      */
-    fun build(role: String, newContent: String): String {
+    fun build(role: String, newContent: String): String = build(role, newContent, null)
+
+    /**
+     * Build the user prompt, optionally grounded in the candidate's own experience.
+     *
+     * @param role       The candidate's target role (e.g. "Senior DevOps Engineer").
+     * @param newContent The most recent transcription text from this inference interval.
+     * @param candidateProfile Optional background — clouds, scale, tooling, war stories.
+     *   When present, the model reaches for the candidate's real incidents instead of
+     *   textbook generalities, which is the difference between an answer that survives a
+     *   follow-up and one that does not.
+     *
+     * ## Ordering matters for cache reuse
+     * Role and profile are constant for the whole session, so they are emitted **before**
+     * the transcript. That keeps the prompt prefix byte-identical across intervals and
+     * lets llama.cpp reuse its KV cache, so only the changing `[TRANSCRIPT]` block needs
+     * prefill. Putting the profile after the transcript would invalidate the cache on
+     * every call and add seconds of latency to a mode whose whole point is speed.
+     */
+    fun build(role: String, newContent: String, candidateProfile: String?): String {
         val transcript = newContent.takeLast(MAX_TRANSCRIPT_CHARS).trim()
-        // Two-line structure keeps the [TRANSCRIPT] label close to the text so small
-        // models reliably associate the instruction with the content block.
-        return "Role: $role\n[TRANSCRIPT]\n$transcript"
+
+        return buildString {
+            append("Role: ").append(role)
+            candidateProfile?.trim()?.takeIf { it.isNotEmpty() }?.let { profile ->
+                append("\n[CANDIDATE PROFILE]\n")
+                // Bounded so a long profile can never crowd out the transcript in the
+                // 4096-token context window.
+                append(profile.take(MAX_PROFILE_CHARS))
+            }
+            // Keep the [TRANSCRIPT] label adjacent to the text so small models reliably
+            // associate the instruction with the content block.
+            append("\n[TRANSCRIPT]\n").append(transcript)
+        }
     }
 }
