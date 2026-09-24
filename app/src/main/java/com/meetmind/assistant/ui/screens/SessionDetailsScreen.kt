@@ -774,10 +774,16 @@ private fun TranscriptTab(
     val sortedSegments = remember(segments) { segments.sortedBy { it.timestamp } }
     val listState = rememberLazyListState()
 
+    // Jump to the highlighted segment once. Keying on the list alone would re-run on every
+    // edit/speaker change and yank the user back to the highlight mid-scroll.
+    var scrolledToHighlight by rememberSaveable(highlightId) { mutableStateOf(false) }
     LaunchedEffect(highlightId, sortedSegments) {
-        if (highlightId != null && sortedSegments.isNotEmpty()) {
-            val index = sortedSegments.indexOfFirst { it.id == highlightId }
-            if (index >= 0) listState.scrollToItem(index)
+        if (highlightId == null || scrolledToHighlight || sortedSegments.isEmpty()) return@LaunchedEffect
+        val index = sortedSegments.indexOfFirst { it.id == highlightId }
+        if (index >= 0) {
+            // The photos section, when present, is the first item in the list.
+            listState.scrollToItem(index + if (photos.isNotEmpty()) 1 else 0)
+            scrolledToHighlight = true
         }
     }
 
@@ -929,11 +935,15 @@ private fun StaticInsightsView(
     }
 
     val listState = rememberLazyListState()
+    // Jump to the highlighted insight once, not again on every edit or regeneration.
+    var scrolledToHighlight by rememberSaveable(highlightId) { mutableStateOf(false) }
     LaunchedEffect(highlightId, finalInsights, intermediateInsights) {
-        if (highlightId != null) {
-            val allInsights = finalInsights + intermediateInsights
-            val index = allInsights.indexOfFirst { it.id == highlightId }
-            if (index >= 0) listState.scrollToItem(index)
+        if (highlightId == null || scrolledToHighlight) return@LaunchedEffect
+        val allInsights = finalInsights + intermediateInsights
+        val index = allInsights.indexOfFirst { it.id == highlightId }
+        if (index >= 0) {
+            listState.scrollToItem(index)
+            scrolledToHighlight = true
         }
     }
 

@@ -103,6 +103,7 @@
     <string name="transcription_hint3_title">Fully private</string>
     <string name="transcription_hint3_desc">Everything runs on your device — nothing is sent to the cloud</string>
     <string name="transcription_complete">Complete</string>
+    <string name="transcription_jump_to_latest">Jump to latest</string>
     <string name="transcription_error">Error: %s</string>
 
     <!-- AI Insights Tab -->
