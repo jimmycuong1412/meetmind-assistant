@@ -7,8 +7,9 @@
 > **Scope:** Android / Jetpack Compose, Material 3. Every color below is expressed as an M3 role
 > so it can be dropped into `lightColorScheme()` / `darkColorScheme()` directly.
 >
-> Last updated: **2026-10-15** — accent changed from terracotta to raspberry (dark pink) and the
-> Real-Time Translation tint from slate blue to teal; all ratios below recomputed.
+> Last updated: **2026-10-15** — accent changed from terracotta to raspberry (dark pink), the
+> Real-Time Translation tint from slate blue to teal and the Interview tint from plum to violet;
+> all ratios below recomputed.
 
 ---
 
@@ -316,15 +317,16 @@ because these tints are used as small label text (`SessionsScreen.kt:734`,
 | Short Meeting | `#A3245F` | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
 | Long Meeting | `#A3245F` | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
 | Real-Time Translation | `#2F6E68` Teal | 5.61 | 5.36 | `#7CC4BA` | 8.39 | 9.18 |
-| Interview | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
+| Interview | `#5B4A9E` Violet | 6.83 | 6.53 | `#B3A6E8` | 7.65 | 8.37 |
 | English Coach | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
 
-The rule is that every pair of tier colors differs by ≥1.5:1 in contrast or ≥25° in hue, in both
-themes. **Open issue (2026-10-15):** with the raspberry accent, Interview plum no longer meets it —
-plum vs raspberry is 1.06:1 (light) / 1.12:1 (dark) with only ~13° of hue between them, so the
-Interview label reads as a capture mode. Translation moved from slate blue to teal (~170° from
-raspberry) and passes. Interview needs a new hue (e.g. a violet or amber that is not the warning
-ochre) before this rule holds again.
+All four colors are mutually distinguishable — every pair differs by ≥1.5:1 in contrast or ≥25° in
+hue, in both themes. The tier hues are raspberry (~332°), teal (~175°), violet (~252°) and moss
+(~105°); the closest pair, violet vs teal or raspberry, is ~75–80° apart.
+
+When the accent moved from terracotta to raspberry (2026-10-15), two live-assist hues had to move
+with it: slate blue Translation became teal, and plum Interview (`#734765` / `#C495B4`, only ~13°
+from raspberry at 1.06:1) became violet.
 
 Note the capture tier uses the same `#A3245F` as the `primary` role. That is deliberate: capture is
 the app's default activity, so it takes the brand color rather than a color of its own.
@@ -410,7 +412,7 @@ in its own theme:
 | 2 | `#2F6E68` Teal | 5.61 | 5.36 | `#7CC4BA` | 8.39 | 9.18 |
 | 3 | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
 | 4 | `#8A6A2F` Ochre | 4.77 | 4.55 | `#D4B36A` | 8.39 | 9.18 |
-| 5 | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
+| 5 | `#5B4A9E` Violet | 6.83 | 6.53 | `#B3A6E8` | 7.65 | 8.37 |
 | 6 | `#5E5D59` Olive Gray | 6.26 | 5.98 | `#B0AEA5` | 7.57 | 8.29 |
 
 Speakers 1–3 and 5 share their values with the mode palette (§6.2) deliberately — one set of

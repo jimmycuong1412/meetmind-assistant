@@ -32,13 +32,13 @@ import com.meetmind.assistant.domain.model.RecordingMode
 // ── Light ────────────────────────────────────────────────────────────────────
 private val ModeCaptureLight     = Color(0xFFA3245F) // raspberry deep — shared by all 3 capture modes
 private val ModeTranslationLight = Color(0xFF2F6E68) // teal
-private val ModeInterviewLightC  = Color(0xFF734765) // plum
+private val ModeInterviewLightC  = Color(0xFF5B4A9E) // violet
 private val ModeCoachLight       = Color(0xFF547449) // moss
 
 // ── Dark ─────────────────────────────────────────────────────────────────────
 private val ModeCaptureDark      = Color(0xFFF08FBA) // rose
 private val ModeTranslationDark  = Color(0xFF7CC4BA)
-private val ModeInterviewDarkC   = Color(0xFFC495B4)
+private val ModeInterviewDarkC   = Color(0xFFB3A6E8)
 private val ModeCoachDark        = Color(0xFF9BBE90)
 
 /**
@@ -95,7 +95,7 @@ private val SpeakersLight = listOf(
     Color(0xFF2F6E68), // teal
     Color(0xFF547449), // moss
     Color(0xFF8A6A2F), // ochre
-    Color(0xFF734765), // plum
+    Color(0xFF5B4A9E), // violet
     Color(0xFF5E5D59), // olive gray
 )
 
@@ -104,7 +104,7 @@ private val SpeakersDark = listOf(
     Color(0xFF7CC4BA),
     Color(0xFF9BBE90),
     Color(0xFFD4B36A),
-    Color(0xFFC495B4),
+    Color(0xFFB3A6E8),
     Color(0xFFB0AEA5),
 )
 

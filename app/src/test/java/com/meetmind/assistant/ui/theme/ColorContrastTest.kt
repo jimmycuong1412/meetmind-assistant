@@ -156,13 +156,13 @@ class ColorContrastTest {
         val lightAccents = mapOf(
             "capture" to Color(0xFFA3245F),
             "translation" to Color(0xFF2F6E68),
-            "interview" to Color(0xFF734765),
+            "interview" to Color(0xFF5B4A9E),
             "coach" to Color(0xFF547449),
         )
         val darkAccents = mapOf(
             "capture" to Color(0xFFF08FBA),
             "translation" to Color(0xFF7CC4BA),
-            "interview" to Color(0xFFC495B4),
+            "interview" to Color(0xFFB3A6E8),
             "coach" to Color(0xFF9BBE90),
         )
 
@@ -205,11 +205,11 @@ class ColorContrastTest {
     fun `speaker colors meet AA in both schemes`() {
         val light = listOf(
             Color(0xFFA3245F), Color(0xFF2F6E68), Color(0xFF547449),
-            Color(0xFF8A6A2F), Color(0xFF734765), Color(0xFF5E5D59),
+            Color(0xFF8A6A2F), Color(0xFF5B4A9E), Color(0xFF5E5D59),
         )
         val dark = listOf(
             Color(0xFFF08FBA), Color(0xFF7CC4BA), Color(0xFF9BBE90),
-            Color(0xFFD4B36A), Color(0xFFC495B4), Color(0xFFB0AEA5),
+            Color(0xFFD4B36A), Color(0xFFB3A6E8), Color(0xFFB0AEA5),
         )
         light.forEachIndexed { i, c ->
             assertContrast("speaker $i on light surface", c, md_theme_light_surface, AA_TEXT)
