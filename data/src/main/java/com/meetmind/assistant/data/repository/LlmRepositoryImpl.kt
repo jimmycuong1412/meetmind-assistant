@@ -242,7 +242,8 @@ class LlmRepositoryImpl @Inject constructor(
         text: String,
         systemPrompt: String?,
         maxTokens: Int,
-        imagePath: String?
+        imagePath: String?,
+        rawPrompt: Boolean
     ): Flow<String> = flow {
         // Stateless inference: reset context before each call so the system
         // prompt is always the dominant signal. The KV-cache clear + system
@@ -259,7 +260,7 @@ class LlmRepositoryImpl @Inject constructor(
         }
         llmDataSource.updateSystemPrompt(lastSystemPrompt ?: "")
 
-        val prompt = if (imagePath != null) text else buildPrompt(text)
+        val prompt = if (imagePath != null || rawPrompt) text else buildPrompt(text)
         val estimatedTokens = text.length / 4
         val threadsDesc = if (nThreadsHint > 0) "$nThreadsHint (conservative)" else "auto"
         Log.d(TAG, "=== LLM INFERENCE === threads=$threadsDesc inputChars=${text.length}")

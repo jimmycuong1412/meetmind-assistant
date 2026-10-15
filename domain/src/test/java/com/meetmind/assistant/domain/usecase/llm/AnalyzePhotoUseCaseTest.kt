@@ -39,7 +39,7 @@ class AnalyzePhotoUseCaseTest {
         override fun isMemoryConstrained() = false
 
         override fun generateInsight(
-            text: String, systemPrompt: String?, maxTokens: Int, imagePath: String?
+            text: String, systemPrompt: String?, maxTokens: Int, imagePath: String?, rawPrompt: Boolean
         ): Flow<String> {
             receivedText = text
             receivedImagePath = imagePath
