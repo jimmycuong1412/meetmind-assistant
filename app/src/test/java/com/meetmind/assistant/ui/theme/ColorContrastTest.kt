@@ -14,8 +14,8 @@ import kotlin.math.pow
  * The warm palette has two traps that are easy to reintroduce by eye, because warm
  * mid-tones read darker than they measure:
  *
- *  - White on the brand terracotta `#C96442` is 3.90:1 and **fails AA**. That is why
- *    [TerracottaDeep] exists and holds the `primary` role.
+ *  - White on the brand raspberry `#D04A86` is 4.20:1 and **fails AA**. That is why
+ *    [RaspberryDeep] exists and holds the `primary` role.
  *  - The obvious warm warning ochre `#B3811F` is 3.13:1 on parchment and also fails.
  *
  * Both shipped in the previous spec. This test exists so they cannot ship again.
@@ -133,17 +133,18 @@ class ColorContrastTest {
     }
 
     @Test
-    fun `brand terracotta is not used where it would fail`() {
+    fun `brand raspberry is not used where it would fail`() {
         // Documents the trap rather than just avoiding it: if someone later promotes
-        // Terracotta to the primary role, this test explains why that breaks.
-        val whiteOnBrand = contrast(Color.White, Terracotta)
+        // Raspberry to the primary role, this test explains why that breaks.
+        val whiteOnBrand = contrast(Color.White, Raspberry)
         assertTrue(
-            "Terracotta unexpectedly passes AA (${"%.2f".format(whiteOnBrand)}) — " +
+            "Raspberry unexpectedly passes AA (${"%.2f".format(whiteOnBrand)}) — " +
                 "if the brand value changed, revisit DESIGN.md §2.4",
             whiteOnBrand < AA_TEXT,
         )
-        assertContrast("white on TerracottaDeep", Color.White, TerracottaDeep, AA_TEXT)
-        assertContrast("Terracotta as accent on parchment", Terracotta, md_theme_light_background, AA_NON_TEXT)
+        assertContrast("white on RaspberryDeep", Color.White, RaspberryDeep, AA_TEXT)
+        assertContrast("Raspberry as accent on parchment", Raspberry, md_theme_light_background, AA_NON_TEXT)
+        assertContrast("Rose on dark background", Rose, md_theme_dark_background, AA_TEXT)
     }
 
     @Test
@@ -153,14 +154,14 @@ class ColorContrastTest {
 
         // Values mirror ModeColors.kt; these are used as small label text, not just icons.
         val lightAccents = mapOf(
-            "capture" to Color(0xFFB35334),
-            "translation" to Color(0xFF4F6F82),
+            "capture" to Color(0xFFA3245F),
+            "translation" to Color(0xFF2F6E68),
             "interview" to Color(0xFF734765),
             "coach" to Color(0xFF547449),
         )
         val darkAccents = mapOf(
-            "capture" to Color(0xFFE08A68),
-            "translation" to Color(0xFF8FB0C4),
+            "capture" to Color(0xFFF08FBA),
+            "translation" to Color(0xFF7CC4BA),
             "interview" to Color(0xFFC495B4),
             "coach" to Color(0xFF9BBE90),
         )
@@ -203,11 +204,11 @@ class ColorContrastTest {
     @Test
     fun `speaker colors meet AA in both schemes`() {
         val light = listOf(
-            Color(0xFFB35334), Color(0xFF4F6F82), Color(0xFF547449),
+            Color(0xFFA3245F), Color(0xFF2F6E68), Color(0xFF547449),
             Color(0xFF8A6A2F), Color(0xFF734765), Color(0xFF5E5D59),
         )
         val dark = listOf(
-            Color(0xFFE08A68), Color(0xFF8FB0C4), Color(0xFF9BBE90),
+            Color(0xFFF08FBA), Color(0xFF7CC4BA), Color(0xFF9BBE90),
             Color(0xFFD4B36A), Color(0xFFC495B4), Color(0xFFB0AEA5),
         )
         light.forEachIndexed { i, c ->

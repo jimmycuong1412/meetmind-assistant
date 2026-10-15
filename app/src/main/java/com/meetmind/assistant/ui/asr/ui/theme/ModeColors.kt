@@ -14,8 +14,8 @@ import com.meetmind.assistant.domain.model.RecordingMode
  * DESIGN.md §6 (Option C, two-tier):
  *
  *  - **Capture** modes (Simple Listening, Short Meeting, Long Meeting) all share the brand
- *    terracotta and are told apart by icon and label. They are three variations of one
- *    activity — recording a meeting — so three near-identical terracotta shades bought no
+ *    raspberry and are told apart by icon and label. They are three variations of one
+ *    activity — recording a meeting — so three near-identical shades of one hue bought no
  *    real separation (measured 1.13–1.34 contrast between them; see §6.3) while tripling
  *    the palette.
  *  - **Live-assist** modes (Translation, Interview, English Coach) are genuinely different
@@ -30,14 +30,14 @@ import com.meetmind.assistant.domain.model.RecordingMode
  */
 
 // ── Light ────────────────────────────────────────────────────────────────────
-private val ModeCaptureLight     = Color(0xFFB35334) // terracotta deep — shared by all 3 capture modes
-private val ModeTranslationLight = Color(0xFF4F6F82) // slate blue
+private val ModeCaptureLight     = Color(0xFFA3245F) // raspberry deep — shared by all 3 capture modes
+private val ModeTranslationLight = Color(0xFF2F6E68) // teal
 private val ModeInterviewLightC  = Color(0xFF734765) // plum
 private val ModeCoachLight       = Color(0xFF547449) // moss
 
 // ── Dark ─────────────────────────────────────────────────────────────────────
-private val ModeCaptureDark      = Color(0xFFE08A68) // coral
-private val ModeTranslationDark  = Color(0xFF8FB0C4)
+private val ModeCaptureDark      = Color(0xFFF08FBA) // rose
+private val ModeTranslationDark  = Color(0xFF7CC4BA)
 private val ModeInterviewDarkC   = Color(0xFFC495B4)
 private val ModeCoachDark        = Color(0xFF9BBE90)
 
@@ -87,12 +87,12 @@ fun isAppInDarkTheme(): Boolean = MaterialTheme.colorScheme.surface.luminance() 
 // on a light ground.
 //
 // Every value is verified >=4.5:1 against both the surface and the background of its
-// own theme. Four are shared with the mode palette above on purpose: one set of warm
+// own theme. Four are shared with the mode palette above on purpose: one set of
 // hues serves both, so the app carries fewer colors rather than more.
 
 private val SpeakersLight = listOf(
-    Color(0xFFB35334), // terracotta deep
-    Color(0xFF4F6F82), // slate blue
+    Color(0xFFA3245F), // raspberry deep
+    Color(0xFF2F6E68), // teal
     Color(0xFF547449), // moss
     Color(0xFF8A6A2F), // ochre
     Color(0xFF734765), // plum
@@ -100,8 +100,8 @@ private val SpeakersLight = listOf(
 )
 
 private val SpeakersDark = listOf(
-    Color(0xFFE08A68),
-    Color(0xFF8FB0C4),
+    Color(0xFFF08FBA),
+    Color(0xFF7CC4BA),
     Color(0xFF9BBE90),
     Color(0xFFD4B36A),
     Color(0xFFC495B4),

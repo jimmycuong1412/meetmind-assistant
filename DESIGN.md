@@ -7,7 +7,8 @@
 > **Scope:** Android / Jetpack Compose, Material 3. Every color below is expressed as an M3 role
 > so it can be dropped into `lightColorScheme()` / `darkColorScheme()` directly.
 >
-> Last updated: **2026-09-06**
+> Last updated: **2026-10-15** — accent changed from terracotta to raspberry (dark pink) and the
+> Real-Time Translation tint from slate blue to teal; all ratios below recomputed.
 
 ---
 
@@ -21,7 +22,7 @@ Three rules drive every decision below:
 1. **Warm neutrals only.** Every gray carries a yellow-brown undertone. No cool blue-grays anywhere.
    This is the single most important rule — mixing warm and cool neutrals is what makes a partial
    migration look broken.
-2. **One accent.** Terracotta. Color is not the primary way we distinguish things; type, spacing
+2. **One accent.** Raspberry (dark pink). Color is not the primary way we distinguish things; type, spacing
    and iconography are. See [§6](#6-recording-mode-colors) for the one place this is under tension.
 3. **Containment over elevation.** Borders and hairline rings, not drop shadows.
 
@@ -48,9 +49,9 @@ can be assembled from them.
 | Ivory | `#FAF9F5` | Light card / elevated surface |
 | Warm Sand | `#E8E6DC` | Light secondary container, prominent interactive surfaces |
 | Border Cream | `#F0EEE6` | Lightest divider |
-| Terracotta | `#C96442` | Brand accent — **large text and non-text only**, see §2.4 |
-| Terracotta Deep | `#B35334` | Primary role — the AA-safe variant that carries white text |
-| Coral | `#D97757` | Dark-scheme accent, text links on dark |
+| Raspberry | `#D04A86` | Brand accent — **large text and non-text only**, see §2.4 |
+| Raspberry Deep | `#A3245F` | Primary role — the AA-safe variant that carries white text |
+| Rose | `#F08FBA` | Dark-scheme accent and primary, text links on dark |
 | Near Black | `#141413` | Primary text (light) / background (dark) — warm, olive-tinted |
 | Dark Surface | `#1E1D1B` | Dark card surface |
 | Dark Elevated | `#30302E` | Dark elevated container, dark dividers |
@@ -64,8 +65,8 @@ can be assembled from them.
 ### 2.2 Light scheme
 
 ```kotlin
-primary              = #B35334   onPrimary            = #FFFFFF
-primaryContainer     = #F2DDD3   onPrimaryContainer   = #4A1D0C
+primary              = #A3245F   onPrimary            = #FFFFFF
+primaryContainer     = #F6DCE8   onPrimaryContainer   = #4A0F2B
 secondary            = #5E5D59   onSecondary          = #FFFFFF
 secondaryContainer   = #E8E6DC   onSecondaryContainer = #33322E
 tertiary             = #6B705C   onTertiary           = #FFFFFF
@@ -89,12 +90,12 @@ scrim                = #141413
 
 ### 2.3 Dark scheme
 
-Not a naive inversion. Terracotta darkens badly against warm near-black, so the dark scheme uses
-the lighter Coral family — this is why `#D97757` exists.
+Not a naive inversion. Raspberry Deep sinks into warm near-black, so the dark scheme uses
+the lighter Rose family — this is why `#F08FBA` exists.
 
 ```kotlin
-primary              = #E08A68   onPrimary            = #3D1A0B
-primaryContainer     = #7A3A22   onPrimaryContainer   = #F7DDD1
+primary              = #F08FBA   onPrimary            = #4A0F2B
+primaryContainer     = #6E1F45   onPrimaryContainer   = #F9D9E8
 secondary            = #C9C6BC   onSecondary          = #33322E
 secondaryContainer   = #45443F   onSecondaryContainer = #E8E6DC
 tertiary             = #BFC4B0   onTertiary           = #2A2D23
@@ -123,30 +124,29 @@ text require 3.0:1.**
 
 | Pair | Light | Dark |
 |---|---|---|
-| `onPrimary` on `primary` | 5.00 | 5.93 |
+| `onPrimary` on `primary` | 7.06 | 6.70 |
 | `onBackground` on `background` | 16.72 | 15.32 |
 | `onSurface` on `surface` | 17.50 | 14.00 |
 | `onSurfaceVariant` on `surface` | 6.26 | 7.57 |
-| `onPrimaryContainer` on `primaryContainer` | 10.91 | 6.60 |
+| `onPrimaryContainer` on `primaryContainer` | 11.70 | 8.29 |
 | `onSecondaryContainer` on `secondaryContainer` | 10.26 | — |
 | `error` on `background` | 5.46 | 8.92 |
 | `onError` on `error` | 6.02 | 7.99 |
 | `outline` on `background` (3.0 target) | 3.31 | 6.31 |
 
-> ### ⚠ The terracotta trap
+> ### ⚠ The brand-accent trap
 >
-> **Pure Terracotta `#C96442` cannot carry white body text.** White on `#C96442` is **3.90:1** —
-> it fails AA. The previous version of this document specified `#C96442` as the primary CTA color,
-> which would have shipped a failing contrast on every primary button in the app.
+> **Pure Raspberry `#D04A86` cannot carry white body text.** White on `#D04A86` is **4.20:1** —
+> it fails AA. (The same trap existed with the earlier terracotta accent `#C96442`, at 3.90:1.)
 >
 > The resolution:
-> - **`#B35334` (Terracotta Deep) is the `primary` role.** White on it is 5.00:1. Use it for
+> - **`#A3245F` (Raspberry Deep) is the `primary` role.** White on it is 7.06:1. Use it for
 >   filled buttons, FABs, and anything with text on top.
-> - **`#C96442` stays the brand accent** for icons, focus rings, active-state strokes, chart
+> - **`#D04A86` stays the brand accent** for icons, focus rings, active-state strokes, chart
 >   marks, and large display text (≥24sp) — all of which only need 3.0:1. On parchment it is
->   3.54:1, which clears that bar.
+>   3.80:1, which clears that bar.
 >
-> Never put small text on `#C96442`.
+> Never put small text on `#D04A86`.
 
 ### 2.5 Gradient surfaces
 
@@ -157,17 +157,19 @@ through `MaterialTheme.semanticColors`.
 
 | Token | Value | Note |
 |---|---|---|
-| `GradientTop` | `#8D3A1E` | Lightest stop — the worst case for contrast |
-| `GradientMid` | `#6B3320` | Header bands |
-| `GradientBottom` | `#241A16` | Immersive screens |
-| `OnGradient` | `#FFFFFF` | 7.62 on top, 17.01 on bottom |
-| `OnGradientVariant` | white @ 80% | 5.47 composited on top, 6.96 on mid |
+| `GradientTop` | `#7A1A47` | Lightest stop — the worst case for contrast |
+| `GradientMid` | `#5C1536` | Header bands |
+| `GradientBottom` | `#241419` | Immersive screens |
+| `OnGradient` | `#FFFFFF` | 10.16 on top, 17.66 on bottom |
+| `OnGradientVariant` | white @ 80% | 7.00 composited on top, 8.75 on mid |
 | `OnGradientDivider` | white @ 18% | Non-text |
 | `OnGradientScrim` | white @ 14% | Glass pill fills |
 
-**Why the top stop is not the brand terracotta.** Secondary text on these screens is
-translucent white. Over `#B35334` at 80% alpha that composites to 3.78:1 — below AA for
-the `bodySmall`/`bodyMedium` it is actually used on. Over `#8D3A1E` it is 5.47:1.
+**Why the top stop is darker than the brand accent.** Secondary text on these screens is
+translucent white at 80% alpha, so the ground has to stay dark enough for the composited value
+to clear AA for the `bodySmall`/`bodyMedium` it is actually used on. Over the brand raspberry
+`#D04A86` it would not; over `#7A1A47` it is 7.00:1. (The terracotta palette hit the same limit:
+`#B35334` composited to 3.78:1, which is why its top stop was `#8D3A1E`.)
 
 The previous violet build had the same defect, drawing secondary text at 70–75% alpha for
 roughly 3.3:1. It was fixed during the migration rather than carried across, and
@@ -295,7 +297,7 @@ rather than inventing a new grouping:
 | **Capture** | Simple Listening, Short Meeting, Long Meeting | Record a meeting, produce a summary afterwards. Differ only in length and insight cadence. |
 | **Live assist** | Real-Time Translation, Interview, English Coach | Act on speech *during* the session. Each is a distinct activity. |
 
-**Capture modes share one color — terracotta — and are told apart by icon and label.**
+**Capture modes share one color — raspberry — and are told apart by icon and label.**
 **Live-assist modes each keep their own hue.**
 
 This is the core of the decision: the three capture modes are variations of one activity, so
@@ -310,20 +312,26 @@ because these tints are used as small label text (`SessionsScreen.kt:734`,
 
 | Mode | Light | on surface | on bg | Dark | on surface | on bg |
 |---|---|---|---|---|---|---|
-| Simple Listening | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
-| Short Meeting | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
-| Long Meeting | `#B35334` | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
-| Real-Time Translation | `#4F6F82` Slate Blue | 5.07 | 4.85 | `#8FB0C4` | 7.36 | 8.05 |
+| Simple Listening | `#A3245F` | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
+| Short Meeting | `#A3245F` | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
+| Long Meeting | `#A3245F` | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
+| Real-Time Translation | `#2F6E68` Teal | 5.61 | 5.36 | `#7CC4BA` | 8.39 | 9.18 |
 | Interview | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
 | English Coach | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
 
-All four colors are mutually distinguishable — every pair differs by ≥1.5:1 in contrast or ≥25° in
-hue, in both themes.
+The rule is that every pair of tier colors differs by ≥1.5:1 in contrast or ≥25° in hue, in both
+themes. **Open issue (2026-10-15):** with the raspberry accent, Interview plum no longer meets it —
+plum vs raspberry is 1.06:1 (light) / 1.12:1 (dark) with only ~13° of hue between them, so the
+Interview label reads as a capture mode. Translation moved from slate blue to teal (~170° from
+raspberry) and passes. Interview needs a new hue (e.g. a violet or amber that is not the warning
+ochre) before this rule holds again.
 
-Note the capture tier uses the same `#B35334` as the `primary` role. That is deliberate: capture is
+Note the capture tier uses the same `#A3245F` as the `primary` role. That is deliberate: capture is
 the app's default activity, so it takes the brand color rather than a color of its own.
 
-### 6.3 Why the capture modes are not three shades of terracotta
+### 6.3 Why the capture modes are not three shades of one hue
+
+(Recorded with the terracotta palette in use at the time; the reasoning holds for raspberry.)
 
 The first attempt at Option C gave each capture mode its own terracotta-family shade — taupe
 `#6E6257`, terracotta `#B35334`, umber `#8C4A2F`. Each passed AA against the background
@@ -398,8 +406,8 @@ in its own theme:
 
 | # | Light | on surface | on bg | Dark | on surface | on bg |
 |---|---|---|---|---|---|---|
-| 1 | `#B35334` Terracotta Deep | 4.74 | 4.53 | `#E08A68` | 6.42 | 7.03 |
-| 2 | `#4F6F82` Slate Blue | 5.07 | 4.85 | `#8FB0C4` | 7.36 | 8.05 |
+| 1 | `#A3245F` Raspberry Deep | 6.70 | 6.40 | `#F08FBA` | 7.49 | 8.20 |
+| 2 | `#2F6E68` Teal | 5.61 | 5.36 | `#7CC4BA` | 8.39 | 9.18 |
 | 3 | `#547449` Moss | 5.02 | 4.80 | `#9BBE90` | 8.15 | 8.92 |
 | 4 | `#8A6A2F` Ochre | 4.77 | 4.55 | `#D4B36A` | 8.39 | 9.18 |
 | 5 | `#734765` Plum | 7.07 | 6.76 | `#C495B4` | 6.66 | 7.29 |
@@ -520,7 +528,7 @@ which step 5 owns.
    deliberate.
 4. Check both schemes before committing. `@Preview(uiMode = UI_MODE_NIGHT_YES)`.
 5. Body text clears **4.5:1**; icons, strokes and large text clear **3.0:1**. When in doubt,
-   compute it — see the terracotta trap in §2.4 for why assuming is not safe.
+   compute it — see the brand-accent trap in §2.4 for why assuming is not safe.
 6. No raw `Color(0x…)` outside the theme package. Enforced by `SpacingGridTest`.
 
 ### Enforcement

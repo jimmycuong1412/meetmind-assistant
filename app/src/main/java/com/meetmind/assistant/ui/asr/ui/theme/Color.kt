@@ -4,13 +4,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
 /**
- * Material 3 color palette for MeetMind Assistant - warm parchment system.
+ * Material 3 color palette for MeetMind Assistant - warm parchment with a raspberry accent.
  *
  * Full specification, including every verified contrast ratio: DESIGN.md section 2.
  *
  * Design philosophy:
  * - Warm neutrals only. Every gray carries a yellow-brown undertone; no cool blue-grays.
- * - One accent: terracotta. Type and spacing carry hierarchy, not color.
+ * - One accent: raspberry (dark pink). Type and spacing carry hierarchy, not color.
  * - Containment over elevation - borders and hairline rings, not drop shadows.
  *
  * Do not reference these values from UI code. Always read through
@@ -20,23 +20,23 @@ import androidx.compose.ui.graphics.Color
 
 // -- Brand --------------------------------------------------------------------
 /**
- * The brand terracotta. Accent use only - icons, strokes, chart marks, large display
- * text (>=24sp). White on this is 3.90:1 and fails AA for body text, which is why
- * [TerracottaDeep] exists and takes the `primary` role. See DESIGN.md section 2.4.
+ * The brand raspberry. Accent use only - icons, strokes, chart marks, large display
+ * text (>=24sp). White on this is 4.20:1 and fails AA for body text, which is why
+ * [RaspberryDeep] exists and takes the `primary` role. See DESIGN.md section 2.4.
  */
-val Terracotta = Color(0xFFC96442)
+val Raspberry = Color(0xFFD04A86)
 
-/** AA-safe terracotta for filled surfaces that carry text. White on this is 5.00:1. */
-val TerracottaDeep = Color(0xFFB35334)
+/** AA-safe raspberry for filled surfaces that carry text. White on this is 7.06:1. */
+val RaspberryDeep = Color(0xFFA3245F)
 
-/** Dark-scheme accent. Terracotta muddies against warm near-black; coral holds up. */
-val Coral = Color(0xFFD97757)
+/** Dark-scheme accent. Deep raspberry sinks into warm near-black; rose holds up. */
+val Rose = Color(0xFFF08FBA)
 
 // -- Light scheme -------------------------------------------------------------
-val md_theme_light_primary = Color(0xFFB35334)
+val md_theme_light_primary = Color(0xFFA3245F)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
-val md_theme_light_primaryContainer = Color(0xFFF2DDD3)
-val md_theme_light_onPrimaryContainer = Color(0xFF4A1D0C)
+val md_theme_light_primaryContainer = Color(0xFFF6DCE8)
+val md_theme_light_onPrimaryContainer = Color(0xFF4A0F2B)
 
 val md_theme_light_secondary = Color(0xFF5E5D59)
 val md_theme_light_onSecondary = Color(0xFFFFFFFF)
@@ -71,12 +71,12 @@ val md_theme_light_outlineVariant = Color(0xFFDEDCD1)
 val md_theme_light_scrim = Color(0xFF141413)
 
 // -- Dark scheme --------------------------------------------------------------
-// Not an inversion. Terracotta darkens badly on warm near-black, so the accent shifts
-// to the lighter coral family.
-val md_theme_dark_primary = Color(0xFFE08A68)
-val md_theme_dark_onPrimary = Color(0xFF3D1A0B)
-val md_theme_dark_primaryContainer = Color(0xFF7A3A22)
-val md_theme_dark_onPrimaryContainer = Color(0xFFF7DDD1)
+// Not an inversion. Deep raspberry sinks on warm near-black, so the accent shifts
+// to the lighter rose family.
+val md_theme_dark_primary = Color(0xFFF08FBA)
+val md_theme_dark_onPrimary = Color(0xFF4A0F2B)
+val md_theme_dark_primaryContainer = Color(0xFF6E1F45)
+val md_theme_dark_onPrimaryContainer = Color(0xFFF9D9E8)
 
 val md_theme_dark_secondary = Color(0xFFC9C6BC)
 val md_theme_dark_onSecondary = Color(0xFF33322E)
@@ -125,14 +125,13 @@ val WarningDark = Color(0xFFD9AE5C)
 // -- Gradient surfaces --------------------------------------------------------
 // Full-bleed download / welcome screens, brand headers and the record button.
 //
-// The lightest stop is #8D3A1E rather than the brand terracotta because secondary text
-// on these surfaces is drawn at 80% alpha: over #B35334 that composites to 3.78:1 and
-// fails AA for the bodySmall/bodyMedium it is used on. Over #8D3A1E it is 5.47:1. The
-// previous violet build had the same defect at 70-75% alpha; it is fixed here rather
-// than carried across. See DESIGN.md section 2.5.
-val GradientTop = Color(0xFF8D3A1E)
-val GradientMid = Color(0xFF6B3320)
-val GradientBottom = Color(0xFF241A16)
+// The lightest stop is #7A1A47 rather than the brand raspberry because secondary text
+// on these surfaces is drawn at 80% alpha, so the ground must stay dark enough for the
+// composited value to clear AA: over #7A1A47 it is 6.98:1. The previous violet build
+// drew it at 70-75% alpha for ~3.3:1. See DESIGN.md section 2.5.
+val GradientTop = Color(0xFF7A1A47)
+val GradientMid = Color(0xFF5C1536)
+val GradientBottom = Color(0xFF241419)
 
 /** Brand gradient for headers and accent bars. */
 val PrimaryGradient = Brush.verticalGradient(
