@@ -81,4 +81,112 @@
     <string name="photo_analysis_failed">Phân tích ảnh thất bại. Ảnh vẫn được lưu cùng phiên ghi.</string>
     <string name="prompt_photo_analysis">Hãy mô tả hình ảnh này một cách ngắn gọn cho ghi chú cuộc họp. Tập trung vào bất kỳ văn bản, sơ đồ, biểu đồ và thông tin quan trọng nào hiển thị.</string>
     <string name="session_photos_title">Ảnh</string>
+
+    <!-- Ask MeetMind: hỏi đáp về các cuộc họp đã lưu -->
+    <string name="ask_title">Hỏi MeetMind</string>
+    <string name="ask_entry_content_description">Hỏi MeetMind về các cuộc họp của bạn</string>
+    <string name="ask_pick_title">Hỏi về cuộc họp</string>
+    <string name="ask_pick_subtitle">Chọn ghi chú để MeetMind đọc</string>
+    <string name="ask_pick_edit_title">Đổi cuộc họp</string>
+    <string name="ask_pick_search_hint">Tìm phiên ghi</string>
+    <string name="ask_section_this_week">Tuần này</string>
+    <string name="ask_section_earlier">Trước đó</string>
+    <string name="ask_pick_empty">Chưa có cuộc họp nào được lưu. Hãy ghi âm một cuộc họp trước, rồi hỏi về nó tại đây.</string>
+    <string name="ask_pick_no_match">Không có cuộc họp nào khớp với tìm kiếm.</string>
+    <plurals name="ask_meetings_selected">
+        <item quantity="other">Đã chọn %d cuộc họp</item>
+    </plurals>
+    <string name="ask_pick_selected_duration">%1$s ghi chú</string>
+    <string name="ask_pick_select_hint">Chọn ít nhất một cuộc họp</string>
+    <string name="ask_pick_long_selection">Lựa chọn khá dài. Câu trả lời sẽ tập trung vào những phần liên quan nhất của mỗi cuộc họp.</string>
+    <string name="ask_pick_confirm">Hỏi MeetMind</string>
+    <string name="ask_pick_confirm_edit">Dùng các cuộc họp này</string>
+    <string name="ask_privacy_note">Mô hình trên điện thoại này đọc ghi chú. Không có gì được tải lên.</string>
+    <string name="ask_meeting_generic">Cuộc họp</string>
+    <string name="ask_untitled_meeting">Cuộc họp ngày %1$s</string>
+    <plurals name="ask_reading_meetings">
+        <item quantity="other">Đang đọc %d cuộc họp</item>
+    </plurals>
+    <string name="ask_edit_meetings">Sửa</string>
+    <plurals name="ask_meetings_deleted">
+        <item quantity="other">%d cuộc họp trong cuộc trò chuyện này đã bị xóa</item>
+    </plurals>
+    <string name="ask_empty_title">Bạn muốn biết điều gì?</string>
+    <plurals name="ask_empty_body">
+        <item quantity="other">Tôi chỉ trả lời dựa trên %d cuộc họp đã chọn, và chỉ cho bạn vị trí trong bản ghi mà mỗi câu trả lời dựa vào.</item>
+    </plurals>
+    <string name="ask_try_asking">Thử hỏi</string>
+    <string name="ask_suggestion_decisions">Đã quyết định những gì?</string>
+    <string name="ask_suggestion_actions">Liệt kê mọi việc cần làm và người phụ trách</string>
+    <string name="ask_suggestion_open">Còn vấn đề nào chưa giải quyết?</string>
+    <string name="ask_suggestion_summary">Tóm tắt thành năm gạch đầu dòng</string>
+    <string name="ask_input_hint">Hỏi về các cuộc họp này</string>
+    <string name="ask_input_followup_hint">Hỏi tiếp</string>
+    <string name="ask_input_label">Câu hỏi của bạn</string>
+    <string name="ask_send">Gửi</string>
+    <string name="ask_stop">Dừng tạo câu trả lời</string>
+    <string name="ask_disclaimer">Mô hình chạy trên máy có thể bỏ sót thông tin, hãy kiểm tra nguồn.</string>
+    <string name="ask_assistant_name">MeetMind</string>
+    <string name="ask_status_preparing">Đang tải mô hình…</string>
+    <plurals name="ask_status_reading">
+        <item quantity="other">Đang đọc %d cuộc họp…</item>
+    </plurals>
+    <string name="ask_status_writing">Đang viết câu trả lời…</string>
+    <plurals name="ask_status_sources">
+        <item quantity="other">từ %d nguồn</item>
+    </plurals>
+    <string name="ask_status_not_found">không có trong ghi chú</string>
+    <string name="ask_sources">Nguồn</string>
+    <string name="ask_citation_description">Nguồn %1$d</string>
+    <string name="ask_ai_summary">Tóm tắt AI</string>
+    <string name="ask_not_found_default">Tôi không tìm thấy thông tin này trong các cuộc họp đã chọn.</string>
+    <string name="ask_not_found_hint">Có thể thông tin nằm trong một cuộc họp bạn chưa chọn</string>
+    <string name="ask_add_meetings">Thêm cuộc họp</string>
+    <string name="ask_copy_answer">Sao chép câu trả lời</string>
+    <string name="ask_regenerate">Tạo lại câu trả lời</string>
+    <string name="ask_copied">Đã sao chép câu trả lời</string>
+    <string name="ask_unanswered">Chưa có câu trả lời.</string>
+    <string name="ask_retry">Hỏi lại</string>
+    <string name="ask_error_model">Hãy tải mô hình AI để đặt câu hỏi.</string>
+    <string name="ask_error_model_action">Tải xuống</string>
+    <string name="ask_error_busy">Mô hình đang bận xử lý bản ghi âm. Hãy thử lại khi xong.</string>
+    <string name="ask_error_no_meetings">Các cuộc họp trong cuộc trò chuyện này đã bị xóa. Hãy thêm cuộc họp để tiếp tục hỏi.</string>
+    <string name="ask_error_failed">Đã xảy ra lỗi khi trả lời. Hãy thử lại.</string>
+    <string name="ask_chat_deleted">Cuộc trò chuyện này đã bị xóa.</string>
+    <string name="ask_source_position">Nguồn %1$d / %2$d</string>
+    <string name="ask_source_previous">Nguồn trước</string>
+    <string name="ask_source_next">Nguồn sau</string>
+    <string name="ask_source_cited">Được trích dẫn</string>
+    <string name="ask_source_quote_note">Trích nguyên văn từ bản ghi.</string>
+    <string name="ask_source_summary_note">Trích từ tóm tắt AI của cuộc họp.</string>
+    <string name="ask_source_deleted">Cuộc họp này đã bị xóa. Đây là đoạn trích được lưu cùng câu trả lời.</string>
+    <string name="ask_source_open_session">Mở phiên ghi</string>
+    <string name="ask_history_title">Cuộc trò chuyện đã lưu</string>
+    <string name="ask_history_pinned">Đã ghim</string>
+    <string name="ask_history_empty_title">Chưa có cuộc trò chuyện nào</string>
+    <string name="ask_history_empty_body">Hãy đặt câu hỏi về các cuộc họp, cuộc trò chuyện sẽ được lưu tại đây.</string>
+    <string name="ask_history_new_chat">Trò chuyện mới</string>
+    <string name="ask_history_local_note">Các cuộc trò chuyện chỉ được lưu trên điện thoại này.</string>
+    <plurals name="ask_history_meetings">
+        <item quantity="other">%d cuộc họp</item>
+    </plurals>
+    <plurals name="ask_history_questions">
+        <item quantity="other">%d câu hỏi</item>
+    </plurals>
+    <string name="ask_history_missing">%1$d / %2$d cuộc họp đã bị xóa · mất một số nguồn</string>
+    <string name="ask_history_options">Tùy chọn cho %1$s</string>
+    <string name="ask_history_pin">Ghim</string>
+    <string name="ask_history_unpin">Bỏ ghim</string>
+    <string name="ask_history_delete">Xóa cuộc trò chuyện</string>
+    <string name="ask_history_delete_title">Xóa cuộc trò chuyện?</string>
+    <string name="ask_history_delete_message">\"%1$s\" và các câu trả lời sẽ bị xóa. Các cuộc họp của bạn không bị ảnh hưởng.</string>
+    <string name="ask_rename_title">Đổi tên cuộc trò chuyện</string>
+    <string name="ask_rename_body">Chỉ đổi tên. Câu trả lời và nguồn vẫn giữ nguyên.</string>
+    <string name="ask_rename_label">Tên cuộc trò chuyện</string>
+    <string name="ask_rename_helper">Hiển thị trong Cuộc trò chuyện đã lưu</string>
+    <string name="ask_rename_empty">Hãy đặt tên cho cuộc trò chuyện</string>
+    <string name="ask_rename_clear">Xóa tên</string>
+    <string name="ask_renamed">Đã đổi tên cuộc trò chuyện</string>
+    <string name="ask_undo">Hoàn tác</string>
+    <string name="ask_untitled_chat">Cuộc trò chuyện chưa đặt tên</string>
 </resources>

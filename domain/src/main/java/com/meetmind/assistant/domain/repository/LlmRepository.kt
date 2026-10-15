@@ -50,12 +50,15 @@ interface LlmRepository {
      * @param maxTokens Maximum number of tokens to generate; caller supplies a mode-appropriate budget
      * @param imagePath Optional absolute path to a photo; when non-null the model
      *   receives the image plus [text] as the instruction (vision-capable models only).
+     * @param rawPrompt When true, [text] is sent as-is instead of being wrapped as a
+     *   transcription. Used by Ask MeetMind, whose prompt carries its own excerpts.
      */
     fun generateInsight(
         text: String,
         systemPrompt: String? = null,
         maxTokens: Int = 512,
-        imagePath: String? = null
+        imagePath: String? = null,
+        rawPrompt: Boolean = false
     ): Flow<String>
 
     /**

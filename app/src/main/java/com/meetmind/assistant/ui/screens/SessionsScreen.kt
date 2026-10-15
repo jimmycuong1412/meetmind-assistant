@@ -60,6 +60,7 @@ fun SessionsScreen(
     onNavigateToSessionDetailsForAnalyze: (String) -> Unit = {},
     onNavigateToRecording: (String) -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
+    onNavigateToAsk: () -> Unit = {},
     quickStart: Boolean = false,
     viewModel: SessionsViewModel = hiltViewModel()
 ) {
@@ -96,6 +97,9 @@ fun SessionsScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onNavigateToAsk) {
+                            Icon(AppIcons.AskAi, contentDescription = stringResource(R.string.ask_entry_content_description))
+                        }
                         IconButton(onClick = onNavigateToSearch) {
                             Icon(AppIcons.Search, contentDescription = stringResource(R.string.search_hint))
                         }

@@ -42,12 +42,18 @@ import com.meetmind.assistant.domain.model.ThemeMode
 import com.meetmind.assistant.domain.model.OnboardingStep
 import com.meetmind.assistant.presentation.settings.SettingsViewModel
 import com.meetmind.assistant.ui.screens.*
+import com.meetmind.assistant.ui.screens.ask.AskChatScreen
+import com.meetmind.assistant.ui.screens.ask.AskHistoryScreen
+import com.meetmind.assistant.ui.screens.ask.AskPickerScreen
 import com.meetmind.assistant.presentation.setup.SetupViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 
 const val TAG = "sherpa-onnx-sim-asr"
+
+private const val ASK_PICK_ROUTE = "ask_pick?chatId={chatId}&sessionId={sessionId}"
+private const val ASK_PICK_ROUTE_NEW = "ask_pick"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -204,6 +210,9 @@ fun LibellulaApp(quickStart: Boolean = false, openSessionId: String? = null) {
                 onNavigateToSearch = {
                     navController.navigate("search")
                 },
+                onNavigateToAsk = {
+                    navController.navigate(ASK_PICK_ROUTE_NEW)
+                },
                 quickStart = quickStart
             )
         }
@@ -309,6 +318,70 @@ fun LibellulaApp(quickStart: Boolean = false, openSessionId: String? = null) {
                         }
                     }
                 }
+            )
+        }
+
+        // Ask MeetMind: pick meetings (new chat, or ?chatId= to change a chat's meetings).
+        composable(
+            route = ASK_PICK_ROUTE,
+            arguments = listOf(
+                navArgument("chatId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("sessionId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            val editing = entry.arguments?.getString("chatId") != null
+            AskPickerScreen(
+                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() },
+                onOpenChat = { chatId ->
+                    if (editing) {
+                        // The chat screen below observes its meetings and updates itself.
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate("ask_chat/$chatId") {
+                            popUpTo(ASK_PICK_ROUTE) { inclusive = true }
+                        }
+                    }
+                },
+                onOpenHistory = { navController.navigate("ask_history") }
+            )
+        }
+
+        composable(
+            route = "ask_chat/{chatId}",
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) {
+            AskChatScreen(
+                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() },
+                onEditMeetings = { chatId -> navController.navigate("ask_pick?chatId=$chatId") },
+                onOpenHistory = {
+                    navController.navigate("ask_history") {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenSession = { sessionId, segmentId ->
+                    val route = buildString {
+                        append("session_details/$sessionId")
+                        if (segmentId != null) append("?highlightId=$segmentId")
+                    }
+                    navController.navigate(route)
+                },
+                onDownloadModel = { navController.navigate("llm_download_standalone") }
+            )
+        }
+
+        composable("ask_history") {
+            AskHistoryScreen(
+                onNavigateBack = { if (navController.previousBackStackEntry != null) navController.popBackStack() },
+                onOpenChat = { chatId -> navController.navigate("ask_chat/$chatId") },
+                onNewChat = { navController.navigate(ASK_PICK_ROUTE_NEW) }
             )
         }
 

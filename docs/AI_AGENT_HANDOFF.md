@@ -2,7 +2,7 @@
 
 > **Purpose:** Get a fresh AI agent productive on this codebase fast, without re-deriving
 > facts from scratch. Read this first, then `README.md` only for the deep architecture
-> sections you actually need. Last updated: **2026-07-08**.
+> sections you actually need. Last updated: **2026-10-15**.
 
 ---
 
@@ -258,6 +258,31 @@ Design + plan: `docs/superpowers/specs/2026-07-07-camera-vision-insight-design.m
 
 ---
 
+## 8b. Ask MeetMind — chat with saved meetings (2026-10-15)
+
+Users pick saved sessions and ask questions; the on-device LLM answers only from them
+and cites transcript passages. Key facts:
+
+- **Domain is the tested core** — `usecase/ask/AskContextBuilder` (retrieval within a
+  7 000-char budget that fits the 4 096-token context), `AskAnswerParser` (citation
+  renumbering, `NOT_FOUND`), `AskMeetingsUseCase` (streams progress). Tests in
+  `domain/src/test/.../usecase/ask/`.
+- **`LlmRepository.generateInsight(rawPrompt = true)`** sends the prompt unwrapped. All
+  other callers keep the default (`Transcription: "…"` wrapper). Any new fake
+  `LlmRepository` must declare the `rawPrompt` parameter.
+- **Room v13** — `MIGRATION_12_13` adds `ask_chats`, `ask_chat_sessions`, `ask_messages`.
+  `ask_chat_sessions.session_id` has no FK to sessions by design (deleted meetings are
+  reported, not silently dropped). `AskChatDao` is an abstract class for `@Transaction`
+  methods.
+- **UI** lives in `ui/screens/ask/` (own package to avoid name clashes); routes
+  `ask_pick`, `ask_chat/{chatId}`, `ask_history` in `MainActivity`. Entry: Ask icon in
+  the Sessions top bar.
+
+Design: `docs/superpowers/specs/2026-10-15-ask-meetmind-design.md` (includes the list of
+what is deliberately not in this slice).
+
+---
+
 ## 9. Gotchas that waste tokens if unknown
 
 - **`gradlew.bat`** on Windows, not `./gradlew`. Bash tool runs Git Bash (POSIX), but the
@@ -289,6 +314,7 @@ Design + plan: `docs/superpowers/specs/2026-07-07-camera-vision-insight-design.m
 | Model download/storage | `:data` `ModelDownloadManager`, `ModelConfig`/`DefaultModelConfig` |
 | Native llama.cpp flags | `lib-llama-android/.../ai_chat.cpp`, README §llama.cpp Optimizations |
 | Camera/vision photo analysis | §8 above; `PhotoContextQueue`, `AnalyzePhotoUseCase`, `SessionPhotoDao` |
+| Ask MeetMind (Q&A over meetings) | §8b above; `usecase/ask/`, `presentation/ask/`, `ui/screens/ask/` |
 
 ---
 
