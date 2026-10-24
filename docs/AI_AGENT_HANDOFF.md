@@ -302,8 +302,15 @@ Rebuilt on the current code from the unmerged `feature/010-interview-coach-enhan
   `runBatchInsight` (map-reduce, so a long hot stretch cannot overflow the context). Separate
   from the existing start-of-recording `isCritical()` downgrade to END_OF_SESSION.
 
+- **STAR answer cards** — `domain/usecase/coach/StarAnswer.from(skeleton)` reads a behavioural
+  skeleton as Situation/Task/Action/Result: explicit labels if every bullet has one, else
+  4 bullets → S,T,A,R and 3 → S,A,R (the older prompt's shape, still used by devices whose saved
+  prompt predates the change — any Settings save freezes all prompts in DataStore).
+  `InterviewOutputParser` now persists `question_type` (wire form) and fills a missing type with
+  BEHAVIORAL for openers like "Tell me about a time". UI: `StarAnswerSection` in `InsightsSection`.
+
 Not rebuilt from spec 010: reactive question trigger and speaker-aware detection (develop's
-`InterviewTurnDetector` covers them) and STAR answer cards.
+`InterviewTurnDetector` covers them).
 
 ---
 

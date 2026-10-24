@@ -392,4 +392,37 @@ class InterviewOutputParserTest {
             llm.content.contains("orphaned locks")
         )
     }
+
+    // ─── STAR support ───────────────────────────────────────────────────────────
+
+    @Test
+    fun `behavioural opener fills a missing question type`() {
+        val json = """{"question_detected":true,"detected_question":"Tell me about a time you disagreed with your lead","skeleton":["a","b","c","d"]}"""
+
+        assertEquals(QuestionType.BEHAVIORAL, InterviewOutputParser.parse(json, role).questionType)
+    }
+
+    @Test
+    fun `behavioural opener never overrides an explicit type`() {
+        val json = """{"question_detected":true,"question_type":"incident_retro","detected_question":"Tell me about a time production went down","skeleton":["a"]}"""
+
+        assertEquals(QuestionType.INCIDENT_RETRO, InterviewOutputParser.parse(json, role).questionType)
+    }
+
+    @Test
+    fun `non-behavioural question without a type stays unclassified`() {
+        val json = """{"question_detected":true,"detected_question":"How does Raft elect a leader?","skeleton":["a"]}"""
+
+        assertNull(InterviewOutputParser.parse(json, role).questionType)
+    }
+
+    @Test
+    fun `toLlmInsight persists the question type in wire form`() {
+        val json = """{"question_detected":true,"question_type":"behavioral","detected_question":"Q?","skeleton":["s","t","a","r"]}"""
+
+        val insight = InterviewOutputParser.toLlmInsight(InterviewOutputParser.parse(json, role), "s1", 1L, emptyList())
+
+        assertEquals("behavioral", insight.questionType)
+        assertEquals(QuestionType.BEHAVIORAL, QuestionType.fromWireValue(insight.questionType))
+    }
 }

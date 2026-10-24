@@ -69,6 +69,29 @@ object InterviewOutputParser {
     const val TIPS_SEPARATOR = "—"
 
     /**
+     * Openers that make a question behavioural regardless of how the model classified
+     * it. Small models often leave `question_type` empty for these; without the type the
+     * card cannot show its STAR layout. Matched only when the model gave no type, so an
+     * explicit classification (e.g. incident_retro for "tell me about a time prod went
+     * down") is never overridden.
+     */
+    private val BEHAVIORAL_OPENERS = listOf(
+        "tell me about a time",
+        "tell me about when",
+        "give me an example",
+        "give an example",
+        "can you give an example",
+        "describe a situation",
+        "describe a time",
+        "walk me through a time",
+        "have you ever",
+        "share an experience",
+        "kể về một lần",
+        "hãy kể về một lần",
+        "cho một ví dụ"
+    )
+
+    /**
      * Parse the raw LLM output into an [InterviewInsight].
      *
      * @param rawOutput Token-collected string from the LLM (may include code fences
@@ -125,7 +148,9 @@ object InterviewOutputParser {
                 isSkeletonSynthesised = skeletonSynthesised,
                 questionType = QuestionType.fromWireValue(
                     InsightOutputParser.extractJsonField(cleaned, "question_type")
-                ),
+                ) ?: detectedQuestion?.lowercase()?.let { question ->
+                    QuestionType.BEHAVIORAL.takeIf { BEHAVIORAL_OPENERS.any { question.contains(it) } }
+                },
                 depthProbe = InsightOutputParser.extractJsonField(cleaned, "depth_probe")
                     ?.takeIf { it.isNotBlank() }
             )
@@ -206,7 +231,10 @@ object InterviewOutputParser {
             content = content,
             tasks = tasksJson,
             timestamp = timestamp,
-            sourceSegmentIds = sourceSegmentIds
+            sourceSegmentIds = sourceSegmentIds,
+            // Persisted in llm_insights.question_type (wire form, e.g. "behavioral") so the
+            // card can choose the answer layout — STAR for behavioural questions.
+            questionType = interviewInsight.questionType?.name?.lowercase()
         )
     }
 

@@ -55,10 +55,12 @@ import com.meetmind.assistant.domain.model.BatchInsightProgress
 import com.meetmind.assistant.domain.model.FillerWordStats
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
+import com.meetmind.assistant.domain.model.QuestionType
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.TranscriptionSegment
 import com.meetmind.assistant.domain.usecase.coach.AnswerTimeline
 import com.meetmind.assistant.domain.usecase.coach.AnswerTiming
+import com.meetmind.assistant.domain.usecase.coach.StarAnswer
 import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
 import kotlin.math.roundToInt
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
@@ -781,7 +783,18 @@ private fun InterviewInsightItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
 
-            if (skeletonBullets.isNotEmpty()) {
+            // Behavioural questions get the skeleton laid out as labelled STAR beats when
+            // its shape allows; anything else keeps the plain bullet list.
+            val starAnswer = remember(skeletonBullets, insight.questionType) {
+                if (QuestionType.fromWireValue(insight.questionType) == QuestionType.BEHAVIORAL) {
+                    StarAnswer.from(skeletonBullets)
+                } else {
+                    null
+                }
+            }
+            if (starAnswer != null) {
+                StarAnswerSection(starAnswer, accentColor)
+            } else if (skeletonBullets.isNotEmpty()) {
                 SkeletonBulletList(skeletonBullets, accentColor)
             } else {
                 // Pre-skeleton insights (and any model output that ignored the schema)
@@ -1332,6 +1345,58 @@ private fun SkeletonBulletList(bullets: List<String>, accentColor: Color) {
         }
     }
 }
+
+/**
+ * A behavioural answer as four (or three) labelled STAR beats, each with a thin accent
+ * bar, so the candidate can see where they are in the story at a glance.
+ */
+@Composable
+private fun StarAnswerSection(answer: StarAnswer, accentColor: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        answer.parts.forEach { part ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .background(color = accentColor.copy(alpha = 0.06f), shape = MaterialTheme.shapes.small)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(color = accentColor, shape = MaterialTheme.shapes.small)
+                )
+                Column(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = starStepLabel(part.step),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = accentColor,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = part.text,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun starStepLabel(step: StarAnswer.Step): String = stringResource(
+    when (step) {
+        StarAnswer.Step.SITUATION -> R.string.interview_star_situation
+        StarAnswer.Step.TASK -> R.string.interview_star_task
+        StarAnswer.Step.ACTION -> R.string.interview_star_action
+        StarAnswer.Step.RESULT -> R.string.interview_star_result
+    }
+)
 
 /**
  * Coaching-tips section used exclusively by [InterviewInsightItem].
