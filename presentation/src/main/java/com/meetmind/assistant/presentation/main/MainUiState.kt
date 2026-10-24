@@ -2,10 +2,12 @@ package com.meetmind.assistant.presentation.main
 
 import com.meetmind.assistant.domain.model.AppSettings
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.FillerWordStats
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.TranscriptionSegment
+import com.meetmind.assistant.domain.usecase.coach.AnswerTiming
 
 /**
  * UI state for the main screen.
@@ -71,7 +73,19 @@ data class MainUiState(
      * (the one currently running + any queued behind it). Capture is never
      * blocked; photos are analyzed one at a time in capture order.
      */
-    val pendingPhotoAnalysisCount: Int = 0
+    val pendingPhotoAnalysisCount: Int = 0,
+    /** Interview Mode: running filler-word count and rate for the live badge. */
+    val fillerWordStats: FillerWordStats = FillerWordStats(),
+    /**
+     * Interview Mode: answer timers keyed by question-card insight id, on the recording
+     * clock. Compare against [recordingDurationMillis] for the live elapsed time.
+     */
+    val answerTimings: Map<String, AnswerTiming> = emptyMap(),
+    /**
+     * True while the mid-session thermal gate pauses live insights. The paused stretch is
+     * summarised once when recording stops.
+     */
+    val isThermalPaused: Boolean = false
 ) {
     /** True while at least one captured photo is being (or waiting to be) analyzed. */
     val isAnalyzingPhoto: Boolean

@@ -28,6 +28,12 @@ import com.meetmind.assistant.domain.usecase.llm.PhotoAnalysisQueue
 import com.meetmind.assistant.domain.usecase.stt.StartSttStreamingUseCase
 import com.meetmind.assistant.domain.usecase.stt.StopSttStreamingUseCase
 import com.meetmind.assistant.domain.usecase.sync.SyncSttLlmUseCase
+import com.meetmind.assistant.domain.model.FillerWordStats
+import com.meetmind.assistant.domain.model.LlmInsight
+import com.meetmind.assistant.domain.usecase.coach.AnswerTimeline
+import com.meetmind.assistant.domain.usecase.coach.FillerWordCounter
+import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
+import com.meetmind.assistant.domain.usecase.sync.ThermalGate
 import com.meetmind.assistant.domain.usecase.llm.RegenerateInsightUseCase
 import com.meetmind.assistant.domain.usecase.transcription.SaveInsightUseCase
 import com.meetmind.assistant.domain.usecase.transcription.SaveSegmentUseCase
@@ -143,6 +149,23 @@ class MainViewModel @Inject constructor(
     // Accumulates complete segment text not yet covered by a periodic LLM insight.
     // Thread-safe: written by transcriptionJob coroutine, cleared by insightsJob coroutine.
     private val pendingContent = AtomicReference<String>("")
+
+    // Mid-session thermal gate (spec 011): pauses live inference while the phone is hot.
+    // Fed one reading per second by the recording timer; read by SyncSttLlmUseCase.
+    private val thermalGate = ThermalGate()
+
+    // Completed segments received while the thermal gate was active. Unlike
+    // pendingContent this is never cleared by a live insight — the hot stretch is
+    // summarised once, through the batch pipeline, when recording stops.
+    // Main-thread only (transcription collector, insight collector, stopStreaming).
+    private val thermalBacklog = mutableListOf<TranscriptionSegment>()
+
+    // Segment form of pendingContent: completed segments no live insight has covered yet,
+    // so a thermal summary can include the tail since the last live insight as well.
+    private val uncoveredSegments = mutableListOf<TranscriptionSegment>()
+
+    // Interview Mode filler-word total for this session; survives pause/resume.
+    private var fillerWordTotal = 0
 
     // FIFO worker so the user can keep capturing photos while earlier ones are
     // still being analyzed. llama.cpp is single-threaded for inference, so jobs
@@ -548,7 +571,12 @@ class MainViewModel @Inject constructor(
             return
         }
 
-        _uiState.update { it.copy(isRecording = true, error = null, recordingDurationMillis = accumulatedDurationMs) }
+        _uiState.update {
+            it.copy(isRecording = true, error = null, recordingDurationMillis = accumulatedDurationMs, isThermalPaused = false)
+        }
+        thermalGate.reset()
+        thermalBacklog.clear()
+        uncoveredSegments.clear()
 
         // Start recording timer offset by any previously accumulated duration so that
         // resuming within the same session produces a cumulative elapsed time display.
@@ -559,6 +587,21 @@ class MainViewModel @Inject constructor(
                 val segmentElapsed = System.currentTimeMillis() - segmentStart
                 val totalDurationMs = accumulatedDurationMs + segmentElapsed
                 _uiState.update { it.copy(recordingDurationMillis = totalDurationMs) }
+
+                if (currentRecordingMode == RecordingMode.INTERVIEW) {
+                    // Recompute so the rate falls while the candidate speaks cleanly.
+                    _uiState.update { it.copy(fillerWordStats = FillerWordStats.of(fillerWordTotal, totalDurationMs)) }
+                }
+
+                // Thermal gate: one reading per tick. Only real-time sessions run live
+                // inference, so only they can be paused.
+                if (currentInsightStrategy == InsightStrategy.REAL_TIME) {
+                    val paused = thermalGate.onReading(thermalMonitor.isOverheating())
+                    if (paused != _uiState.value.isThermalPaused) {
+                        Log.i(TAG, "Thermal gate ${if (paused) "on: live insights paused" else "off: live insights resumed"}")
+                        _uiState.update { it.copy(isThermalPaused = paused) }
+                    }
+                }
 
                 // Conservative thread management is now handled adaptively by LlmRepositoryImpl:
                 // - Post-load check (checkAndCacheMemoryConstraint) detects RAM pressure accurately.
@@ -654,10 +697,22 @@ class MainViewModel @Inject constructor(
                         .onSuccess {
                             Log.d(TAG, "Segment saved to DB: ${segmentWithSession.id}")
                         }
-                    // Track accumulated text for potential final insight on stop
-                    pendingContent.getAndUpdate { existing ->
-                        if (existing.isBlank()) segmentWithSession.text
-                        else "$existing ${segmentWithSession.text}"
+                    if (thermalGate.isActive) {
+                        // Live inference is paused; this goes into the end-of-session summary.
+                        thermalBacklog += segmentWithSession
+                    } else {
+                        uncoveredSegments += segmentWithSession
+                        // Track accumulated text for potential final insight on stop
+                        pendingContent.getAndUpdate { existing ->
+                            if (existing.isBlank()) segmentWithSession.text
+                            else "$existing ${segmentWithSession.text}"
+                        }
+                    }
+                    if (currentRecordingMode == RecordingMode.INTERVIEW) {
+                        fillerWordTotal += FillerWordCounter.count(segmentWithSession.text)
+                        _uiState.update {
+                            it.copy(fillerWordStats = FillerWordStats.of(fillerWordTotal, it.recordingDurationMillis))
+                        }
                     }
                     // Clear partial since this segment is now complete
                     _uiState.update { state ->
@@ -698,7 +753,8 @@ class MainViewModel @Inject constructor(
                     // Read at stream start so an edit in Settings applies to the next
                     // recording without an app restart.
                     candidateProfile = _uiState.value.settings.interviewCandidateProfile
-                        .takeIf { it.isNotBlank() }
+                        .takeIf { it.isNotBlank() },
+                    isInferencePaused = { thermalGate.isActive }
                 )
                     .catch { e ->
                         // Handle errors without crashing
@@ -712,7 +768,7 @@ class MainViewModel @Inject constructor(
 
                         // A periodic insight was generated — clear pending buffer so stopStreaming()
                         // does not double-cover the same content in the final insight call.
-                        pendingContent.set("")
+                        onLiveInsight(insight)
 
                         // Save insight to database — UI updates automatically via
                         // the database Flow collector in init block
@@ -752,7 +808,8 @@ class MainViewModel @Inject constructor(
                 mode = mode,
                 inputLanguage = inputLanguage,
                 outputLanguage = outputLanguage,
-                topic = currentTopic
+                topic = currentTopic,
+                isInferencePaused = { thermalGate.isActive }
             )
                 .catch { e ->
                     Log.e(TAG, "LLM error after job restart", e)
@@ -760,13 +817,80 @@ class MainViewModel @Inject constructor(
                 }
                 .collect { insight ->
                     Log.d(TAG, "Received insight (restarted job): ${insight.content}")
-                    pendingContent.set("")
+                    onLiveInsight(insight)
                     saveInsightUseCase(insight)
                         .onFailure { e -> Log.e(TAG, "Failed to save insight: ${e.message}") }
                         .onSuccess { Log.d(TAG, "Insight saved: ${insight.id}") }
                 }
         }
         Log.i(TAG, "Insights job restarted: mode=$mode, output=$outputLanguage")
+    }
+
+    /**
+     * Run the map-reduce batch pipeline over [segments] and save its insights, then free
+     * the model. Used by END_OF_SESSION sessions and by the thermal summary of a
+     * real-time session whose live insights were paused by the heat gate.
+     */
+    private suspend fun runBatchInsight(segments: List<TranscriptionSegment>) {
+        Log.i(TAG, "Starting batch insight pipeline: ${segments.size} segments")
+        // Conservative threads for batch are handled inside
+        // GenerateBatchInsightUseCase via checkAndCacheMemoryConstraint()
+        // (post first-load, accurate) and isLargeContext() (per-chunk).
+        // Protect inference from being killed when app is backgrounded.
+        llmProcessingServiceController.startProcessing()
+        generateBatchInsightUseCase(
+            segments = segments,
+            sessionId = sessionId,
+            mode = currentRecordingMode,
+            outputLanguage = currentOutputLanguage,
+            topic = currentTopic,
+            onProgress = { progress ->
+                _uiState.update { it.copy(batchProgress = progress) }
+            },
+            onChunkInsight = { chunkInsight ->
+                saveInsightUseCase(chunkInsight)
+                    .onFailure { e -> Log.e(TAG, "Failed to save chunk insight: ${e.message}") }
+                    .onSuccess { Log.d(TAG, "Chunk insight saved: ${chunkInsight.id}") }
+            }
+        )
+            .onFailure { e ->
+                Log.e(TAG, "Batch insight generation failed: ${e.message}")
+            }
+            .onSuccess { insight ->
+                if (insight != null) {
+                    saveInsightUseCase(insight)
+                        .onFailure { e -> Log.e(TAG, "Failed to save batch insight: ${e.message}") }
+                        .onSuccess { Log.i(TAG, "Batch insight saved: ${insight.id}") }
+                } else {
+                    Log.d(TAG, "Batch insight skipped: not enough content")
+                }
+            }
+        _uiState.update { it.copy(isFinalizingSession = false, batchProgress = BatchInsightProgress.Idle) }
+
+        llmProcessingServiceController.stopProcessing()
+
+        try {
+            llmRepository.cleanup()
+            Log.i(TAG, "LLM resources released after batch insight")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error releasing LLM resources after batch insight", e)
+        }
+    }
+
+    /**
+     * Bookkeeping for a live insight: its content no longer needs the final insight, and
+     * in Interview Mode a question card starts the next answer timer (ending the last).
+     */
+    private fun onLiveInsight(insight: LlmInsight) {
+        pendingContent.set("")
+        uncoveredSegments.clear()
+        val isQuestionCard = currentRecordingMode == RecordingMode.INTERVIEW &&
+            insight.title?.startsWith(InterviewOutputParser.COACHING_NOTE_PREFIX) != true
+        if (isQuestionCard) {
+            _uiState.update {
+                it.copy(answerTimings = AnswerTimeline.start(it.answerTimings, insight.id, it.recordingDurationMillis))
+            }
+        }
     }
 
     /**
@@ -793,6 +917,15 @@ class MainViewModel @Inject constructor(
             timerJob?.cancel()
             settingsWatcherJob = null
             timerJob = null
+
+            // Freeze the running answer timer at the stop position; short answers get
+            // their nudge from here on. The thermal badge goes away with the recording.
+            _uiState.update {
+                it.copy(
+                    answerTimings = AnswerTimeline.endAll(it.answerTimings, it.recordingDurationMillis),
+                    isThermalPaused = false
+                )
+            }
 
             // Persist total cumulative recording duration before tearing down.
             // accumulatedDurationMs is updated so that a subsequent startStreaming() call
@@ -899,51 +1032,7 @@ class MainViewModel @Inject constructor(
                 Log.i(TAG, "Streaming stopped (batch mode), willRunBatch=$willRunBatch, segments=${allSegments.size}")
 
                 if (willRunBatch) {
-                    launch {
-                        Log.i(TAG, "Starting batch insight pipeline: ${allSegments.size} segments")
-                        // Conservative threads for batch are handled inside
-                        // GenerateBatchInsightUseCase via checkAndCacheMemoryConstraint()
-                        // (post first-load, accurate) and isLargeContext() (per-chunk).
-                        // Protect inference from being killed when app is backgrounded.
-                        llmProcessingServiceController.startProcessing()
-                        generateBatchInsightUseCase(
-                            segments = allSegments,
-                            sessionId = sessionId,
-                            mode = currentRecordingMode,
-                            outputLanguage = currentOutputLanguage,
-                            topic = currentTopic,
-                            onProgress = { progress ->
-                                _uiState.update { it.copy(batchProgress = progress) }
-                            },
-                            onChunkInsight = { chunkInsight ->
-                                saveInsightUseCase(chunkInsight)
-                                    .onFailure { e -> Log.e(TAG, "Failed to save chunk insight: ${e.message}") }
-                                    .onSuccess { Log.d(TAG, "Chunk insight saved: ${chunkInsight.id}") }
-                            }
-                        )
-                            .onFailure { e ->
-                                Log.e(TAG, "Batch insight generation failed: ${e.message}")
-                            }
-                            .onSuccess { insight ->
-                                if (insight != null) {
-                                    saveInsightUseCase(insight)
-                                        .onFailure { e -> Log.e(TAG, "Failed to save batch insight: ${e.message}") }
-                                        .onSuccess { Log.i(TAG, "Batch insight saved: ${insight.id}") }
-                                } else {
-                                    Log.d(TAG, "Batch insight skipped: not enough content")
-                                }
-                            }
-                        _uiState.update { it.copy(isFinalizingSession = false, batchProgress = BatchInsightProgress.Idle) }
-
-                        llmProcessingServiceController.stopProcessing()
-
-                        try {
-                            llmRepository.cleanup()
-                            Log.i(TAG, "LLM resources released after batch insight")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error releasing LLM resources after batch insight", e)
-                        }
-                    }
+                    launch { runBatchInsight(allSegments) }
                 } else {
                     launch {
                         try {
@@ -955,6 +1044,25 @@ class MainViewModel @Inject constructor(
                     }
                 }
             } else {
+                // Thermal summary (spec 011, US2): the gate paused live insights for part of
+                // this session. Summarise everything no live insight covered — the paused
+                // stretch plus the tail since the last insight — in one batch run, which
+                // chunks long text instead of overflowing the context like a single
+                // final-insight call would. Replaces the plain final insight below.
+                val thermalSummarySegments = if (thermalBacklog.isNotEmpty()) {
+                    (uncoveredSegments + thermalBacklog).distinctBy { it.id }.sortedBy { it.timestamp }
+                } else {
+                    emptyList()
+                }
+                thermalBacklog.clear()
+                uncoveredSegments.clear()
+                if (thermalSummarySegments.isNotEmpty() && _uiState.value.isLlmModelAvailable) {
+                    Log.i(TAG, "Streaming stopped (real-time, thermal gate was on): summarising ${thermalSummarySegments.size} segments")
+                    _uiState.update { it.copy(isFinalizingSession = true) }
+                    launch { runBatchInsight(thermalSummarySegments) }
+                    return@launch
+                }
+
                 // Real-time strategy: generate a final insight for any pending content.
                 // Skip if a periodic inference was actively running when Stop was pressed —
                 // that insight already covers the session content up to this point, and

@@ -234,7 +234,7 @@ internal fun AskInlineNote(text: String, color: Color, modifier: Modifier = Modi
             text = text,
             style = MaterialTheme.typography.bodySmall,
             color = color,
-            modifier = Modifier.padding(start = 6.dp)
+            modifier = Modifier.padding(start = 8.dp)
         )
     }
 }

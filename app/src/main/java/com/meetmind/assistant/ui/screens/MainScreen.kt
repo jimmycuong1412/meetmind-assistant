@@ -762,6 +762,10 @@ fun MainScreen(
                                     }
                                 } else null,
                                 regeneratingInsightId = uiState.regeneratingInsightId,
+                                fillerWordStats = uiState.fillerWordStats,
+                                answerTimings = uiState.answerTimings,
+                                recordingClockMs = uiState.recordingDurationMillis,
+                                isThermalPaused = uiState.isThermalPaused,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -878,6 +882,7 @@ private fun TranslationSplitView(
             onDownloadLlm = onNavigateToLlmDownload,
             onRegenerate = null,
             regeneratingInsightId = uiState.regeneratingInsightId,
+            isThermalPaused = uiState.isThermalPaused,
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
