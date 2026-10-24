@@ -22,7 +22,7 @@ import com.meetmind.assistant.domain.model.ThemeMode
  * Warm parchment system - see DESIGN.md for the full specification.
  *
  * Design philosophy:
- * - Color restraint: terracotta only for primary actions
+ * - Color restraint: raspberry only for primary actions
  * - Warm neutrals throughout; no cool blue-grays
  * - Borders over shadows (DESIGN.md section 5)
  * - Explicit surfaceContainer tiers for layering

@@ -5,6 +5,7 @@ import com.meetmind.assistant.domain.provider.ResourceProvider
 import com.meetmind.assistant.domain.repository.LlmRepository
 import com.meetmind.assistant.domain.repository.SettingsRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
+import com.meetmind.assistant.domain.usecase.ask.AskMeetingsUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateBatchInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateFinalInsightUseCase
 import com.meetmind.assistant.domain.usecase.llm.GenerateHistoryInsightUseCase
@@ -186,6 +187,14 @@ object UseCaseModule {
         thermalMonitor: ThermalMonitor
     ): GenerateBatchInsightUseCase {
         return GenerateBatchInsightUseCase(llmRepository, settingsRepository, resourceProvider, thermalMonitor)
+    }
+
+    @Provides
+    @ViewModelScoped
+    fun provideAskMeetingsUseCase(
+        llmRepository: LlmRepository
+    ): AskMeetingsUseCase {
+        return AskMeetingsUseCase(llmRepository)
     }
 
     @Provides

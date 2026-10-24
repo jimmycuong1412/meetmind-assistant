@@ -105,4 +105,13 @@ object AppIcons {
     // Groups / folders
     val FolderOpen: ImageVector get() = Icons.Outlined.FolderOpen
     val Folder: ImageVector get() = Icons.Outlined.Folder
+
+    // Ask MeetMind (chat with saved meetings)
+    val AskAi: ImageVector get() = Icons.Outlined.QuestionAnswer
+    val History: ImageVector get() = Icons.Outlined.History
+    val Send: ImageVector get() = Icons.Outlined.ArrowUpward
+    val SuggestionArrow: ImageVector get() = Icons.Outlined.NorthEast
+    val MoreVert: ImageVector get() = Icons.Outlined.MoreVert
+    val PushPin: ImageVector get() = Icons.Outlined.PushPin
+    val Cancel: ImageVector get() = Icons.Outlined.Cancel
 }

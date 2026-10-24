@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.meetmind.assistant.data.database.AppDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
+import com.meetmind.assistant.data.database.dao.AskChatDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
 import com.meetmind.assistant.data.database.dao.SessionGroupDao
@@ -11,9 +12,11 @@ import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.repository.ActionItemRepositoryImpl
+import com.meetmind.assistant.data.repository.AskChatRepositoryImpl
 import com.meetmind.assistant.data.repository.GroupRepositoryImpl
 import com.meetmind.assistant.data.repository.TranscriptionRepositoryImpl
 import com.meetmind.assistant.domain.repository.ActionItemRepository
+import com.meetmind.assistant.domain.repository.AskChatRepository
 import com.meetmind.assistant.domain.repository.GroupRepository
 import com.meetmind.assistant.domain.repository.TranscriptionRepository
 import dagger.Module
@@ -48,7 +51,8 @@ object DatabaseModule {
                 AppDatabase.MIGRATION_8_9,
                 AppDatabase.MIGRATION_9_10,
                 AppDatabase.MIGRATION_10_11,
-                AppDatabase.MIGRATION_11_12
+                AppDatabase.MIGRATION_11_12,
+                AppDatabase.MIGRATION_12_13
             )
             .build()
     }
@@ -87,6 +91,16 @@ object DatabaseModule {
     @Singleton
     fun provideSessionGroupDao(database: AppDatabase): SessionGroupDao =
         database.sessionGroupDao()
+
+    @Provides
+    @Singleton
+    fun provideAskChatDao(database: AppDatabase): AskChatDao =
+        database.askChatDao()
+
+    @Provides
+    @Singleton
+    fun provideAskChatRepository(dao: AskChatDao): AskChatRepository =
+        AskChatRepositoryImpl(dao)
 
     @Provides
     @Singleton

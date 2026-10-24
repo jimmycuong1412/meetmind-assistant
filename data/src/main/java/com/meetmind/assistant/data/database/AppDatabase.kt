@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.meetmind.assistant.data.database.dao.ActionItemDao
+import com.meetmind.assistant.data.database.dao.AskChatDao
 import com.meetmind.assistant.data.database.dao.LlmInsightDao
 import com.meetmind.assistant.data.database.dao.SearchDao
 import com.meetmind.assistant.data.database.dao.SessionGroupDao
@@ -12,6 +13,9 @@ import com.meetmind.assistant.data.database.dao.SessionPhotoDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSegmentDao
 import com.meetmind.assistant.data.database.dao.TranscriptionSessionDao
 import com.meetmind.assistant.data.database.entity.ActionItemEntity
+import com.meetmind.assistant.data.database.entity.AskChatEntity
+import com.meetmind.assistant.data.database.entity.AskChatSessionEntity
+import com.meetmind.assistant.data.database.entity.AskMessageEntity
 import com.meetmind.assistant.data.database.entity.LlmInsightEntity
 import com.meetmind.assistant.data.database.entity.SessionGroupEntity
 import com.meetmind.assistant.data.database.entity.SessionPhotoEntity
@@ -55,9 +59,12 @@ import com.meetmind.assistant.data.database.entity.TranscriptionSessionEntity
         LlmInsightEntity::class,
         ActionItemEntity::class,
         SessionPhotoEntity::class,
-        SessionGroupEntity::class
+        SessionGroupEntity::class,
+        AskChatEntity::class,
+        AskChatSessionEntity::class,
+        AskMessageEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -69,6 +76,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun actionItemDao(): ActionItemDao
     abstract fun sessionPhotoDao(): SessionPhotoDao
     abstract fun sessionGroupDao(): SessionGroupDao
+    abstract fun askChatDao(): AskChatDao
 
     companion object {
         const val DATABASE_NAME = "libellula_transcription.db"
@@ -248,6 +256,56 @@ abstract class AppDatabase : RoomDatabase() {
                     database.execSQL("ALTER TABLE transcription_sessions ADD COLUMN group_id TEXT")
                 }
                 createSessionPhotosTable(database)
+            }
+        }
+
+        /**
+         * Database version 13:
+         * - Added ask_chats, ask_chat_sessions and ask_messages for saved
+         *   "Ask MeetMind" chats. ask_chat_sessions.session_id has no foreign key
+         *   to transcription_sessions on purpose (see AskChatSessionEntity).
+         */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS ask_chats (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        title TEXT,
+                        pinned INTEGER NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        updated_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS ask_chat_sessions (
+                        chat_id TEXT NOT NULL,
+                        session_id TEXT NOT NULL,
+                        position INTEGER NOT NULL,
+                        PRIMARY KEY (chat_id, session_id),
+                        FOREIGN KEY (chat_id) REFERENCES ask_chats(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS ask_messages (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        chat_id TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        created_at INTEGER NOT NULL,
+                        citations_json TEXT,
+                        not_found INTEGER NOT NULL,
+                        FOREIGN KEY (chat_id) REFERENCES ask_chats(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_ask_messages_chat_id ON ask_messages(chat_id)"
+                )
             }
         }
 

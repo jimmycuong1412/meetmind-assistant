@@ -682,4 +682,120 @@ War stories: Postgres failover cascade; Terraform state corruption mid-migration
     <string name="group_delete_message">Delete group \"%1$s\"? Sessions will be moved to Other.</string>
     <string name="group_create_confirm">Create</string>
     <string name="group_move_to_group">Move to group</string>
+
+    <!-- Ask MeetMind: chat with saved meetings -->
+    <string name="ask_title">Ask MeetMind</string>
+    <string name="ask_entry_content_description">Ask MeetMind about your meetings</string>
+    <string name="ask_pick_title">Ask about meetings</string>
+    <string name="ask_pick_subtitle">Pick the notes MeetMind should read</string>
+    <string name="ask_pick_edit_title">Change meetings</string>
+    <string name="ask_pick_search_hint">Search sessions</string>
+    <string name="ask_section_this_week">This week</string>
+    <string name="ask_section_earlier">Earlier</string>
+    <string name="ask_pick_empty">No saved meetings yet. Record one first, then ask about it here.</string>
+    <string name="ask_pick_no_match">No meetings match your search.</string>
+    <plurals name="ask_meetings_selected">
+        <item quantity="one">%d meeting selected</item>
+        <item quantity="other">%d meetings selected</item>
+    </plurals>
+    <string name="ask_pick_selected_duration">%1$s of notes</string>
+    <string name="ask_pick_select_hint">Select at least one meeting</string>
+    <string name="ask_pick_long_selection">Long selection. Answers will focus on the most relevant parts of each meeting.</string>
+    <string name="ask_pick_confirm">Ask MeetMind</string>
+    <string name="ask_pick_confirm_edit">Use these meetings</string>
+    <string name="ask_privacy_note">Read by the model on this phone. Nothing is uploaded.</string>
+    <string name="ask_meeting_generic">Meeting</string>
+    <string name="ask_untitled_meeting">Meeting on %1$s</string>
+    <plurals name="ask_reading_meetings">
+        <item quantity="one">Reading %d meeting</item>
+        <item quantity="other">Reading %d meetings</item>
+    </plurals>
+    <string name="ask_edit_meetings">Edit</string>
+    <plurals name="ask_meetings_deleted">
+        <item quantity="one">%d meeting in this chat was deleted</item>
+        <item quantity="other">%d meetings in this chat were deleted</item>
+    </plurals>
+    <string name="ask_empty_title">What do you want to know?</string>
+    <plurals name="ask_empty_body">
+        <item quantity="one">I answer only from this meeting, and show you where in the transcript each answer comes from.</item>
+        <item quantity="other">I answer only from these %d meetings, and show you where in the transcript each answer comes from.</item>
+    </plurals>
+    <string name="ask_try_asking">Try asking</string>
+    <string name="ask_suggestion_decisions">What was decided?</string>
+    <string name="ask_suggestion_actions">List every action item and who owns it</string>
+    <string name="ask_suggestion_open">What is still unresolved?</string>
+    <string name="ask_suggestion_summary">Summarize in five bullet points</string>
+    <string name="ask_input_hint">Ask about these meetings</string>
+    <string name="ask_input_followup_hint">Ask a follow-up</string>
+    <string name="ask_input_label">Your question</string>
+    <string name="ask_send">Send</string>
+    <string name="ask_stop">Stop generating</string>
+    <string name="ask_disclaimer">On-device model. Answers can miss things, so check the sources.</string>
+    <string name="ask_assistant_name">MeetMind</string>
+    <string name="ask_status_preparing">Loading the model…</string>
+    <plurals name="ask_status_reading">
+        <item quantity="one">Reading %d meeting…</item>
+        <item quantity="other">Reading %d meetings…</item>
+    </plurals>
+    <string name="ask_status_writing">Writing an answer…</string>
+    <plurals name="ask_status_sources">
+        <item quantity="one">from %d source</item>
+        <item quantity="other">from %d sources</item>
+    </plurals>
+    <string name="ask_status_not_found">not in these notes</string>
+    <string name="ask_sources">Sources</string>
+    <string name="ask_citation_description">Source %1$d</string>
+    <string name="ask_ai_summary">AI summary</string>
+    <string name="ask_not_found_default">I couldn\'t find this in the selected meetings.</string>
+    <string name="ask_not_found_hint">It may be in a meeting you didn\'t pick</string>
+    <string name="ask_add_meetings">Add meetings</string>
+    <string name="ask_copy_answer">Copy answer</string>
+    <string name="ask_regenerate">Regenerate answer</string>
+    <string name="ask_copied">Answer copied</string>
+    <string name="ask_unanswered">No answer yet.</string>
+    <string name="ask_retry">Ask again</string>
+    <string name="ask_error_model">Download the AI model to ask questions.</string>
+    <string name="ask_error_model_action">Download</string>
+    <string name="ask_error_busy">The model is busy with a recording. Try again when it finishes.</string>
+    <string name="ask_error_no_meetings">The meetings in this chat were deleted. Add meetings to keep asking.</string>
+    <string name="ask_error_failed">Something went wrong while answering. Try again.</string>
+    <string name="ask_chat_deleted">This chat was deleted.</string>
+    <string name="ask_source_position">Source %1$d of %2$d</string>
+    <string name="ask_source_previous">Previous source</string>
+    <string name="ask_source_next">Next source</string>
+    <string name="ask_source_cited">Cited</string>
+    <string name="ask_source_quote_note">Quoted from the transcript, unedited.</string>
+    <string name="ask_source_summary_note">Quoted from the meeting\'s AI summary.</string>
+    <string name="ask_source_deleted">This meeting was deleted. This is the quote saved with the answer.</string>
+    <string name="ask_source_open_session">Open session</string>
+    <string name="ask_history_title">Saved chats</string>
+    <string name="ask_history_pinned">Pinned</string>
+    <string name="ask_history_empty_title">No saved chats yet</string>
+    <string name="ask_history_empty_body">Ask a question about your meetings and the chat is kept here.</string>
+    <string name="ask_history_new_chat">New chat</string>
+    <string name="ask_history_local_note">Chats are kept on this phone only.</string>
+    <plurals name="ask_history_meetings">
+        <item quantity="one">%d meeting</item>
+        <item quantity="other">%d meetings</item>
+    </plurals>
+    <plurals name="ask_history_questions">
+        <item quantity="one">%d question</item>
+        <item quantity="other">%d questions</item>
+    </plurals>
+    <string name="ask_history_missing">%1$d of %2$d meetings deleted · some sources gone</string>
+    <string name="ask_history_options">Options for %1$s</string>
+    <string name="ask_history_pin">Pin</string>
+    <string name="ask_history_unpin">Unpin</string>
+    <string name="ask_history_delete">Delete chat</string>
+    <string name="ask_history_delete_title">Delete chat?</string>
+    <string name="ask_history_delete_message">\"%1$s\" and its answers will be deleted. Your meetings are not affected.</string>
+    <string name="ask_rename_title">Rename chat</string>
+    <string name="ask_rename_body">Only the name changes. Answers and sources stay as they are.</string>
+    <string name="ask_rename_label">Chat name</string>
+    <string name="ask_rename_helper">Shown in Saved chats</string>
+    <string name="ask_rename_empty">Give the chat a name</string>
+    <string name="ask_rename_clear">Clear name</string>
+    <string name="ask_renamed">Chat renamed</string>
+    <string name="ask_undo">Undo</string>
+    <string name="ask_untitled_chat">Untitled chat</string>
 </resources>
