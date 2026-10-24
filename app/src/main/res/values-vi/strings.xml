@@ -195,4 +195,10 @@
     <string name="interview_answer_time">Thời gian trả lời %1$s</string>
     <string name="interview_short_answer_nudge">Câu trả lời ngắn: hãy thêm một ví dụ hoặc kết quả</string>
     <string name="thermal_paused_badge">Máy đang nóng: tạm dừng gợi ý trực tiếp, sẽ tóm tắt khi dừng</string>
+
+    <!-- Bố cục câu trả lời STAR (câu hỏi hành vi) -->
+    <string name="interview_star_situation">Tình huống</string>
+    <string name="interview_star_task">Nhiệm vụ</string>
+    <string name="interview_star_action">Hành động</string>
+    <string name="interview_star_result">Kết quả</string>
 </resources>

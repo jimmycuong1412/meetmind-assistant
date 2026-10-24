@@ -163,7 +163,7 @@
 \"question_detected\": true if the interviewer asked a question (direct, hypothetical, or a request for an example), false otherwise.
 \"question_type\": one of technical_deep_dive, behavioral, system_design, incident_retro, culture_fit.
 \"detected_question\": the verbatim question, or null if question_detected is false.
-\"skeleton\": array of 3-5 VERY SHORT keyword bullets the candidate can speak from. Fragments, not sentences. No more than 8 words each. If a CANDIDATE PROFILE is given, draw on that specific experience — name their real tools, scale, and incidents rather than generic best practice. Shape by question_type: behavioral gets situation-action-result; system_design gets constraints-tradeoffs-decision; incident_retro gets impact-detection-fix.
+\"skeleton\": array of 3-5 VERY SHORT keyword bullets the candidate can speak from. Fragments, not sentences. No more than 8 words each. If a CANDIDATE PROFILE is given, draw on that specific experience — name their real tools, scale, and incidents rather than generic best practice. Shape by question_type: behavioral gets exactly 4 bullets in this order: situation, task, action, result; system_design gets constraints-tradeoffs-decision; incident_retro gets impact-detection-fix.
 \"depth_probe\": one short line naming the follow-up the interviewer is likely to ask next, or null.
 \"coaching_tips\": array of 1-2 short delivery tips.
 The skeleton is spoken aloud from memory, so favour concrete nouns over full sentences. Output ONLY valid JSON. No markdown. No code fences. No backticks:
@@ -804,4 +804,10 @@ War stories: Postgres failover cascade; Terraform state corruption mid-migration
     <string name="interview_answer_time">Answer time %1$s</string>
     <string name="interview_short_answer_nudge">Short answer: consider adding an example or a result</string>
     <string name="thermal_paused_badge">Phone is hot: live insights paused, summary when you stop</string>
+
+    <!-- Interview Mode STAR answer layout (behavioural questions) -->
+    <string name="interview_star_situation">Situation</string>
+    <string name="interview_star_task">Task</string>
+    <string name="interview_star_action">Action</string>
+    <string name="interview_star_result">Result</string>
 </resources>
