@@ -2,7 +2,7 @@
 
 > **Purpose:** Get a fresh AI agent productive on this codebase fast, without re-deriving
 > facts from scratch. Read this first, then `README.md` only for the deep architecture
-> sections you actually need. Last updated: **2026-10-15**.
+> sections you actually need. Last updated: **2026-10-24**.
 
 ---
 
@@ -280,6 +280,30 @@ and cites transcript passages. Key facts:
 
 Design: `docs/superpowers/specs/2026-10-15-ask-meetmind-design.md` (includes the list of
 what is deliberately not in this slice).
+
+---
+
+## 8c. Interview coaching + thermal gate, rebuilt (2026-10-24)
+
+Rebuilt on the current code from the unmerged `feature/010-interview-coach-enhancements`
+(US3 filler counter, US4 answer timer) and `feature/011-thermal-protection` branches.
+
+- **Filler counter** — `domain/usecase/coach/FillerWordCounter` (token-based; bare "like"/"so"
+  are no longer counted) + `FillerWordStats` (rate floors the first minute). Interview Mode
+  only; badge in `InsightsSection`.
+- **Answer timer** — `domain/usecase/coach/AnswerTimeline`: one running answer at a time, a new
+  question card ends the previous one (the old branch ticked every card). Times sit on the
+  recording clock (`recordingDurationMillis`), so pauses don't count. Short-answer nudge only
+  after the answer ends.
+- **Thermal gate** — `domain/usecase/sync/ThermalGate` (on at the first MODERATE+ reading, off
+  after 30 cool readings), fed by `MainViewModel`'s 1 s timer and passed to
+  `SyncSttLlmUseCase(isInferencePaused = …)`. Text spoken while gated goes to
+  `MainViewModel.thermalBacklog`, never to the live buffers; on stop it is summarised once via
+  `runBatchInsight` (map-reduce, so a long hot stretch cannot overflow the context). Separate
+  from the existing start-of-recording `isCritical()` downgrade to END_OF_SESSION.
+
+Not rebuilt from spec 010: reactive question trigger and speaker-aware detection (develop's
+`InterviewTurnDetector` covers them) and STAR answer cards.
 
 ---
 

@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +39,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,11 +52,15 @@ import com.meetmind.assistant.ui.R
 import com.meetmind.assistant.ui.ui.theme.*
 import com.meetmind.assistant.ui.components.GradientButton
 import com.meetmind.assistant.domain.model.BatchInsightProgress
+import com.meetmind.assistant.domain.model.FillerWordStats
 import com.meetmind.assistant.domain.model.InsightStrategy
 import com.meetmind.assistant.domain.model.LlmInsight
 import com.meetmind.assistant.domain.model.RecordingMode
 import com.meetmind.assistant.domain.model.TranscriptionSegment
+import com.meetmind.assistant.domain.usecase.coach.AnswerTimeline
+import com.meetmind.assistant.domain.usecase.coach.AnswerTiming
 import com.meetmind.assistant.domain.usecase.llm.InterviewOutputParser
+import kotlin.math.roundToInt
 import com.meetmind.assistant.ui.components.ShimmerInsightCard
 import kotlinx.coroutines.launch
 
@@ -90,9 +98,16 @@ fun InsightsSection(
     onDownloadLlm: () -> Unit = {},
     onRegenerate: ((LlmInsight) -> Unit)? = null,
     regeneratingInsightId: String? = null,
+    fillerWordStats: FillerWordStats = FillerWordStats(),
+    answerTimings: Map<String, AnswerTiming> = emptyMap(),
+    recordingClockMs: Long = 0L,
+    isThermalPaused: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
+    val showFillerBadge = isRecording && isInterviewMode
+    val showThermalBadge = isRecording && isThermalPaused
+    val showStatusBadges = showFillerBadge || showThermalBadge
 
     // Live-sync is on by default whenever recording is active so new insights are
     // scrolled into view automatically. The user can toggle it off mid-session.
@@ -335,7 +350,8 @@ fun InsightsSection(
                 contentPadding = PaddingValues(
                     start = 0.dp,
                     end = 0.dp,
-                    top = 8.dp,
+                    // Room for the status badges overlaid at the top while they show.
+                    top = if (showStatusBadges) 48.dp else 8.dp,
                     // Extra bottom padding ensures the last card is not obscured by the
                     // floating sync button when live-sync is available.
                     bottom = if (isRecording || isFinalizingSession) 80.dp else 8.dp
@@ -348,11 +364,52 @@ fun InsightsSection(
                         segments = segments,
                         recordingMode = recordingMode,
                         onRegenerate = onRegenerate?.let { { it(insight) } },
-                        isRegenerating = regeneratingInsightId == insight.id
+                        isRegenerating = regeneratingInsightId == insight.id,
+                        answerTiming = answerTimings[insight.id],
+                        recordingClockMs = recordingClockMs
                     )
                 }
                 if (isFinalizingSession) {
                     item { ShimmerInsightCard(modifier = Modifier.padding(horizontal = 0.dp)) }
+                }
+            }
+        }
+
+        // ── Status badges ─────────────────────────────────────────────────────
+        // Thermal pause (any real-time mode) and filler-word rate (Interview Mode),
+        // overlaid at the top while recording. Shown over empty states too, so a hot
+        // phone explains why no cards are arriving.
+        AnimatedVisibility(
+            visible = showStatusBadges,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (showThermalBadge) {
+                    StatusPill(
+                        text = stringResource(R.string.thermal_paused_badge),
+                        color = MaterialTheme.semanticColors.warning,
+                        icon = AppIcons.Warning,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
+                if (showFillerBadge) {
+                    StatusPill(
+                        text = stringResource(
+                            R.string.interview_filler_badge,
+                            fillerWordStats.totalCount,
+                            fillerWordStats.ratePerMinute.roundToInt()
+                        ),
+                        color = when (fillerWordStats.level) {
+                            FillerWordStats.Level.HIGH -> MaterialTheme.colorScheme.error
+                            FillerWordStats.Level.ELEVATED -> MaterialTheme.semanticColors.warning
+                            FillerWordStats.Level.CALM -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        icon = null
+                    )
                 }
             }
         }
@@ -485,7 +542,9 @@ private fun InsightItem(
     segments: List<TranscriptionSegment>,
     recordingMode: RecordingMode = RecordingMode.SHORT_MEETING,
     onRegenerate: (() -> Unit)? = null,
-    isRegenerating: Boolean = false
+    isRegenerating: Boolean = false,
+    answerTiming: AnswerTiming? = null,
+    recordingClockMs: Long = 0L
 ) {
     val isInterviewMode = recordingMode == RecordingMode.INTERVIEW
     val isEnglishCoachMode = recordingMode == RecordingMode.ENGLISH_COACH
@@ -498,7 +557,9 @@ private fun InsightItem(
             segments = segments,
             isCoachingNote = isCoachingNote,
             onRegenerate = onRegenerate,
-            isRegenerating = isRegenerating
+            isRegenerating = isRegenerating,
+            answerTiming = answerTiming.takeUnless { isCoachingNote },
+            recordingClockMs = recordingClockMs
         )
         isEnglishCoachMode -> EnglishCoachInsightItem(
             insight = insight,
@@ -528,7 +589,9 @@ private fun InterviewInsightItem(
     segments: List<TranscriptionSegment>,
     isCoachingNote: Boolean,
     onRegenerate: (() -> Unit)? = null,
-    isRegenerating: Boolean = false
+    isRegenerating: Boolean = false,
+    answerTiming: AnswerTiming? = null,
+    recordingClockMs: Long = 0L
 ) {
     // ── Derived display values ────────────────────────────────────────────────
     // For coaching notes the title encodes the role as "coaching:<role>"; strip the prefix.
@@ -583,12 +646,24 @@ private fun InterviewInsightItem(
         ) { "\"" + it.replace("\\", "\\\\").replace("\"", "\\\"") + "\"" }
     }
 
+    // ── Answer timer (question cards only) ───────────────────────────────────
+    // The border warms as the answer runs long; the nudge appears once a short
+    // answer has finished (never live, so it cannot rush the candidate).
+    val answerElapsedMs = answerTiming?.elapsedMs(recordingClockMs)
+    val answerPace = answerElapsedMs?.let { AnswerTimeline.pace(it) }
+    val borderColor = when (answerPace) {
+        AnswerTimeline.Pace.TOO_LONG -> MaterialTheme.colorScheme.error
+        AnswerTimeline.Pace.LONG -> MaterialTheme.semanticColors.warning
+        else -> accentColor.copy(alpha = 0.3f)
+    }
+    val borderWidth = if (answerPace == AnswerTimeline.Pace.LONG || answerPace == AnswerTimeline.Pace.TOO_LONG) 1.5.dp else 1.dp
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .border(
-                width = 1.dp,
-                color = accentColor.copy(alpha = 0.3f),
+                width = borderWidth,
+                color = borderColor,
                 shape = MaterialTheme.shapes.medium
             ),
         shape = MaterialTheme.shapes.medium,
@@ -628,6 +703,16 @@ private fun InterviewInsightItem(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                if (answerElapsedMs != null) {
+                    AnswerTimerLabel(
+                        elapsedMs = answerElapsedMs,
+                        color = when (answerPace) {
+                            AnswerTimeline.Pace.TOO_LONG -> MaterialTheme.colorScheme.error
+                            AnswerTimeline.Pace.LONG -> MaterialTheme.semanticColors.warning
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
                 // Regenerate button
                 if (onRegenerate != null) {
                     if (isRegenerating) {
@@ -736,6 +821,76 @@ private fun InterviewInsightItem(
                 Spacer(modifier = Modifier.height(12.dp))
                 SourceTranscriptionSection(sourceSegments)
             }
+
+            // ── Short-answer nudge ─────────────────────────────────────────
+            if (answerTiming != null && AnswerTimeline.isShortAnswer(answerTiming)) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Text(
+                        text = stringResource(R.string.interview_short_answer_nudge),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Elapsed answer time, `m:ss`, with a clock icon. */
+@Composable
+private fun AnswerTimerLabel(elapsedMs: Long, color: Color) {
+    val totalSeconds = elapsedMs / 1000
+    val text = "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
+    val description = stringResource(R.string.interview_answer_time, text)
+    Row(
+        modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = description },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Icon(
+            imageVector = AppIcons.Schedule,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+}
+
+/** Small rounded status badge overlaid on the insights list. */
+@Composable
+private fun StatusPill(text: String, color: Color, icon: ImageVector?, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(50),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, color.copy(alpha = 0.5f)),
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (icon != null) {
+                Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelMedium,
+                color = color,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }

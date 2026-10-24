@@ -189,4 +189,10 @@
     <string name="ask_renamed">Đã đổi tên cuộc trò chuyện</string>
     <string name="ask_undo">Hoàn tác</string>
     <string name="ask_untitled_chat">Cuộc trò chuyện chưa đặt tên</string>
+
+    <!-- Huấn luyện phỏng vấn: từ đệm, thời gian trả lời và bảo vệ nhiệt -->
+    <string name="interview_filler_badge">Từ đệm: %1$d · %2$d/phút</string>
+    <string name="interview_answer_time">Thời gian trả lời %1$s</string>
+    <string name="interview_short_answer_nudge">Câu trả lời ngắn: hãy thêm một ví dụ hoặc kết quả</string>
+    <string name="thermal_paused_badge">Máy đang nóng: tạm dừng gợi ý trực tiếp, sẽ tóm tắt khi dừng</string>
 </resources>

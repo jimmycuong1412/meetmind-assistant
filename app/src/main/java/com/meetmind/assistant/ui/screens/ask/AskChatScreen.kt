@@ -308,7 +308,7 @@ private fun AskMeetingsStrip(
             AskInlineNote(
                 text = pluralStringResource(R.plurals.ask_meetings_deleted, missingCount, missingCount),
                 color = MaterialTheme.semanticColors.warning,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Icon(AppIcons.Info, contentDescription = null, tint = MaterialTheme.semanticColors.warning, modifier = Modifier.size(14.dp))
             }
@@ -443,7 +443,7 @@ private fun AskAssistantMessage(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.ask_not_found_hint), style = MaterialTheme.typography.titleSmall)
                     Button(onClick = onAddMeetings) { Text(stringResource(R.string.ask_add_meetings)) }
                 }
@@ -495,7 +495,7 @@ private fun AskSourcesCard(
         Column {
             AskSectionHeader(
                 text = stringResource(R.string.ask_sources),
-                modifier = Modifier.padding(start = 14.dp, end = 14.dp)
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp)
             )
             citations.forEach { citation ->
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -503,7 +503,7 @@ private fun AskSourcesCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable(role = Role.Button) { onCitation(citation.number) }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.Top
                 ) {
                     AskNumberBadge(citation.number)
@@ -563,7 +563,7 @@ private fun AskPendingAnswer(pending: AskPending) {
             Text(pending.partial, style = MaterialTheme.typography.bodyLarge)
         } else {
             // Placeholder lines while the model loads and reads.
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 listOf(1f, 0.92f, 0.64f).forEach { fraction ->
                     Box(
                         modifier = Modifier
@@ -589,7 +589,7 @@ private fun AskUnanswered(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
                 text = stringResource(
                     when (error) {
@@ -776,7 +776,7 @@ private fun AskSourceSheet(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = stringResource(

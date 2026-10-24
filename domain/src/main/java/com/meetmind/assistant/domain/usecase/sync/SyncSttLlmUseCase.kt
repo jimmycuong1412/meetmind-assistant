@@ -115,6 +115,10 @@ class SyncSttLlmUseCase(
      * @param topic Optional session topic injected into the system prompt for focused analysis
      * @param candidateProfile Interview Mode only: the candidate's own background, so
      *   generated answers cite their real experience rather than textbook generalities.
+     * @param isInferencePaused Polled on every segment; while it returns true no live
+     *   inference starts (the thermal gate, see [ThermalGate]). Text that arrives while
+     *   paused is dropped from the live buffers here — the caller keeps it for one
+     *   end-of-session summary instead, so resuming never sends a huge backlog live.
      * @return Flow of LLM insights
      */
     operator fun invoke(
@@ -124,7 +128,8 @@ class SyncSttLlmUseCase(
         inputLanguage: String,
         outputLanguage: String?,
         topic: String? = null,
-        candidateProfile: String? = null
+        candidateProfile: String? = null,
+        isInferencePaused: () -> Boolean = { false }
     ): Flow<LlmInsight> = channelFlow {
         val settings = settingsRepository.getSettings().first()
         var baseIntervalMs = calculateIntervalMs(mode, settings)
@@ -249,6 +254,19 @@ class SyncSttLlmUseCase(
                     } else {
                         currentPartialSegment = segment.text
                     }
+                }
+
+                // Thermal gate: while the phone is hot, start no inference of any kind. An
+                // inference already in flight is left to finish. The paused text is not kept
+                // here; the caller buffers it for a single summary when recording stops.
+                if (isInferencePaused()) {
+                    newSegmentsSinceLastLlm.clear()
+                    completeSegmentIds.clear()
+                    lastPartialSent = ""
+                    // Restart the interval clock so the first live insight after cooling
+                    // down covers only fresh speech.
+                    lastInferenceTime = System.currentTimeMillis()
+                    return@collect
                 }
 
                 // English Coach: fire immediately on each completed segment ≥ 5 words.

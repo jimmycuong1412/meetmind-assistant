@@ -798,4 +798,10 @@ War stories: Postgres failover cascade; Terraform state corruption mid-migration
     <string name="ask_renamed">Chat renamed</string>
     <string name="ask_undo">Undo</string>
     <string name="ask_untitled_chat">Untitled chat</string>
+
+    <!-- Interview coaching: filler words, answer timer (spec 010) and thermal gate (spec 011) -->
+    <string name="interview_filler_badge">Fillers: %1$d · %2$d/min</string>
+    <string name="interview_answer_time">Answer time %1$s</string>
+    <string name="interview_short_answer_nudge">Short answer: consider adding an example or a result</string>
+    <string name="thermal_paused_badge">Phone is hot: live insights paused, summary when you stop</string>
 </resources>

@@ -200,7 +200,7 @@ private fun AskPickerRow(session: TranscriptionSession, selected: Boolean, onTog
             .toggleable(value = selected, role = Role.Checkbox, onValueChange = { onToggle() })
     ) {
         Row(
-            modifier = Modifier.padding(start = 4.dp, end = 16.dp, top = 6.dp, bottom = 10.dp),
+            modifier = Modifier.padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.Top
         ) {
             // The whole row is the toggle target, so the checkbox takes no clicks itself
@@ -247,7 +247,7 @@ private fun AskPickerFooter(
                     .fillMaxWidth()
                     .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -274,7 +274,7 @@ private fun AskPickerFooter(
                         AskInlineNote(
                             text = stringResource(R.string.ask_pick_long_selection),
                             color = MaterialTheme.semanticColors.warning,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
                         ) {
                             Icon(
                                 imageVector = AppIcons.Info,
