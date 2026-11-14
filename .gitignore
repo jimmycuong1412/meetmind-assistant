@@ -59,7 +59,9 @@ Thumbs.db
 
 # AI tool local data (runtime, memory, sessions)
 .gemini/
-.claude/
+# .claude/ stays local, except the shared team settings (plugins/workflow)
+.claude/*
+!.claude/settings.json
 .specify/.runtime/
 .specify/memory/
 
